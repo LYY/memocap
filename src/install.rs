@@ -74,6 +74,7 @@ pub fn status(global: bool) -> Result<InstallStatus> {
 fn copy_binary(source: &Path, destination: &Path) -> Result<()> {
     let parent = destination.parent().context("安装路径没有父目录")?;
     fs::create_dir_all(parent)?;
+    let temporary = parent.join(".memocap-install.tmp");
     fs::copy(source, &temporary).with_context(|| format!("复制 {} 失败", source.display()))?;
     // Windows cannot rename over an existing .exe. Removing only our known
     // destination makes repeated install/update work on all supported systems.
