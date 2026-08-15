@@ -1,0 +1,16 @@
+/target
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+.idea
+.vscode
+
+# Test-only local state
+.memocap/
+.codex/
+AGENTS.md
+
+# Never commit local release artifacts
+*.exe
+memocap
