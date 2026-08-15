@@ -20,12 +20,10 @@ impl Paths {
             .ok_or_else(|| anyhow!("无法确定用户目录；请设置 MEMOCAP_HOME"))?;
         let data_dir = env::var_os("MEMOCAP_DATA_DIR")
             .filter(|value| !value.is_empty())
-            .map(PathBuf::from)
-            .unwrap_or_else(|| home.join(".memocap"));
+            .map_or_else(|| home.join(".memocap"), PathBuf::from);
         let codex_home = env::var_os("CODEX_HOME")
             .filter(|value| !value.is_empty())
-            .map(PathBuf::from)
-            .unwrap_or_else(|| home.join(".codex"));
+            .map_or_else(|| home.join(".codex"), PathBuf::from);
         Ok(Self {
             installed_binary: codex_home.join("bin").join(binary_name()),
             database: data_dir.join("memocap.db"),
@@ -36,6 +34,7 @@ impl Paths {
     }
 }
 
+#[must_use]
 pub fn binary_name() -> &'static str {
     if cfg!(windows) {
         "memocap.exe"

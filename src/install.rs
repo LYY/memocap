@@ -15,6 +15,7 @@ pub struct InstallStatus {
     pub configured: bool,
 }
 
+#[must_use]
 pub fn global_agents_path(paths: &Paths) -> PathBuf {
     paths.codex_home.join("AGENTS.md")
 }

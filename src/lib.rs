@@ -9,6 +9,7 @@ pub mod tui;
 pub const AGENTS_BEGIN: &str = "<!-- memocap:begin -->";
 pub const AGENTS_END: &str = "<!-- memocap:end -->";
 
+#[must_use]
 pub fn agents_block(binary: &str) -> String {
     format!(
         r#"{AGENTS_BEGIN}

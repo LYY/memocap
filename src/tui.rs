@@ -53,7 +53,7 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()>
                 KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
                 KeyCode::Up | KeyCode::Char('k') => selected = selected.saturating_sub(1),
                 KeyCode::Down | KeyCode::Char('j') => {
-                    selected = (selected + 1).min(ACTIONS.len() - 1)
+                    selected = (selected + 1).min(ACTIONS.len() - 1);
                 }
                 KeyCode::Enter => match selected {
                     0 => message = install_message(false),
@@ -119,7 +119,7 @@ fn render(frame: &mut ratatui::Frame, selected: usize, message: &str) {
         .block(Block::default().borders(Borders::ALL)),
         areas[0],
     );
-    let items = ACTIONS.map(|action| ListItem::new(action));
+    let items = ACTIONS.map(ListItem::new);
     let mut state = ListState::default();
     state.select(Some(selected));
     frame.render_stateful_widget(
