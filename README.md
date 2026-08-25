@@ -6,13 +6,13 @@
 
 ## 做法
 
-别人在自动记你的会话；我们只在你说记住的时候记，并且同一份库能装进 Codex、Claude Code、Pi、OpenCode。
+别人在自动记你的会话。我们只在你说记住的时候记，同一份库能装进 Codex、Claude Code、Pi、OpenCode。
 
-- 开口才记：你说记住或回忆才动手，不自动抓会话，不每轮注入。
-- 一份记忆库，四端官方渠道。Codex / Claude Code 一条命令写规则；Pi 上 [pi.dev](https://pi.dev/packages/)；OpenCode 能发插件就走官方插件。不是四个产品。
-- 本机 SQLite 单二进制，默认不联网。没有 worker、没有 Chroma、没有 embedding、没有云账号。
-- 命令只有 remember / recall / list / forget。
-- 下一版才可选 Docker Compose 远程库。没配地址继续本地。
+- 开口才记：说记住/回忆才动手，不自动抓、不每轮注入
+- 一份 CLI，四端官方渠道：Codex / Claude Code 一条命令写规则；Pi 上 pi.dev；OpenCode 能 plugin add 就走官方插件
+- 本机 SQLite 单二进制，默认不联网。没有 worker、Chroma、embedding、云账号
+- 命令就 remember / recall / list / forget
+- Docker Compose 远程库是下一版；没配地址继续本地
 
 ## 现在仓库是什么
 
