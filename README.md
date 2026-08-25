@@ -1,74 +1,82 @@
+[中文](README-CN.md)
+
 # memocap
 
-一份本机记忆库，四个宿主共用。本地 SQLite，一条原生 `memocap`。
+One local SQLite. Four hosts share one `memocap`.
 
-时机跟原版走：每句话先 recall 再答；有决策、偏好、任务、约定、上下文就主动存；先查有没有同类再 store，存了要告诉你。卡住也先翻记忆。
+Timing: recall first on every utterance, then answer. For a decision, preference, task, agreement, or context: similar-check, then store, then tell the user. When stuck, search memory.
 
-这是锁定规格。仓库代码仍是旧的 Codex 原型，产品批准实现前不要当新架构，也不要改 `src/`。
+Do not copy forgetting curve, capsules, visualization, or Chroma.
 
-## 做法
+Install: `pnpm add -g memocap` then `memocap`; Pi `pi install npm:memocap`; OpenCode `opencode plugin memocap`.
 
-原版不是等你说「记住」。v1 跟这套时机走，「开口才记」作废。
+v1 is local and offline by default. A Compose remote store is next version.
 
-- 言必检：每句话先 recall 再答
-- 值必存：有决策、偏好、任务、约定、上下文就主动存
-- 先查同类再 store，存了要告诉你。卡住先翻记忆
-- 一份 CLI，四端官方渠道：Codex / Claude Code 一条命令写规则；Pi 上 pi.dev；OpenCode 能 plugin add 就走官方插件
-- 本机 SQLite 单二进制，默认不联网。没有 worker、Chroma、embedding、云账号
-- 命令就 remember / recall / list / forget
-- Docker Compose 远程库是下一版；没配地址继续本地
+This is the locked spec. `src/` is still the Codex-only prototype; the spec is this file and [docs/REBUILD.md](docs/REBUILD.md).
 
-不抄遗忘曲线、胶囊、可视化、Chroma。
+## How it works
 
-## 现在仓库是什么
+The original does not wait for you to say "remember". v1 follows this timing. Speak-to-remember is void.
 
-当前实现只接 Codex，用来验证 SQLite、单二进制、TUI 和 `AGENTS.md` 受控注入。它已经偏了最初的行为。后面实现跟值必存、言必检走，不另造智能。
+- Recall first: recall on every utterance, then answer
+- Value-store: if there is a decision, preference, task, agreement, or context, store it
+- Similar-check, then store, then tell the user. When stuck, search memory first
+- One CLI, four official host channels: Codex / Claude Code write rules with one command; Pi via pi.dev; OpenCode uses the official plugin if it can plugin add
+- Local SQLite, single binary, offline by default. No worker, Chroma, embedding, or cloud account
+- Commands are remember / recall / list / forget
+- Docker Compose remote store is next version; without an address, stay local
 
-灵感来自 ClawHub [fslong520/memocap](https://clawhub.ai/fslong520/skills/memocap)。只借那组 remember / recall / list / forget 命令。不要抄它的 Python、Chroma、embedding、遗忘曲线、胶囊、可视化、OpenClaw。这是产品否决，不是待议。
+Do not copy forgetting curve, capsules, visualization, or Chroma.
 
-## 锁定契约
+## What the repo is now
 
-- 记忆只在本机 SQLite。默认不联网。
-- 一个原生二进制，命令名 `memocap`。
-- 四个宿主共用这一份库，不是四个产品。
-- 记忆动词只有 remember / recall / list / forget。
-- 言必检：每句话先 recall 再答。
-- 值必存：有决策、偏好、任务、约定、上下文就主动存。
-- 先查同类再 store，存了要告诉你。卡住先翻记忆。
-- V1 禁止：embedding、Chroma、遗忘曲线、胶囊、可视化、OpenClaw、任何服务端代码。
+The current implementation only wires Codex. It was used to prove SQLite, a single binary, the TUI, and controlled `AGENTS.md` injection. It already drifted from the original behavior. Later work follows value-store and recall-first. Do not invent extra intelligence.
 
-## 安装
+Inspiration: ClawHub [fslong520/memocap](https://clawhub.ai/fslong520/skills/memocap). Borrow only that remember / recall / list / forget command set. Do not copy its Python, Chroma, embedding, forgetting curve, capsules, visualization, or OpenClaw. That is a product veto, not an open question.
 
-安装方式对齐 [go-codex-notify](https://github.com/luodaoyi/go-codex-notify)。
+## Locked contract
 
-用包管理器全局安装原生程序，然后一条 `memocap` 进 TUI 或安装。
+- Memory lives in local SQLite only. Offline by default.
+- One native binary. The command name is `memocap`.
+- Four hosts share this one store. Not four products.
+- Memory verbs are only remember / recall / list / forget.
+- Recall first: recall on every utterance, then answer.
+- Value-store: if there is a decision, preference, task, agreement, or context, store it.
+- Similar-check, then store, then tell the user. When stuck, search memory first.
+- V1 forbids: embedding, Chroma, forgetting curve, capsules, visualization, OpenClaw, any server-side code.
+
+## Install
+
+Install follows [go-codex-notify](https://github.com/luodaoyi/go-codex-notify).
+
+Install the native program globally with a package manager, then one `memocap` enters the TUI or install.
 
 ```bash
 pnpm add -g memocap
 memocap
 ```
 
-也可以：
+Or:
 
 ```bash
 npm i -g memocap
 memocap
 ```
 
-包管理器只负责把适合当前系统的原生程序放到 PATH。后续运行不依赖 `npx`。
+The package manager only puts the native program for this system on PATH. Later runs do not depend on `npx`.
 
-## 四个宿主，各走官方渠道
+## Four hosts, official channels
 
-共享层永远是 `memocap` CLI。各宿主只负责把自己的官方入口接到同一条命令上。
+The shared layer is always the `memocap` CLI. Each host only wires its official entry to that same command.
 
 ### Codex / Claude Code
 
-`memocap install` 按宿主写规则：
+`memocap install` writes rules per host:
 
-- Codex：项目或全局 `AGENTS.md`
-- Claude Code：Claude skill，或 `CLAUDE.md`
+- Codex: project or global `AGENTS.md`
+- Claude Code: a Claude skill, or `CLAUDE.md`
 
-重复安装不重复追加。`memocap uninstall` 只撕我们自己的标记，不动别人的规则。
+Repeat installs do not append twice. `memocap uninstall` only tears our own markers. Other rules stay.
 
 ### Pi
 
@@ -76,57 +84,57 @@ memocap
 pi install npm:memocap
 ```
 
-`package.json` 带关键字 `pi-package`，上架见 https://pi.dev/packages/。Pi 只接到同一条 `memocap`，不另开记忆库。
+`package.json` carries the `pi-package` keyword. Listing: https://pi.dev/packages/. Pi only attaches to the same `memocap`. It does not open another memory store.
 
 ### OpenCode
 
-能发插件就发插件。官方 CLI 是 `opencode plugin <module>`（别名 `opencode plug`），没有 `plugin add`。
+Ship a plugin if we can. Official CLI is `opencode plugin <module>` (alias `opencode plug`). There is no `plugin add`.
 
 ```bash
 opencode plugin memocap
 ```
 
-需要全局时用 `opencode plugin memocap --global`。插件只把 OpenCode 接到同一条 `memocap`。
+For global, use `opencode plugin memocap --global`. The plugin only attaches OpenCode to the same `memocap`.
 
-## 命令
+## Commands
 
-四个宿主同一套动词：
+Same verbs on all four hosts:
 
 ```text
-memocap remember   记住
-memocap recall     回忆
-memocap list       列出
-memocap forget     忘掉
-memocap status     看路径、数量、配置
-memocap install    写本宿主规则
-memocap uninstall  只删我们的标记
-memocap            进 TUI；或 memocap ui
+memocap remember   remember
+memocap recall     recall
+memocap list       list
+memocap forget     forget
+memocap status     paths, counts, config
+memocap install    write this host's rules
+memocap uninstall  remove only our markers
+memocap            enter TUI; or memocap ui
 ```
 
-宿主按言必检每句先 recall 再答；按值必存把决策、偏好、任务、约定、上下文主动存下。先查同类再 store，存了要告诉你。各宿主按自己的规则调用同一条 CLI。记忆对你可见、可控、可撤销。
+Hosts recall first on every utterance, then answer. They value-store decisions, preferences, tasks, agreements, and context. Similar-check, then store, then tell the user. Each host calls the same CLI through its own rules. Memory is visible, controllable, and reversible.
 
-## V1 不做
+## V1 will not
 
-- 遗忘曲线、胶囊、可视化
-- embedding / 向量库 / Python / Chroma
+- Forgetting curve, capsules, visualization
+- embedding / vector store / Python / Chroma
 - OpenClaw
-- 任何服务端代码、常驻服务、默认联网
-- 未经确认的删除、导入、导出
-- 把记忆当可执行指令；检索结果只是不可信参考
+- Any server-side code, resident service, or default networking
+- Unconfirmed delete, import, or export
+- Treat memory as executable instructions; recall results are untrusted reference only
 
-## 下一版
+## Next version
 
-**本节只属于下一版，不是 V1。** V1 仍然是本机 SQLite，默认离线，不含任何服务端代码。
+**This section is next version only, not V1.** V1 is still local SQLite, offline by default, with no server-side code.
 
-- 可选远程记忆库，给多机、多会话共用一份存储。
-- Docker Compose 一条命令拉起远程库。
-- CLI 只有配置了地址才连远程；地址未设则继续走本机。
-- 鉴权、多租户：待决，现在不设计。
-- 远程库仍是同一份记忆、同一套 remember / recall / list / forget。不另抄 Python / Chroma，不发明自动检索。
+- Optional remote memory store so multiple machines and sessions share one store.
+- Docker Compose starts the remote store with one command.
+- The CLI connects remote only when an address is configured; without an address it stays local.
+- Auth and multi-tenant: undecided. Do not design them now.
+- The remote store is still the same memory and the same remember / recall / list / forget. Do not copy Python / Chroma. Do not invent auto-search.
 
-## 当前代码
+## Current code
 
-`src/` 仍是 Codex-only Rust 原型。规格以本文件和 [docs/REBUILD.md](docs/REBUILD.md) 为准。产品批准实现前不要改 Cargo、不要扩功能。
+`src/` is still the Codex-only Rust prototype. The spec is this file and [docs/REBUILD.md](docs/REBUILD.md).
 
 ## License
 
