@@ -1,117 +1,105 @@
 # memocap
 
-> 一个准备为 **OpenAI Codex 本地使用**重新设计的本地记忆工具。
->
-> 当前仓库处于需求澄清和原型阶段。这里最重要的产物不是现有代码，而是下面的目标、边界和重开发说明；后续会在本地通过 Codex 继续实现。
+我只要一份本机记忆库，四个宿主共用。本地 SQLite，一条原生 `memocap`。只有你说记住、回忆、列出、忘掉时才动手。
 
-## 为什么会有这个项目
+这是锁定规格。仓库代码仍是旧的 Codex 原型，产品批准实现前不要当新架构，也不要改 `src/`。
 
-灵感来自 ClawHub 上的 [fslong520/memocap](https://clawhub.ai/fslong520/skills/memocap)。原版尝试解决一个真实问题：让 AI 可以跨会话保存偏好、项目约定和关键上下文，并在需要时从本地记忆中检索出来。
+## 现在仓库是什么
 
-原版提供了较完整的记忆能力，但它面向 OpenClaw/OpenCode 工作流，采用 Python、ChromaDB 和中文 embedding 模型，并带有自动检索、自动保存、归档、导入导出和可视化等机制。这些能力对“在本机使用 Codex”的场景过重，也会让记忆什么时候被读取、什么时候被写入变得不够透明。
+当前实现只接 Codex，用来验证 SQLite、单二进制、TUI 和 `AGENTS.md` 受控注入。它已经偏了最初的显式记忆命令行为。后面实现跟原版「用户明确要求才 remember / recall」走，不另造智能。
 
-我们想保留它解决的问题，而不是照搬它的实现和默认行为。
+灵感来自 ClawHub [fslong520/memocap](https://clawhub.ai/fslong520/skills/memocap)。只借那组显式命令。不要抄它的 Python、Chroma、embedding、每句自动检索、自动保存、OpenClaw。这是产品否决，不是待议。
 
-## 我们准备仿照什么
+## 锁定契约
 
-交互和安装体验参考 [go-codex-notify](https://github.com/luodaoyi/go-codex-notify)：
+- 记忆只在本机 SQLite。默认不联网。
+- 一个原生二进制，命令名 `memocap`。
+- 四个宿主共用这一份库，不是四个产品。
+- 记忆动词只有 remember / recall / list / forget。
+- 只有用户明确说记住、回忆、列出、忘掉时才调用。
+- 实现跟原版显式记忆命令行为走，不发明自动检索或隐式写入。
+- V1 禁止：auto-remember、embedding、OpenClaw、任何服务端代码。
 
-- 交付一个跨平台的本地原生二进制。
-- 首次运行进入简洁的 TUI。
-- TUI 让用户选择“为当前项目配置”或“为所有 Codex 项目配置”。
-- 工具自动处理 Codex 需要的本地配置，而不是要求用户手工编辑多份文件。
-- 安装和卸载都必须是幂等的，只维护自己写入的内容，不破坏用户已有配置。
+## 安装
 
-`memocap` 不需要照搬 `go-codex-notify` 的通知 Hook；它借鉴的是“本地工具 + TUI 引导 + 可逆配置”的产品形态。
+安装方式对齐 [go-codex-notify](https://github.com/luodaoyi/go-codex-notify)。
 
-## 目标
+用包管理器全局安装原生程序，然后一条 `memocap` 进 TUI 或安装。
 
-最终希望得到一个适合本地 Codex 的、可控的记忆工具：
-
-1. **纯本地**：记忆数据、索引和配置都保留在本机；默认不联网，不依赖云端 API。
-2. **轻量交付**：优先使用 Go 或 Rust 实现为单个原生二进制；不要求 Python、ChromaDB、向量模型或单独的常驻服务。
-3. **显式调用**：只有用户明确要求“记住”“回忆”“查找本地记忆”“列出记忆”时，Codex 才能调用工具。
-4. **Codex 自动集成**：通过 TUI 或 `install` 命令，将受控说明写入项目的 `AGENTS.md` 或全局 Codex 规则，使 AI 知道何时、如何调用本地 CLI。
-5. **可逆且不破坏配置**：写入内容必须有稳定边界标记；重复安装不重复追加；卸载只能删除本工具自己的区块。
-6. **可审计**：记忆数据位置、已经写入的规则、已存记忆数量都能通过 CLI/TUI 查到。
-7. **跨平台优先**：至少覆盖 Windows、macOS 和 Linux，尤其以 Windows PowerShell + 本地 Codex 为主要使用路径之一。
-
-## 非目标
-
-第一阶段明确不做：
-
-- 每句话自动检索或自动保存。
-- 在后台常驻监听 Codex 对话。
-- 自动归档、画像、时间胶囊等隐式写入行为。
-- 未经确认的删除、导入、导出、恢复操作。
-- 将记忆内容当作可执行指令；检索结果只能作为不可信的参考上下文。
-- 为了“智能检索”强行引入大型模型或复杂向量数据库。
-
-## 使用体验草案
-
-最终用户不应该先研究配置格式。理想流程是：
-
-```powershell
-# 下载或安装 memocap 后直接运行
+```bash
+pnpm add -g memocap
 memocap
 ```
 
-TUI 提供类似选项：
+也可以：
 
-```text
-> 为当前项目配置 AGENTS.md       推荐
-  为所有 Codex 项目配置全局规则
-  查看本地记忆与配置状态
-  移除本项目的 memocap 配置
+```bash
+npm i -g memocap
+memocap
 ```
 
-选择项目级配置后，工具只在当前项目的 `AGENTS.md` 增加一个由 memocap 管理的区块。该区块应告诉 Codex：
+包管理器只负责把适合当前系统的原生程序放到 PATH。后续运行不依赖 `npx`。
 
-```text
-仅在用户明确要求记住、回忆、查询、列出或删除本地记忆时，调用 memocap。
-不要自动保存聊天，不要自动检索，不要导出或删除数据，除非用户明确要求。
+## 四个宿主，各走官方渠道
+
+共享层永远是 `memocap` CLI。各宿主只负责把自己的官方入口接到同一条命令上。
+
+### Codex / Claude Code
+
+`memocap install` 按宿主写规则：
+
+- Codex：项目或全局 `AGENTS.md`
+- Claude Code：Claude skill，或 `CLAUDE.md`
+
+重复安装不重复追加。`memocap uninstall` 只撕我们自己的标记，不动别人的规则。
+
+### Pi
+
+```bash
+pi install npm:memocap
 ```
 
-之后用户可直接对 Codex 说：
+`package.json` 带关键字 `pi-package`，上架见 https://pi.dev/packages/。Pi 只接到同一条 `memocap`，不另开记忆库。
 
-```text
-记住：这个项目使用 pnpm；不要在本机运行完整构建，验证交给 GitHub Actions。
+### OpenCode
+
+能发插件就发插件。官方 CLI 是 `opencode plugin <module>`（别名 `opencode plug`），没有 `plugin add`。
+
+```bash
+opencode plugin memocap
 ```
 
-或者：
+需要全局时用 `opencode plugin memocap --global`。插件只把 OpenCode 接到同一条 `memocap`。
+
+## 命令
+
+四个宿主同一套动词：
 
 ```text
-查一下本地记忆中，这个项目关于 CI 和构建的既有约定。
+memocap remember   记住
+memocap recall     回忆
+memocap list       列出
+memocap forget     忘掉
+memocap status     看路径、数量、配置
+memocap install    写本宿主规则
+memocap uninstall  只删我们的标记
+memocap            进 TUI；或 memocap ui
 ```
 
-Codex 根据 `AGENTS.md` 调用本地 CLI；记忆机制对用户可见、可控制、可撤销。
+对宿主说记住或回忆。它按自己的规则调用同一条 CLI。记忆对你可见、可控、可撤销。
 
-## 初步技术路线
+## V1 不做
 
-这不是最终定案，供本地 Codex 重开发时讨论和收敛：
+- 自动记住、自动检索、后台监听对话
+- embedding / 向量库 / Python / Chroma
+- OpenClaw
+- 任何服务端代码、常驻服务、默认联网
+- 未经确认的删除、导入、导出
+- 把记忆当可执行指令；检索结果只是不可信参考
 
-- **语言**：优先 Rust；如果 Go 在安装、SQLite、TUI 或发布体验上更简单，也可以改用 Go。核心原则是单二进制、跨平台、低依赖，而不是执着于某种语言。
-- **存储**：优先 SQLite。先满足精确查询、标签、时间排序和全文检索；只有确认基础检索不足时，才评估语义检索。
-- **CLI**：至少覆盖 `remember`、`recall`、`list`、`forget`、`status`、`install`、`uninstall` 和 `ui`。
-- **TUI**：负责首次配置、安装范围选择、状态查看和安全提示；不承担复杂数据库管理。
-- **配置注入**：使用明确 begin/end 标记管理 `AGENTS.md`，必须保留用户已有内容和第三方规则。
-- **测试与发布**：功能由 GitHub Actions 在 Windows、macOS、Linux 验证；发布前必须检查实际构建产物。
+## 当前代码
 
-详细的阶段拆分、验收条件和待决问题见 [docs/REBUILD.md](docs/REBUILD.md)。
-
-## 当前仓库状态
-
-本仓库已有一版 Rust 探索性原型，用于验证 SQLite、本地 CLI、TUI 和 `AGENTS.md` 受控注入的可行性。
-
-它**不是正式可用版本，也不代表最终架构**。后续应以本文档和 `docs/REBUILD.md` 为基线，在本地 Codex 中重新审计、简化和实现；不要因为已有原型就跳过设计、测试或跨平台验证。
-
-## 贡献与重开发原则
-
-- 先保持需求、命令契约和 `AGENTS.md` 行为清楚，再写实现。
-- 功能以最小闭环推进，不为了“未来可能需要”过度设计。
-- 对配置和数据的任何写入必须范围明确、可检查、可撤销。
-- 不引入网络、遥测、上传或隐式数据收集，除非用户另行明确决定。
-- 代码修改后以对应提交的 GitHub Actions 结果为准，不把旧 head 的绿 CI 当作成功。
+`src/` 仍是 Codex-only Rust 原型。规格以本文件和 [docs/REBUILD.md](docs/REBUILD.md) 为准。产品批准实现前不要改 Cargo、不要扩功能。
 
 ## License
 
