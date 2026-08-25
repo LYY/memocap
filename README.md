@@ -39,7 +39,7 @@ Port 8787. Data stays in the Compose volume. Without a token the stack will not 
     export MEMOCAP_ADDR=http://127.0.0.1:8787
     memocap remember "ship friday"
 
-Other machines use the same token and set `MEMOCAP_ADDR` to `http://<server>:8787`.
+Other machines use the same token and set `MEMOCAP_ADDR` to `http://server:8787`.
 
 If MEMOCAP_ADDR is unset, the CLI stays local and does not use the network.
 
