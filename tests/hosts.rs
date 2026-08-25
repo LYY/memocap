@@ -7,11 +7,22 @@ fn four_hosts_exist() {
 }
 
 #[test]
-fn plugin_uses_cli_not_a_second_store() {
+fn plugin_uses_official_default_export() {
     let plugin = include_str!("../plugin/index.js");
-    assert!(plugin.contains("memocap"));
+    assert!(plugin.contains("server: memocap"));
+    assert!(plugin.contains("id: \"memocap\""));
+    assert!(!plugin.contains("export default async function"));
+    assert!(!plugin.contains("export { run, RULES }"));
     assert!(!plugin.contains("better-sqlite"));
     assert!(!plugin.to_lowercase().contains("chroma"));
+}
+
+#[test]
+fn plugin_sidecar_uses_cli_not_a_second_store() {
+    let sidecar = include_str!("../plugin/cli.js");
+    assert!(sidecar.contains("spawnSync"));
+    assert!(sidecar.contains("memocap"));
+    assert!(!sidecar.contains("better-sqlite"));
 }
 
 #[test]
