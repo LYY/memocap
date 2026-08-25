@@ -29,12 +29,17 @@ remember / recall / list / forget
 
 服务器（同一份库，需要 token）：
 
+    git clone https://github.com/luodaoyi/memocap
+    cd memocap
     export MEMOCAP_TOKEN=replace-me
     docker compose up -d
+
+端口 8787。数据在 Compose volume 里。不设 token 起不来。
+
     export MEMOCAP_ADDR=http://127.0.0.1:8787
     memocap remember "ship friday"
 
-别的电脑用同一个 token，把 `MEMOCAP_ADDR` 换成那台服务器的地址，不要写 `127.0.0.1`。
+别的电脑用同一个 token，把 `MEMOCAP_ADDR` 设成 `http://<服务器>:8787`。
 
 未设置 MEMOCAP_ADDR 时，CLI 只走本机，不使用网络。
 
