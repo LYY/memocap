@@ -4,6 +4,16 @@
 
 这是锁定规格。仓库代码仍是旧的 Codex 原型，产品批准实现前不要当新架构，也不要改 `src/`。
 
+## 做法
+
+别人在自动记你的会话；我们只在你说记住的时候记，并且同一份库能装进 Codex、Claude Code、Pi、OpenCode。
+
+- 开口才记：你说记住或回忆才动手，不自动抓会话，不每轮注入。
+- 一份记忆库，四端官方渠道。Codex / Claude Code 一条命令写规则；Pi 上 [pi.dev](https://pi.dev/packages/)；OpenCode 能发插件就走官方插件。不是四个产品。
+- 本机 SQLite 单二进制，默认不联网。没有 worker、没有 Chroma、没有 embedding、没有云账号。
+- 命令只有 remember / recall / list / forget。
+- 下一版才可选 Docker Compose 远程库。没配地址继续本地。
+
 ## 现在仓库是什么
 
 当前实现只接 Codex，用来验证 SQLite、单二进制、TUI 和 `AGENTS.md` 受控注入。它已经偏了最初的显式记忆命令行为。后面实现跟原版「用户明确要求才 remember / recall」走，不另造智能。
