@@ -39,7 +39,7 @@ pub fn run() -> Result<()> {
 
 fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
     let mut selected = 0;
-    let mut message = "选择安装范围后按 Enter。memocap 不会自动保存对话。".to_owned();
+    let mut message = "Recall-first, then answer. Value-store decisions, preferences, tasks, agreements, and context.".to_owned();
     loop {
         terminal.draw(|frame| render(frame, selected, &message))?;
         if !event::poll(Duration::from_millis(250))? {
@@ -113,7 +113,7 @@ fn render(frame: &mut ratatui::Frame, selected: usize, message: &str) {
                     .fg(Color::Cyan)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw("  本地 Codex 记忆配置"),
+            Span::raw("  local memory for four hosts"),
         ]))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL)),

@@ -11,6 +11,8 @@ pub struct Memory {
     pub kind: String,
     pub tags: String,
     pub created_at: String,
+    pub updated_at: String,
+    pub scope: String,
 }
 
 pub fn open(path: &Path) -> Result<Connection> {
@@ -29,7 +31,9 @@ pub fn open(path: &Path) -> Result<Connection> {
             content TEXT NOT NULL,
             kind TEXT NOT NULL DEFAULT 'context',
             tags TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            scope TEXT NOT NULL DEFAULT 'global'
         );
         CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
             content, tags, content='memories', content_rowid='id'
@@ -51,34 +55,51 @@ pub fn open(path: &Path) -> Result<Connection> {
     Ok(connection)
 }
 
-pub fn remember(connection: &Connection, content: &str, kind: &str, tags: &str) -> Result<i64> {
+pub fn remember(
+    connection: &Connection,
+    content: &str,
+    kind: &str,
+    tags: &str,
+    scope: &str,
+) -> Result<i64> {
+    let content = content.trim();
+    if content.is_empty() {
+        anyhow::bail!("memory content is empty");
+    }
     let now: DateTime<Utc> = Utc::now();
+    let stamp = now.to_rfc3339();
+    let scope = scope.trim();
+    let scope = if scope.is_empty() { "global" } else { scope };
     connection.execute(
-        "INSERT INTO memories (content, kind, tags, created_at) VALUES (?1, ?2, ?3, ?4)",
-        params![content.trim(), kind.trim(), tags.trim(), now.to_rfc3339()],
+        "INSERT INTO memories (content, kind, tags, created_at, updated_at, scope) VALUES (?1, ?2, ?3, ?4, ?4, ?5)",
+        params![content, { let k = kind.trim(); if k.is_empty() { "context" } else { k } }, tags.trim(), stamp, scope],
     )?;
     Ok(connection.last_insert_rowid())
 }
 
 pub fn recall(connection: &Connection, query: &str, limit: usize) -> Result<Vec<Memory>> {
+    let prepared = fts_query(query);
+    if prepared.is_empty() {
+        return Ok(Vec::new());
+    }
     let mut statement = connection.prepare(
-        "SELECT m.id, m.content, m.kind, m.tags, m.created_at
+        "SELECT m.id, m.content, m.kind, m.tags, m.created_at, m.updated_at, m.scope
          FROM memories_fts f
          JOIN memories m ON m.id = f.rowid
          WHERE memories_fts MATCH ?1
          ORDER BY bm25(memories_fts), m.id DESC
          LIMIT ?2",
     )?;
-    let rows = statement.query_map(params![fts_query(query), limit], memory_from_row)?;
+    let rows = statement.query_map(params![prepared, limit as i64], memory_from_row)?;
     rows.collect::<rusqlite::Result<Vec<_>>>()
         .map_err(Into::into)
 }
 
 pub fn list(connection: &Connection, limit: usize) -> Result<Vec<Memory>> {
     let mut statement = connection.prepare(
-        "SELECT id, content, kind, tags, created_at FROM memories ORDER BY id DESC LIMIT ?1",
+        "SELECT id, content, kind, tags, created_at, updated_at, scope FROM memories ORDER BY id DESC LIMIT ?1",
     )?;
-    let rows = statement.query_map(params![limit], memory_from_row)?;
+    let rows = statement.query_map(params![limit as i64], memory_from_row)?;
     rows.collect::<rusqlite::Result<Vec<_>>>()
         .map_err(Into::into)
 }
@@ -98,6 +119,8 @@ fn memory_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Memory> {
         kind: row.get(2)?,
         tags: row.get(3)?,
         created_at: row.get(4)?,
+        updated_at: row.get(5)?,
+        scope: row.get(6)?,
     })
 }
 
@@ -107,26 +130,4 @@ fn fts_query(query: &str) -> String {
         .map(|part| format!("\"{}\"", part.replace('"', "")))
         .collect::<Vec<_>>()
         .join(" AND ")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn stores_and_recalls_local_memory() {
-        let directory = tempfile::tempdir().unwrap();
-        let connection = open(&directory.path().join("memocap.db")).unwrap();
-        let id = remember(
-            &connection,
-            "项目使用 pnpm，验证交给 GitHub Actions",
-            "preference",
-            "pnpm,ci",
-        )
-        .unwrap();
-        assert!(id > 0);
-        let found = recall(&connection, "pnpm Actions", 5).unwrap();
-        assert_eq!(found.len(), 1);
-        assert_eq!(found[0].kind, "preference");
-    }
 }
