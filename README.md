@@ -29,12 +29,17 @@ Local SQLite (default, no network):
 
 Server (same store, token required):
 
+    git clone https://github.com/luodaoyi/memocap
+    cd memocap
     export MEMOCAP_TOKEN=replace-me
     docker compose up -d
+
+Port 8787. Data stays in the Compose volume. Without a token the stack will not start.
+
     export MEMOCAP_ADDR=http://127.0.0.1:8787
     memocap remember "ship friday"
 
-Other machines use the same token and set `MEMOCAP_ADDR` to that server address, not `127.0.0.1`.
+Other machines use the same token and set `MEMOCAP_ADDR` to `http://server:8787`.
 
 If MEMOCAP_ADDR is unset, the CLI stays local and does not use the network.
 
