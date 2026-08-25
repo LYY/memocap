@@ -28,4 +28,3 @@ fn pi_skills_point_at_skill_md_dir() {
     let pkg = include_str!("../package.json");
     assert!(pkg.contains("./skills/memocap"));
 }
-
