@@ -4,6 +4,7 @@
 
 ## 本轮锁定
 
+- 「开口才记」作废。
 - 言必检：每句话先 recall 再答。
 - 值必存：有决策、偏好、任务、约定、上下文就主动存。先查同类再 store，存了要告诉你。卡住先翻记忆。
 - 四端安装：`pnpm add -g memocap` 或 `npm i -g memocap`，然后一条 `memocap`。 Codex / Claude Code 用 `memocap install` 写规则； Pi：`pi install npm:memocap`； OpenCode 能 plugin add 就走官方插件。
