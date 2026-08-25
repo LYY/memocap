@@ -2,6 +2,13 @@
 
 这是锁定规格。先读 [README](../README.md)。产品批准实现前不要动 `src/`、Cargo。当前代码仍是旧的 Codex 原型。
 
+## 本轮锁定
+
+- 四端安装：`pnpm add -g memocap` 或 `npm i -g memocap`，然后一条 `memocap`。 Codex / Claude Code 用 `memocap install` 写规则； Pi：`pi install npm:memocap`； OpenCode 能 plugin add 就走官方插件。
+- V1 禁止任何服务端代码。本机 SQLite，默认不联网。
+- Docker Compose 远程库只属于下一版。没配地址继续本地。现在不要实现。
+- 鉴权、多租户：待决，现在不设计。
+
 ## 背景
 
 - 灵感：ClawHub [fslong520/memocap](https://clawhub.ai/fslong520/skills/memocap)。只借显式 remember / recall / list / forget 行为。
