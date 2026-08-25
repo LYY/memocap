@@ -34,6 +34,8 @@ Server (same store, token required):
     export MEMOCAP_ADDR=http://127.0.0.1:8787
     memocap remember "ship friday"
 
+Other machines use the same token and set `MEMOCAP_ADDR` to that server address, not `127.0.0.1`.
+
 If MEMOCAP_ADDR is unset, the CLI stays local and does not use the network.
 
 ## Compare
