@@ -8,7 +8,7 @@ Timing: recall first on every utterance, then answer. For a decision, preference
 
 Do not copy forgetting curve, capsules, visualization, or Chroma.
 
-Install: `pnpm add -g memocap` then `memocap`; Pi `pi install npm:memocap`; OpenCode `opencode plugin memocap`.
+Install: pnpm add -g memocap then `memocap`; Pi `pi install npm:memocap`; OpenCode `opencode plugin memocap`
 
 v1 is local and offline by default. A Compose remote store is next version.
 
@@ -101,14 +101,14 @@ For global, use `opencode plugin memocap --global`. The plugin only attaches Ope
 Same verbs on all four hosts:
 
 ```text
-memocap remember   remember
-memocap recall     recall
-memocap list       list
-memocap forget     forget
-memocap status     paths, counts, config
-memocap install    write this host's rules
-memocap uninstall  remove only our markers
-memocap            enter TUI; or memocap ui
+memocap remember   记住
+memocap recall     回忆
+memocap list       列出
+memocap forget     忘掉
+memocap status     看路径、数量、配置
+memocap install    写本宿主规则
+memocap uninstall  只删我们的标记
+memocap            进 TUI；或 memocap ui
 ```
 
 Hosts recall first on every utterance, then answer. They value-store decisions, preferences, tasks, agreements, and context. Similar-check, then store, then tell the user. Each host calls the same CLI through its own rules. Memory is visible, controllable, and reversible.

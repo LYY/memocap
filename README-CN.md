@@ -6,7 +6,7 @@
 
 时机跟原版走：每句话先 recall 再答；有决策、偏好、任务、约定、上下文就主动存；先查有没有同类再 store，存了要告诉你。卡住也先翻记忆。
 
-这是锁定规格。`src/` 仍是 Codex-only 原型；规格以本文件和 [docs/REBUILD.md](docs/REBUILD.md) 为准。
+这是锁定规格。仓库代码仍是旧的 Codex 原型，产品批准实现前不要当新架构，也不要改 `src/`。
 
 ## 做法
 
@@ -128,7 +128,7 @@ memocap            进 TUI；或 memocap ui
 
 ## 当前代码
 
-`src/` 仍是 Codex-only Rust 原型。规格以本文件和 [docs/REBUILD.md](docs/REBUILD.md) 为准。
+`src/` 仍是 Codex-only Rust 原型。规格以本文件和 [docs/REBUILD.md](docs/REBUILD.md) 为准。产品批准实现前不要改 Cargo、不要扩功能。
 
 ## License
 
