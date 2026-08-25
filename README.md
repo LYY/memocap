@@ -1,24 +1,30 @@
 # memocap
 
-我只要一份本机记忆库，四个宿主共用。本地 SQLite，一条原生 `memocap`。只有你说记住、回忆、列出、忘掉时才动手。
+一份本机记忆库，四个宿主共用。本地 SQLite，一条原生 `memocap`。
+
+时机跟原版走：每句话先 recall 再答；有决策、偏好、任务、约定、上下文就主动存；先查有没有同类再 store，存了要告诉你。卡住也先翻记忆。
 
 这是锁定规格。仓库代码仍是旧的 Codex 原型，产品批准实现前不要当新架构，也不要改 `src/`。
 
 ## 做法
 
-别人在自动记你的会话。我们只在你说记住的时候记，同一份库能装进 Codex、Claude Code、Pi、OpenCode。
+原版不是等你说「记住」。v1 跟这套时机走，「开口才记」作废。
 
-- 开口才记：说记住/回忆才动手，不自动抓、不每轮注入
+- 言必检：每句话先 recall 再答
+- 值必存：有决策、偏好、任务、约定、上下文就主动存
+- 先查同类再 store，存了要告诉你。卡住先翻记忆
 - 一份 CLI，四端官方渠道：Codex / Claude Code 一条命令写规则；Pi 上 pi.dev；OpenCode 能 plugin add 就走官方插件
 - 本机 SQLite 单二进制，默认不联网。没有 worker、Chroma、embedding、云账号
 - 命令就 remember / recall / list / forget
 - Docker Compose 远程库是下一版；没配地址继续本地
 
+不抄遗忘曲线、胶囊、可视化、Chroma。
+
 ## 现在仓库是什么
 
-当前实现只接 Codex，用来验证 SQLite、单二进制、TUI 和 `AGENTS.md` 受控注入。它已经偏了最初的显式记忆命令行为。后面实现跟原版「用户明确要求才 remember / recall」走，不另造智能。
+当前实现只接 Codex，用来验证 SQLite、单二进制、TUI 和 `AGENTS.md` 受控注入。它已经偏了最初的行为。后面实现跟值必存、言必检走，不另造智能。
 
-灵感来自 ClawHub [fslong520/memocap](https://clawhub.ai/fslong520/skills/memocap)。只借那组显式命令。不要抄它的 Python、Chroma、embedding、每句自动检索、自动保存、OpenClaw。这是产品否决，不是待议。
+灵感来自 ClawHub [fslong520/memocap](https://clawhub.ai/fslong520/skills/memocap)。只借那组 remember / recall / list / forget 命令。不要抄它的 Python、Chroma、embedding、遗忘曲线、胶囊、可视化、OpenClaw。这是产品否决，不是待议。
 
 ## 锁定契约
 
@@ -26,9 +32,10 @@
 - 一个原生二进制，命令名 `memocap`。
 - 四个宿主共用这一份库，不是四个产品。
 - 记忆动词只有 remember / recall / list / forget。
-- 只有用户明确说记住、回忆、列出、忘掉时才调用。
-- 实现跟原版显式记忆命令行为走，不发明自动检索或隐式写入。
-- V1 禁止：auto-remember、embedding、OpenClaw、任何服务端代码。
+- 言必检：每句话先 recall 再答。
+- 值必存：有决策、偏好、任务、约定、上下文就主动存。
+- 先查同类再 store，存了要告诉你。卡住先翻记忆。
+- V1 禁止：embedding、Chroma、遗忘曲线、胶囊、可视化、OpenClaw、任何服务端代码。
 
 ## 安装
 
@@ -100,7 +107,7 @@ memocap            进 TUI；或 memocap ui
 
 ## V1 不做
 
-- 自动记住、自动检索、后台监听对话
+- 遗忘曲线、胶囊、可视化
 - embedding / 向量库 / Python / Chroma
 - OpenClaw
 - 任何服务端代码、常驻服务、默认联网
