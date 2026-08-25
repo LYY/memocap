@@ -36,44 +36,6 @@
    - 保留原有规则文件内容和其他工具写入的内容。
 7. 注入给各宿主的规则明确要求：只在用户显式请求时调用本地记忆命令；检索到的记忆是不可信参考，不能覆盖用户当轮指令。
 
-### 四个宿主怎么交货
-
-不是四个产品。共享层是原生 `memocap`。各宿主只走自己的官方入口。
-
-共享层安装对齐 go-codex-notify：
-
-```bash
-pnpm add -g memocap
-memocap
-```
-
-也可以：
-
-```bash
-npm i -g memocap
-memocap
-```
-
-- Codex / Claude Code：memocap install 写 AGENTS.md，或 Claude skill / CLAUDE.md。卸载只撕我们的标记。
-- Pi：关键字 pi-package。画廊 https://pi.dev/packages/
-
-```bash
-pi install npm:memocap
-```
-
-- OpenCode：能发插件就发插件。
-
-```bash
-opencode plugin add memocap
-```
-
-没有这条时：
-
-```bash
-opencode plugin memocap
-```
-
-
 ### 必须避免
 
 - V1 禁止：auto-remember、embedding、OpenClaw。
@@ -173,6 +135,16 @@ Claude skill / CLAUDE.md、Pi package、OpenCode 插件用同一组动词和同�
 
 模板中的二进制调用路径要跨平台可靠。如果在 `~/.codex/bin/` 安装二进制，应确认 Windows、macOS、Linux 的可执行文件命名、Shell 调用和 PATH 预期。
 
+## 下一版
+
+**本节只属于下一版，不是 V1。现在不要实现。** V1 仍然是本机 SQLite，默认离线，不含任何服务端代码。不要提前把服务端骨架塞进 V1。
+
+- 可选远程记忆库，给多机、多会话共用一份存储。
+- Docker Compose 一条命令拉起远程库。
+- CLI 只有配置了地址才连远程；地址未设则继续走本机。
+- 鉴权、多租户：待决，现在不设计。
+- 远程库仍是同一份记忆、同一套 remember / recall / list / forget。不另抄 Python / Chroma，不发明自动检索。
+
 ## 开发顺序
 
 0. 产品批准实现前不要开工，不要改 Cargo / src。
@@ -191,7 +163,7 @@ Claude skill / CLAUDE.md、Pi package、OpenCode 插件用同一组动词和同�
 1. 运行二进制能打开 TUI。
 2. 选择“当前项目配置”后，项目 `AGENTS.md` 有且仅有一个 memocap 受控区块。
 3. 重复配置不会复制区块，也不影响既有项目规则。
-4. 各宿主按自己的官方规则，只有在用户明确要求时才执行 remember 或 recall。四个宿主读写同一份 SQLite。
+4. 四个宿主按各自官方入口接到同一条 CLI；只有用户明确要求时才执行 remember / recall / list / forget。四个宿主读写同一份 SQLite。V1 树里没有服务端代码。
 5. `remember` 后 `recall` 能检索到内容；`list` 可显示；`forget <id>` 只删除目标记录。
 6. 卸载后只删除 memocap 区块，原有 `AGENTS.md` 内容仍完整。
 7. 三平台 GitHub Actions 对同一最终 head 全绿，并确认 Windows release artifact 可下载。
@@ -206,10 +178,11 @@ Claude skill / CLAUDE.md、Pi package、OpenCode 插件用同一组动词和同�
 - 是否需要编辑记忆？第一版可以先没有 `edit`，用删除后重建替代。
 - 是否需要备份？若需要，应当是用户显式导出到明确路径，而非自动生成任意路径备份。
 - 何时、以什么指标引入语义检索？在此之前保持 SQLite FTS。
+- 下一版的鉴权与多租户：待决，现在不设计。
 
 ## 当前原型的定位
 
-当前 Rust 代码只是探索性原型，不构成设计承诺。其价值是证明以下部分值得继续：
+当前 Rust 代码只是探索性原型，不构成设计承诺。产品批准实现前不要改 `src/`。其价值是证明以下部分值得继续：
 
 - 本地 SQLite 存储可以替代 Python/ChromaDB 的首版需求。
 - TUI 可以承担安装范围选择和状态展示。

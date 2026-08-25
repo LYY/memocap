@@ -97,6 +97,16 @@ memocap            进 TUI；或 memocap ui
 - 未经确认的删除、导入、导出
 - 把记忆当可执行指令；检索结果只是不可信参考
 
+## 下一版
+
+**本节只属于下一版，不是 V1。** V1 仍然是本机 SQLite，默认离线，不含任何服务端代码。
+
+- 可选远程记忆库，给多机、多会话共用一份存储。
+- Docker Compose 一条命令拉起远程库。
+- CLI 只有配置了地址才连远程；地址未设则继续走本机。
+- 鉴权、多租户：待决，现在不设计。
+- 远程库仍是同一份记忆、同一套 remember / recall / list / forget。不另抄 Python / Chroma，不发明自动检索。
+
 ## 当前代码
 
 `src/` 仍是 Codex-only Rust 原型。规格以本文件和 [docs/REBUILD.md](docs/REBUILD.md) 为准。产品批准实现前不要改 Cargo、不要扩功能。
