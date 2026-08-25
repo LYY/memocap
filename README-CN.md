@@ -34,6 +34,8 @@ remember / recall / list / forget
     export MEMOCAP_ADDR=http://127.0.0.1:8787
     memocap remember "ship friday"
 
+别的电脑用同一个 token，把 `MEMOCAP_ADDR` 换成那台服务器的地址，不要写 `127.0.0.1`。
+
 未设置 MEMOCAP_ADDR 时，CLI 只走本机，不使用网络。
 
 ## 对照
