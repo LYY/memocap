@@ -56,3 +56,10 @@ fn bin_launcher_downloads_release_assets() {
     assert!(!launcher.contains("better-sqlite"));
     assert!(!launcher.to_lowercase().contains("chroma"));
 }
+
+#[test]
+fn dockerfile_rust_compiles_edition2024() {
+    let docker = include_str!("../Dockerfile");
+    assert!(docker.contains("FROM rust:1.85-bookworm AS build"));
+    assert!(!docker.contains("rust:1.83"));
+}
