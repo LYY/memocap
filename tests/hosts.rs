@@ -22,3 +22,10 @@ fn skill_uses_cli_not_a_second_store() {
     assert!(skill.contains("言必检"));
     assert!(skill.contains("值必存"));
 }
+
+#[test]
+fn pi_skills_point_at_skill_md_dir() {
+    let pkg = include_str!("../package.json");
+    assert!(pkg.contains("./skills/memocap"));
+}
+

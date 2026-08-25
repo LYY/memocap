@@ -17,7 +17,7 @@
   },
   "pi": {
     "skills": [
-      "./skills"
+      "./skills/memocap"
     ]
   },
   "files": [
