@@ -28,14 +28,41 @@ jobs:
           TAG="${TAG#refs/tags/}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - name: Ensure GitHub Release
+        id: ensure_release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ steps.meta.outputs.tag }}"
           if gh release view "$TAG" --repo "${{ github.repository }}"; then
             echo "release $TAG exists"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           else
-            gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --notes "memocap $TAG"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        if: steps.ensure_release.outputs.exists != 'true'
+        with:
+          persist-credentials: false
+          ref: ${{ steps.meta.outputs.tag }}
+      - name: Create GitHub Release
+        if: steps.ensure_release.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          VER="${TAG#v}"
+          NOTES_FILE="$(mktemp)"
+          if [ -f CHANGELOG.md ]; then
+            awk -v ver="$VER" '
+              $0 ~ "^## " ver "( |$)" {found=1; next}
+              found && /^## / {exit}
+              found {print}
+            ' CHANGELOG.md > "$NOTES_FILE"
+          fi
+          if grep -q '[^[:space:]]' "$NOTES_FILE" 2>/dev/null; then
+            gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --notes-file "$NOTES_FILE"
+          else
+            gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --generate-notes
           fi
 
   binaries:
