@@ -2,6 +2,8 @@
 
 # memocap
 
+YiShi (忆时) memory — human-like retrieval, storage, forgetting, capsules, and visualization. Gives AI memory that forgets, associates, emerges, and can be sealed. Triggers: 忆时, 记忆, 记住, 回想, 回忆, recall, remember, 时间胶囊, 记忆检索, 可视化, 记忆脑图, 人物画像.
+
 One SQLite. Four hosts, one `memocap`. Recall first every turn; store decisions / prefs / tasks / agreements after a similar-check.
 
 ## Install
