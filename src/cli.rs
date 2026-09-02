@@ -4,12 +4,33 @@ use anyhow::Result;
 
 use crate::store::{self, Memory};
 
-pub fn remember(database: &Path, content: &str, kind: &str, tags: &str) -> Result<i64> {
-    store::remember(&store::open(database)?, content, kind, tags, "global")
+pub fn remember(
+    database: &Path,
+    content: &str,
+    kind: &str,
+    tags: &str,
+    force: bool,
+    overwrite_id: Option<i64>,
+) -> Result<i64> {
+    store::remember(
+        &store::open(database)?,
+        content,
+        kind,
+        tags,
+        "global",
+        force,
+        overwrite_id,
+    )
 }
 
-pub fn recall(database: &Path, query: &str, limit: usize) -> Result<Vec<Memory>> {
-    store::recall(&store::open(database)?, query, limit)
+pub fn recall(
+    database: &Path,
+    query: &str,
+    limit: usize,
+    kind: Option<&str>,
+    max_chars: Option<usize>,
+) -> Result<Vec<Memory>> {
+    store::recall(&store::open(database)?, query, limit, kind, max_chars)
 }
 
 pub fn list(database: &Path, limit: usize) -> Result<Vec<Memory>> {

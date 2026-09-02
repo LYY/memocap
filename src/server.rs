@@ -30,6 +30,10 @@ struct RememberIn {
     r#type: String,
     #[serde(default)]
     tags: String,
+    #[serde(default)]
+    force: bool,
+    #[serde(default)]
+    id: Option<i64>,
 }
 
 fn default_kind() -> String {
@@ -107,8 +111,10 @@ pub fn handle(connection: &Connection, expected_token: &str, req: &Incoming) -> 
             let query = query_param(&req.query, "q").unwrap_or_default();
             let limit = query_param(&req.query, "limit")
                 .and_then(|v| v.parse().ok())
-                .unwrap_or(5);
-            match store::recall(connection, &query, limit) {
+                .unwrap_or(store::DEFAULT_RECALL_LIMIT);
+            let kind = query_param(&req.query, "type");
+            let max_chars = query_param(&req.query, "max_chars").and_then(|v| v.parse().ok());
+            match store::recall(connection, &query, limit, kind.as_deref(), max_chars) {
                 Ok(memories) => json(200, serde_json::json!({"memories": memories})),
                 Err(error) => json(500, serde_json::json!({"error": error.to_string()})),
             }
@@ -142,9 +148,23 @@ fn remember(connection: &Connection, body: &str) -> Outgoing {
         &parsed.r#type,
         &parsed.tags,
         "global",
+        parsed.force,
+        parsed.id,
     ) {
         Ok(id) => json(200, serde_json::json!({"id": id})),
-        Err(error) => json(400, serde_json::json!({"error": error.to_string()})),
+        Err(error) => {
+            if let Some(similar) = error.downcast_ref::<store::SimilarMemories>() {
+                json(
+                    409,
+                    serde_json::json!({
+                        "error": "similar memories found; pass force to insert anyway",
+                        "candidates": similar.candidates
+                    }),
+                )
+            } else {
+                json(400, serde_json::json!({"error": error.to_string()}))
+            }
+        }
     }
 }
 
@@ -279,7 +299,84 @@ mod tests {
         let response = handle(&connection, "secret", &req(Some("secret")));
         assert_eq!(response.status, 200);
         assert_eq!(store::count(&connection).unwrap(), 1);
-        let found = store::recall(&connection, "alpha", 5).unwrap();
+        let found = store::recall(&connection, "alpha", 5, None, None).unwrap();
         assert_eq!(found.len(), 1);
+    }
+
+    #[test]
+    fn remember_similar_requires_force() {
+        let dir = tempfile::tempdir().unwrap();
+        let connection = store::open(&dir.path().join("db")).unwrap();
+        let first = handle(&connection, "secret", &req(Some("secret")));
+        assert_eq!(first.status, 200);
+        assert_eq!(store::count(&connection).unwrap(), 1);
+        let again = handle(&connection, "secret", &req(Some("secret")));
+        assert_eq!(again.status, 409);
+        assert!(again.body.contains("similar memories found"));
+        assert!(again.body.contains("alpha"));
+        assert_eq!(store::count(&connection).unwrap(), 1);
+        let mut forced = req(Some("secret"));
+        forced.body = r#"{"content":"alpha","type":"note","tags":"","force":true}"#.to_owned();
+        let forced = handle(&connection, "secret", &forced);
+        assert_eq!(forced.status, 200);
+        assert_eq!(store::count(&connection).unwrap(), 2);
+    }
+
+    #[test]
+    fn recall_default_limit_and_type_filter() {
+        let dir = tempfile::tempdir().unwrap();
+        let connection = store::open(&dir.path().join("db")).unwrap();
+        for _ in 0..5 {
+            store::remember(
+                &connection,
+                "shared token",
+                "note",
+                "",
+                "global",
+                true,
+                None,
+            )
+            .unwrap();
+        }
+        store::remember(
+            &connection,
+            "shared token",
+            "preference",
+            "",
+            "global",
+            true,
+            None,
+        )
+        .unwrap();
+        let response = handle(
+            &connection,
+            "secret",
+            &Incoming {
+                method: "GET".to_owned(),
+                path: "/recall".to_owned(),
+                query: "q=shared+token".to_owned(),
+                token: Some("secret".to_owned()),
+                body: String::new(),
+            },
+        );
+        assert_eq!(response.status, 200);
+        let value: serde_json::Value = serde_json::from_str(&response.body).unwrap();
+        assert_eq!(value["memories"].as_array().unwrap().len(), 3);
+        let response = handle(
+            &connection,
+            "secret",
+            &Incoming {
+                method: "GET".to_owned(),
+                path: "/recall".to_owned(),
+                query: "q=shared+token&type=preference&limit=10".to_owned(),
+                token: Some("secret".to_owned()),
+                body: String::new(),
+            },
+        );
+        assert_eq!(response.status, 200);
+        let value: serde_json::Value = serde_json::from_str(&response.body).unwrap();
+        let memories = value["memories"].as_array().unwrap();
+        assert_eq!(memories.len(), 1);
+        assert_eq!(memories[0]["kind"], "preference");
     }
 }

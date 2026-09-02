@@ -45,24 +45,69 @@ fn send(req: ureq::Request, token: &str, body: Option<serde_json::Value>) -> Res
     }
 }
 
-pub fn remember(address: &str, token: &str, content: &str, kind: &str, tags: &str) -> Result<i64> {
-    let text = send(
-        ureq::post(&format!("{}/remember", base(address))),
-        token,
-        Some(json!({"content": content, "type": kind, "tags": tags})),
-    )?;
-    let reply: RememberReply = serde_json::from_str(&text).context("remember reply")?;
-    Ok(reply.id)
+pub fn remember(
+    address: &str,
+    token: &str,
+    content: &str,
+    kind: &str,
+    tags: &str,
+    force: bool,
+    overwrite_id: Option<i64>,
+) -> Result<i64> {
+    let req = ureq::post(&format!("{}/remember", base(address)))
+        .set("Authorization", &format!("Bearer {token}"));
+    let payload = json!({
+        "content": content,
+        "type": kind,
+        "tags": tags,
+        "force": force,
+        "id": overwrite_id,
+    });
+    match req.send_json(payload) {
+        Ok(resp) => {
+            let text = resp.into_string().context("read body")?;
+            let reply: RememberReply = serde_json::from_str(&text).context("remember reply")?;
+            Ok(reply.id)
+        }
+        Err(ureq::Error::Status(401, _)) => bail!("unauthorized: token rejected"),
+        Err(ureq::Error::Status(409, resp)) => {
+            let text = resp.into_string().unwrap_or_default();
+            #[derive(Deserialize)]
+            struct SimilarReply {
+                candidates: Vec<Memory>,
+            }
+            let reply: SimilarReply = serde_json::from_str(&text).context("similar reply")?;
+            Err(crate::store::SimilarMemories {
+                candidates: reply.candidates,
+            }
+            .into())
+        }
+        Err(ureq::Error::Status(code, resp)) => {
+            let text = resp.into_string().unwrap_or_default();
+            bail!("remote request failed ({code}): {text}")
+        }
+        Err(error) => Err(error.into()),
+    }
 }
 
-pub fn recall(address: &str, token: &str, query: &str, limit: usize) -> Result<Vec<Memory>> {
-    let text = send(
-        ureq::get(&format!("{}/recall", base(address)))
-            .query("q", query)
-            .query("limit", &limit.to_string()),
-        token,
-        None,
-    )?;
+pub fn recall(
+    address: &str,
+    token: &str,
+    query: &str,
+    limit: usize,
+    kind: Option<&str>,
+    max_chars: Option<usize>,
+) -> Result<Vec<Memory>> {
+    let mut req = ureq::get(&format!("{}/recall", base(address)))
+        .query("q", query)
+        .query("limit", &limit.to_string());
+    if let Some(kind) = kind {
+        req = req.query("type", kind);
+    }
+    if let Some(max_chars) = max_chars {
+        req = req.query("max_chars", &max_chars.to_string());
+    }
+    let text = send(req, token, None)?;
     let reply: MemoriesReply = serde_json::from_str(&text).context("recall reply")?;
     Ok(reply.memories)
 }

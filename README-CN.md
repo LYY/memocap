@@ -20,7 +20,7 @@ OpenCode：`opencode plugin memocap`
 
 ## 命令
 
-remember / recall / list / forget
+remember [--force] / recall [--type] [--limit 3] / list / forget
 
 ## 用法
 

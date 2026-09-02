@@ -23,12 +23,22 @@ enum Command {
         r#type: String,
         #[arg(long, default_value = "")]
         tags: String,
+        /// Insert even if similar memories exist.
+        #[arg(long)]
+        force: bool,
+        /// Overwrite an existing memory by id.
+        #[arg(long)]
+        id: Option<i64>,
     },
     /// Search memory using SQLite full-text search.
     Recall {
         query: String,
-        #[arg(long, default_value_t = 5)]
+        #[arg(long, default_value_t = memocap::store::DEFAULT_RECALL_LIMIT)]
         limit: usize,
+        #[arg(long)]
+        r#type: Option<String>,
+        #[arg(long)]
+        max_chars: Option<usize>,
     },
     /// Show newest memories.
     List {
@@ -69,20 +79,32 @@ fn main() -> Result<()> {
             content,
             r#type,
             tags,
+            force,
+            id,
         } => {
             let id = match config::resolve_target()? {
-                Target::Local { database } => cli::remember(&database, &content, &r#type, &tags)?,
+                Target::Local { database } => {
+                    cli::remember(&database, &content, &r#type, &tags, force, id)?
+                }
                 Target::Remote { address, token } => {
-                    remote::remember(&address, &token, &content, &r#type, &tags)?
+                    remote::remember(&address, &token, &content, &r#type, &tags, force, id)?
                 }
             };
             println!("saved #{id}");
         }
-        Command::Recall { query, limit } => {
+        Command::Recall {
+            query,
+            limit,
+            r#type,
+            max_chars,
+        } => {
+            let kind = r#type.as_deref();
             let memories = match config::resolve_target()? {
-                Target::Local { database } => cli::recall(&database, &query, limit)?,
+                Target::Local { database } => {
+                    cli::recall(&database, &query, limit, kind, max_chars)?
+                }
                 Target::Remote { address, token } => {
-                    remote::recall(&address, &token, &query, limit)?
+                    remote::recall(&address, &token, &query, limit, kind, max_chars)?
                 }
             };
             print!("{}", cli::format_memories(&memories));
