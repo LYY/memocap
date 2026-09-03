@@ -21,6 +21,17 @@ fn mutate_registry(workflow: &str, before: &str, after: &str) -> String {
 }
 
 #[test]
+fn release_contract_rejects_release_write_before_initial_read() {
+    let mutated = mutate(
+        RELEASE_WORKFLOW,
+        "release=\"$(read_release)\"\n          if",
+        "gh release edit \"$TAG\" --draft\n          release=\"$(read_release)\"\n          if",
+    );
+
+    assert!(release_contract(&mutated).is_err());
+}
+
+#[test]
 fn release_contract_rejects_critical_workflow_mutations() {
     assert_eq!(release_contract(RELEASE_WORKFLOW), Ok(()));
     for (before, after) in [

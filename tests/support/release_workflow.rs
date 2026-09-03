@@ -1,5 +1,4 @@
 pub const RELEASE_WORKFLOW: &str = include_str!("../../.github/workflows/release.yml");
-
 fn job<'a>(workflow: &'a str, name: &str) -> &'a str {
     let marker = format!("  {name}:\n");
     let (_, remainder) = workflow
@@ -11,7 +10,6 @@ fn job<'a>(workflow: &'a str, name: &str) -> &'a str {
     });
     &remainder[..end.unwrap_or(remainder.len())]
 }
-
 fn step<'a>(section: &'a str, name: &str) -> &'a str {
     let marker = format!("      - name: {name}\n");
     let (_, remainder) = section
@@ -92,6 +90,51 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     }
 
     let reconcile = job(workflow, "release");
+    let initial_read = "release=\"$(read_release)\"";
+    let initial_read_position = reconcile
+        .find(initial_read)
+        .ok_or("missing initial release read")?;
+    let state_machine = &reconcile[initial_read_position..];
+    for command in reconcile
+        .lines()
+        .map(str::trim_start)
+        .filter(|line| line.starts_with("gh release "))
+    {
+        if command.starts_with("gh release download ") {
+            continue;
+        }
+        if ![
+            "gh release create ",
+            "gh release upload ",
+            "gh release edit ",
+        ]
+        .iter()
+        .any(|allowed| command.starts_with(allowed))
+        {
+            return Err(format!("unexpected gh release command: {command}"));
+        }
+    }
+    for write in ["gh release create", "gh release upload", "gh release edit"] {
+        if reconcile.matches(write).count() != 1 {
+            return Err(format!("expected one release write via {write}"));
+        }
+        if reconcile
+            .find(write)
+            .is_some_and(|position| position < initial_read_position)
+        {
+            return Err(format!("release writes before initial read via {write}"));
+        }
+    }
+    before(
+        state_machine,
+        "gh release create",
+        "verify_identity \"$release\"",
+    )?;
+    before(
+        state_machine,
+        "verify_identity \"$release\"",
+        "case \"$state\" in",
+    )?;
     let draft = reconcile
         .split_once("draft)\n")
         .map(|(_, branch)| branch.split(";;").next().unwrap_or(branch))
@@ -109,6 +152,12 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
         }
     }
     before(draft, validation, "gh release upload")?;
+    before(
+        draft,
+        "gh release upload",
+        "verify_known_assets \"$release\"",
+    )?;
+    before(draft, "verify_known_assets \"$release\"", "gh release edit")?;
     let public = reconcile
         .split_once("public)\n")
         .map(|(_, branch)| branch.split(";;").next().unwrap_or(branch))
