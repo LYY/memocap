@@ -65,7 +65,18 @@ fn package_contract_accepts_windows_crlf_checkout() {
 
 #[test]
 fn platform_matrix_runs_node_contracts() {
-    let test = job(CI_WORKFLOW, "test");
+    assert_node_contract(CI_WORKFLOW);
+}
+
+#[test]
+fn platform_matrix_runs_node_contracts_on_crlf_checkout() {
+    let windows_workflow = CI_WORKFLOW.replace('\n', "\r\n");
+
+    assert_node_contract(&windows_workflow);
+}
+
+fn assert_node_contract(workflow: &str) {
+    let test = job(workflow, "test").replace("\r\n", "\n");
 
     assert!(test.contains("os: [ubuntu-latest, macos-latest, windows-latest]"));
     assert!(test.contains("- name: Test Node contracts\n        run: node --test tests/*.test.cjs"));
