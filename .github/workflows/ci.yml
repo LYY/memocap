@@ -30,6 +30,8 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
       - name: Test
         run: cargo test
+      - name: Test Node contracts
+        run: node --test tests/*.test.cjs
 
   release-build:
     name: build (${{ matrix.target }})

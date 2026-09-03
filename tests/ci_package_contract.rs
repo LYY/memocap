@@ -62,3 +62,11 @@ fn package_contract_accepts_windows_crlf_checkout() {
 
     assert_eq!(permissions(package_contract, 4), vec![("contents", "read")]);
 }
+
+#[test]
+fn platform_matrix_runs_node_contracts() {
+    let test = job(CI_WORKFLOW, "test");
+
+    assert!(test.contains("os: [ubuntu-latest, macos-latest, windows-latest]"));
+    assert!(test.contains("- name: Test Node contracts\n        run: node --test tests/*.test.cjs"));
+}
