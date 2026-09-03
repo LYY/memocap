@@ -3,6 +3,10 @@ const CHANGELOG: &str = include_str!("../CHANGELOG.md");
 const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.1";
 const PLUGIN_INSTALL: &str = "opencode plugin @lyy-gh/memocap";
 
+fn with_lf_line_endings(text: &str) -> String {
+    text.replace("\r\n", "\n")
+}
+
 const HISTORICAL_CHANGELOG: &str = r#"## 0.1.3 — 2026-09-02
 
 记住前先查重，召回默认少灌一点。
@@ -57,7 +61,8 @@ fn rebuild_spec_has_no_stale_host_install_claims() {
 
 #[test]
 fn changelog_starts_with_v001_release_contract() {
-    let top_section = CHANGELOG
+    let changelog = with_lf_line_endings(CHANGELOG);
+    let top_section = changelog
         .split_once("## 0.1.3")
         .map(|(section, _)| section)
         .expect("CHANGELOG must retain historical releases");
@@ -71,17 +76,18 @@ fn changelog_starts_with_v001_release_contract() {
 }
 
 #[test]
-fn changelog_preserves_every_byte_from_v013_onward() {
-    let historical_start = CHANGELOG
+fn changelog_preserves_historical_content_from_v013_onward() {
+    let changelog = with_lf_line_endings(CHANGELOG);
+    let historical_start = changelog
         .find("## 0.1.3")
         .expect("CHANGELOG must retain the 0.1.3 release");
 
-    assert_eq!(&CHANGELOG[historical_start..], HISTORICAL_CHANGELOG);
+    assert_eq!(&changelog[historical_start..], HISTORICAL_CHANGELOG);
 }
 
 #[test]
 fn real_rebuild_document_satisfies_strict_contract() {
-    assert!(rebuild_contract_is_valid(REBUILD));
+    assert!(rebuild_contract_is_valid(&with_lf_line_endings(REBUILD)));
 }
 
 fn official_support_section(rebuild: &str) -> Option<&str> {
@@ -181,7 +187,7 @@ fn rebuild_contract_is_valid(rebuild: &str) -> bool {
 
 #[test]
 fn rebuild_contract_rejects_extra_install_command_mutation() {
-    let mutated = REBUILD.replacen(
+    let mutated = with_lf_line_endings(REBUILD).replacen(
         "opencode plugin @lyy-gh/memocap\n```",
         "opencode plugin @lyy-gh/memocap\necho unexpected\n```",
         1,
@@ -192,7 +198,7 @@ fn rebuild_contract_rejects_extra_install_command_mutation() {
 
 #[test]
 fn rebuild_contract_rejects_missing_opening_install_fence_mutation() {
-    let mutated = REBUILD.replacen(
+    let mutated = with_lf_line_endings(REBUILD).replacen(
         "```bash\npnpm add -g @lyy-gh/memocap@0.0.1",
         "pnpm add -g @lyy-gh/memocap@0.0.1",
         1,
@@ -203,7 +209,7 @@ fn rebuild_contract_rejects_missing_opening_install_fence_mutation() {
 
 #[test]
 fn rebuild_contract_rejects_missing_closing_install_fence_mutation() {
-    let mutated = REBUILD.replacen(
+    let mutated = with_lf_line_endings(REBUILD).replacen(
         "opencode plugin @lyy-gh/memocap\n```",
         "opencode plugin @lyy-gh/memocap",
         1,
