@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.1 (2026-09-02)
+
+独立发布 `@lyy-gh/memocap`，发布源为 [LYY/memocap](https://github.com/LYY/memocap)。OpenCode 是唯一官方支持的集成。
+
+- 通过 Git tag 发布，并保留 tag、源码仓库和构建 artifact 的 release provenance。
+- 发布包由 LYY/memocap GitHub Release 提供，OpenCode 插件通过全局 `memocap` CLI 工作。
+
 ## 0.1.3 — 2026-09-02
 
 记住前先查重，召回默认少灌一点。
