@@ -1,76 +1,59 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      ref:
-        description: git ref to publish
-        default: v0.1.3
-        type: string
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
 
 permissions:
   contents: read
 
 jobs:
-  release:
+  validate:
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      contents: read
     outputs:
-      tag: ${{ steps.meta.outputs.tag }}
+      tag: ${{ steps.release.outputs.tag }}
+      sha: ${{ steps.release.outputs.sha }}
     steps:
-      - id: meta
-        run: |
-          TAG="${{ github.event.inputs.ref || github.ref_name }}"
-          TAG="${TAG#refs/tags/}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-      - name: Ensure GitHub Release
-        id: ensure_release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          TAG="${{ steps.meta.outputs.tag }}"
-          if gh release view "$TAG" --repo "${{ github.repository }}"; then
-            echo "release $TAG exists"
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
-        if: steps.ensure_release.outputs.exists != 'true'
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          fetch-depth: 0
           persist-credentials: false
-          ref: ${{ steps.meta.outputs.tag }}
-      - name: Create GitHub Release
-        if: steps.ensure_release.outputs.exists != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - id: release
+        shell: bash
         run: |
-          TAG="${{ steps.meta.outputs.tag }}"
-          VER="${TAG#v}"
-          NOTES_FILE="$(mktemp)"
-          if [ -f CHANGELOG.md ]; then
-            awk -v ver="$VER" '
-              $0 ~ "^## " ver "( |$)" {found=1; next}
-              found && /^## / {exit}
-              found {print}
-            ' CHANGELOG.md > "$NOTES_FILE"
-          fi
-          if grep -q '[^[:space:]]' "$NOTES_FILE" 2>/dev/null; then
-            gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --notes-file "$NOTES_FILE"
-          else
-            gh release create "$TAG" --repo "${{ github.repository }}" --title "$TAG" --generate-notes
-          fi
+          set -euo pipefail
+          git fetch --no-tags origin main
+          tag="${GITHUB_REF_NAME}"
+          sha="$(git rev-parse "${tag}^{commit}")"
+          git merge-base --is-ancestor "$sha" origin/main
+          printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
+          printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
+      - name: Verify actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/actionlint_1.7.12_linux_amd64.tar.gz"
+          curl --fail --location --silent --show-error \
+            --output "$archive" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          printf '%s  %s\n' \
+            8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 \
+            "$archive" | sha256sum --check --status
+          tar --extract --gzip --file "$archive" --directory "$RUNNER_TEMP"
+          "$RUNNER_TEMP/actionlint" .github/workflows/ci.yml .github/workflows/release.yml
+      - name: Check release contract
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: node scripts/check-release.mjs
 
   binaries:
     name: build (${{ matrix.target }})
-    needs: release
+    needs: validate
     runs-on: ${{ matrix.os }}
     permissions:
-      contents: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -85,43 +68,256 @@ jobs:
             target: x86_64-pc-windows-msvc
             asset: memocap-x86_64-pc-windows-msvc.exe
     steps:
-      - uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-          ref: ${{ github.event.inputs.ref || github.ref }}
-      - uses: dtolnay/rust-toolchain@stable
+          ref: ${{ needs.validate.outputs.sha }}
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
+          toolchain: stable
           targets: ${{ matrix.target }}
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Stage Linux/macOS asset
         if: runner.os != 'Windows'
-        run: cp "target/${{ matrix.target }}/release/memocap" "${{ matrix.asset }}"
+        shell: bash
+        run: |
+          cp "target/${{ matrix.target }}/release/memocap" "${{ matrix.asset }}"
+          sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
       - name: Stage Windows asset
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Copy-Item "target/${{ matrix.target }}/release/memocap.exe" "${{ matrix.asset }}"
-      - name: Upload release asset
+        run: |
+          Copy-Item "target/${{ matrix.target }}/release/memocap.exe" "${{ matrix.asset }}"
+          $hash = (Get-FileHash -Algorithm SHA256 "${{ matrix.asset }}").Hash.ToLower()
+          "$hash  ${{ matrix.asset }}" | Out-File -Encoding ascii "${{ matrix.asset }}.sha256"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            ${{ matrix.asset }}
+            ${{ matrix.asset }}.sha256
+          if-no-files-found: error
+
+  release:
+    needs: [validate, binaries]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+      - name: Reconcile GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          TAG_SHA: ${{ needs.validate.outputs.sha }}
         shell: bash
         run: |
-          gh release upload "${{ needs.release.outputs.tag }}" "${{ matrix.asset }}" --repo "${{ github.repository }}" --clobber
+          set -euo pipefail
+          cd release-assets
+          sha256sum --check ./*.sha256
+          cd "$GITHUB_WORKSPACE"
+
+          read_release() {
+            local releases matches count
+            releases="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+            matches="$(jq --arg tag "$TAG" '[.[][] | select(.tag_name == $tag)]' <<< "$releases")"
+            count="$(jq 'length' <<< "$matches")"
+            if [ "$count" -gt 1 ]; then
+              echo "multiple releases found for $TAG" >&2
+              return 1
+            fi
+            printf '%s' "$matches"
+          }
+
+          verify_identity() {
+            local release="$1"
+            [ "$(jq 'length' <<< "$release")" -eq 1 ]
+            [ "$(jq -r '.[0].tag_name' <<< "$release")" = "$TAG" ]
+            [ "$(jq -r '.[0].target_commitish' <<< "$release")" = "$TAG_SHA" ]
+            [ "$(jq -r '.[0].prerelease' <<< "$release")" = false ]
+          }
+
+          verify_asset() {
+            local asset="$1" expected actual directory
+            directory="$(mktemp -d)"
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$asset" --dir "$directory"
+            expected="$(awk '{print $1}' "release-assets/${asset}.sha256")"
+            actual="$(sha256sum "$directory/$asset" | awk '{print $1}')"
+            [ "$actual" = "$expected" ]
+          }
+
+          verify_known_assets() {
+            local release="$1" asset count remote
+            for remote in $(jq -r '.[0].assets[]?.name' <<< "$release"); do
+              case "$remote" in
+                memocap-x86_64-unknown-linux-gnu|memocap-aarch64-apple-darwin|memocap-x86_64-pc-windows-msvc.exe) ;;
+                *) echo "unexpected release asset $remote" >&2; return 1 ;;
+              esac
+            done
+            for asset in \
+              memocap-x86_64-unknown-linux-gnu \
+              memocap-aarch64-apple-darwin \
+              memocap-x86_64-pc-windows-msvc.exe; do
+              count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
+              [ "$count" -eq 1 ] || { echo "missing or duplicate release asset $asset" >&2; return 1; }
+              verify_asset "$asset"
+            done
+          }
+
+          verify_existing_assets() {
+            local release="$1" asset count remote
+            for remote in $(jq -r '.[0].assets[]?.name' <<< "$release"); do
+              case "$remote" in
+                memocap-x86_64-unknown-linux-gnu|memocap-aarch64-apple-darwin|memocap-x86_64-pc-windows-msvc.exe) ;;
+                *) echo "unexpected release asset $remote" >&2; return 1 ;;
+              esac
+            done
+            for asset in \
+              memocap-x86_64-unknown-linux-gnu \
+              memocap-aarch64-apple-darwin \
+              memocap-x86_64-pc-windows-msvc.exe; do
+              count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
+              case "$count" in
+                0) ;;
+                1) verify_asset "$asset" ;;
+                *) echo "duplicate release asset $asset" >&2; return 1 ;;
+              esac
+            done
+          }
+
+          release="$(read_release)"
+          if [ "$(jq 'length' <<< "$release")" -eq 0 ]; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --target "$TAG_SHA" --title "$TAG" --generate-notes
+            release="$(read_release)"
+          fi
+          verify_identity "$release"
+          state="$(jq -r 'if .[0].draft then "draft" else "public" end' <<< "$release")"
+
+          case "$state" in
+            draft)
+              verify_existing_assets "$release"
+              for asset in \
+                memocap-x86_64-unknown-linux-gnu \
+                memocap-aarch64-apple-darwin \
+                memocap-x86_64-pc-windows-msvc.exe; do
+                count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
+                if [ "$count" -eq 0 ]; then
+                  gh release upload "$TAG" "release-assets/$asset" --repo "$GITHUB_REPOSITORY"
+                  release="$(read_release)"
+                  verify_identity "$release"
+                fi
+              done
+              verify_known_assets "$release"
+              gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+              release="$(read_release)"
+              verify_identity "$release"
+              [ "$(jq -r '.[0].draft' <<< "$release")" = false ]
+              verify_known_assets "$release"
+              ;;
+            public)
+              verify_known_assets "$release"
+              ;;
+            *)
+              echo "invalid release state $state" >&2
+              exit 1
+              ;;
+          esac
 
   registry:
-    needs: binaries
+    needs: [validate, release]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-          ref: ${{ github.event.inputs.ref || github.ref }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+          ref: ${{ needs.validate.outputs.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-      - name: Registry
+      - name: Pin npm
+        run: |
+          npm install --global npm@11.15.0
+          test "$(npm --version)" = 11.15.0
+      - name: Verify public Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          TAG_SHA: ${{ needs.validate.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$TAG")"
+          [ "$(jq -r '.draft' <<< "$release")" = false ]
+          [ "$(jq -r '.target_commitish' <<< "$release")" = "$TAG_SHA" ]
+          for asset in \
+            memocap-x86_64-unknown-linux-gnu \
+            memocap-aarch64-apple-darwin \
+            memocap-x86_64-pc-windows-msvc.exe; do
+            jq -e --arg asset "$asset" '.assets | map(.name) | index($asset) != null' <<< "$release" >/dev/null
+          done
+      - id: registry
+        name: Inspect registry package
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          error_file="$RUNNER_TEMP/npm-view-error"
+          if npm view "$package@$version" --json > "$RUNNER_TEMP/npm-package.json" 2> "$error_file"; then
+            printf 'state=present\n' >> "$GITHUB_OUTPUT"
+          elif grep -q 'E404' "$error_file"; then
+            printf 'state=absent\n' >> "$GITHUB_OUTPUT"
+          else
+            cat "$error_file" >&2
+            exit 1
+          fi
+      - name: Verify existing package
+        if: steps.registry.outputs.state == 'present'
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          expected_integrity="$(npm pack --dry-run --json | jq -r '.[0].integrity')"
+          actual="$RUNNER_TEMP/npm-package.json"
+          [ "$(jq -r '.name' "$actual")" = "$package" ]
+          [ "$(jq -r '.version' "$actual")" = "$version" ]
+          [ "$(jq -r '.repository.url' "$actual")" = "https://github.com/LYY/memocap.git" ]
+          [ "$(jq -r '.dist.integrity' "$actual")" = "$expected_integrity" ]
+          verify_directory="$(mktemp -d)"
+          cd "$verify_directory"
+          npm init --yes >/dev/null
+          npm install --package-lock-only --ignore-scripts "$package@$version"
+          npm audit signatures --package-lock-only --include-attestations
+      - name: Publish missing package
+        if: steps.registry.outputs.state == 'absent'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
         run: npm publish --access public --provenance
+      - name: Verify published package
+        if: always() && steps.registry.outputs.state == 'absent'
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          actual="$(npm view "$package@$version" --json)"
+          expected_integrity="$(npm pack --dry-run --json | jq -r '.[0].integrity')"
+          [ "$(jq -r '.name' <<< "$actual")" = "$package" ]
+          [ "$(jq -r '.version' <<< "$actual")" = "$version" ]
+          [ "$(jq -r '.repository.url' <<< "$actual")" = "https://github.com/LYY/memocap.git" ]
+          [ "$(jq -r '.dist.integrity' <<< "$actual")" = "$expected_integrity" ]
+          verify_directory="$(mktemp -d)"
+          cd "$verify_directory"
+          npm init --yes >/dev/null
+          npm install --package-lock-only --ignore-scripts "$package@$version"
+          npm audit signatures --package-lock-only --include-attestations
