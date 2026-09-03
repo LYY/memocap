@@ -19,19 +19,49 @@ fn repository_row(readme: &str) -> &str {
         .expect("README must contain this repository comparison row")
 }
 
+fn install_commands(readme: &str) -> Vec<&str> {
+    install_section(readme)
+        .lines()
+        .map(str::trim)
+        .filter(|line| {
+            line.starts_with("pnpm add -g ")
+                || line.starts_with("opencode plugin ")
+                || line.starts_with("memocap ")
+        })
+        .collect()
+}
+
+fn install_contract_is_valid(readme: &str) -> bool {
+    let section = install_section(readme);
+    let global_install = "pnpm add -g @lyy-gh/memocap@0.0.1";
+    let plugin_install = "opencode plugin @lyy-gh/memocap";
+    let Some(global_position) = section.find(global_install) else {
+        return false;
+    };
+    let Some(plugin_position) = section.find(plugin_install) else {
+        return false;
+    };
+
+    global_position < plugin_position
+        && install_commands(readme) == vec![global_install, plugin_install]
+        && !section.contains("pnpm add -g memocap")
+        && !section.contains("memocap install")
+        && !section.contains("pi install")
+}
+
+fn repository_row_is_opencode_only(readme: &str) -> bool {
+    let row = repository_row(readme);
+    row.contains("OpenCode")
+        && !row.contains("Codex")
+        && !row.contains("Claude")
+        && !row.contains("Pi")
+        && !row.contains("四端官方渠道")
+}
+
 #[test]
 fn both_readmes_use_ordered_scoped_opencode_install() {
     for readme in [ENGLISH, CHINESE] {
-        let section = install_section(readme);
-        let global_install = "pnpm add -g @lyy-gh/memocap@0.0.1";
-        let plugin_install = "opencode plugin @lyy-gh/memocap";
-
-        assert!(section.contains(global_install));
-        assert!(section.contains(plugin_install));
-        assert!(section.find(global_install) < section.find(plugin_install));
-        assert!(!section.contains("pnpm add -g memocap"));
-        assert!(!section.contains("memocap install"));
-        assert!(!section.contains("pi install"));
+        assert!(install_contract_is_valid(readme));
     }
 }
 
@@ -59,15 +89,8 @@ fn both_readmes_point_server_clone_to_lyy_repository() {
 
 #[test]
 fn repository_rows_name_only_opencode_without_changing_third_party_rows() {
-    let english_row = repository_row(ENGLISH);
-    let chinese_row = repository_row(CHINESE);
-
-    assert!(english_row.contains("OpenCode"));
-    assert!(!english_row.contains("Codex"));
-    assert!(!english_row.contains("Claude"));
-    assert!(!english_row.contains("Pi"));
-    assert!(chinese_row.contains("OpenCode"));
-    assert!(!chinese_row.contains("四端官方渠道"));
+    assert!(repository_row_is_opencode_only(ENGLISH));
+    assert!(repository_row_is_opencode_only(CHINESE));
 
     for row in [
         "| ClawHub memocap | value-store + recall-first | OpenClaw |",
@@ -97,4 +120,23 @@ fn bilingual_install_contract_has_same_machine_consumed_values() {
         assert!(ENGLISH.contains(value));
         assert!(CHINESE.contains(value));
     }
+}
+
+#[test]
+fn inserted_cli_command_is_rejected() {
+    let mutated = ENGLISH.replace(
+        "opencode plugin @lyy-gh/memocap",
+        "memocap --version\nopencode plugin @lyy-gh/memocap",
+    );
+    assert!(!install_contract_is_valid(&mutated));
+}
+
+#[test]
+fn injected_legacy_host_in_chinese_repository_row_is_rejected() {
+    let mutated = CHINESE.replace(
+        "| 本仓库 | 值必存 + 言必检 | 仅 OpenCode，本机 SQLite 或带 token 的服务器 |",
+        "| 本仓库 | 值必存 + 言必检 | 仅 OpenCode、Codex，本机 SQLite 或带 token 的服务器 |",
+    );
+
+    assert!(!repository_row_is_opencode_only(&mutated));
 }
