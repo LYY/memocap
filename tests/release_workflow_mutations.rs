@@ -1,0 +1,71 @@
+#[path = "support/release_workflow.rs"]
+mod release_workflow_contract;
+
+use release_workflow_contract::{release_contract, RELEASE_WORKFLOW};
+
+fn mutate(workflow: &str, before: &str, after: &str) -> String {
+    assert_eq!(
+        workflow.matches(before).count(),
+        1,
+        "mutation target must be unique"
+    );
+    workflow.replacen(before, after, 1)
+}
+
+fn mutate_registry(workflow: &str, before: &str, after: &str) -> String {
+    let index = workflow
+        .find("  registry:\n")
+        .expect("missing registry job");
+    let (prefix, registry) = workflow.split_at(index);
+    format!("{prefix}{}", mutate(registry, before, after))
+}
+
+#[test]
+fn release_contract_rejects_critical_workflow_mutations() {
+    assert_eq!(release_contract(RELEASE_WORKFLOW), Ok(()));
+    for (before, after) in [
+        (
+            "git merge-base --is-ancestor \"$sha\" origin/main",
+            ": # skipped ancestor validation",
+        ),
+        (
+            "verify_existing_assets \"$release\"",
+            ": # skipped asset verification",
+        ),
+        (
+            "verify_existing_assets \"$release\"",
+            "gh release edit \"$TAG\" --draft\n        verify_existing_assets \"$release\"",
+        ),
+    ] {
+        let mutated = mutate(RELEASE_WORKFLOW, before, after);
+        assert!(
+            release_contract(&mutated).is_err(),
+            "mutation accepted: {before}"
+        );
+    }
+    for (before, after) in [
+        ("[.assets[].name] | sort | join", "[.assets[].name] | join"),
+        (
+            "sha256sum \"$directory/$asset\"",
+            "true # skipped digest verification",
+        ),
+        ("id-token: write", "id-token: none"),
+        (
+            "npm install --ignore-scripts --package-lock=false",
+            "npm install --ignore-scripts --no-save --package-lock=false",
+        ),
+        ("any(.verified[];", "any([][];"),
+        (
+            "error_file=\"$RUNNER_TEMP/npm-view-error\"",
+            "npm publish --access public --provenance\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
+        ),
+        ("[ \"$actual_assets\" = \"$expected_names\" ]", "true # skipped exact asset equality"),
+        ("' <<< \"$audit\" >/dev/null", "' <<< \"$audit\" >/dev/null || true"),
+    ] {
+        let mutated = mutate_registry(RELEASE_WORKFLOW, before, after);
+        assert!(
+            release_contract(&mutated).is_err(),
+            "mutation accepted: {before}"
+        );
+    }
+}
