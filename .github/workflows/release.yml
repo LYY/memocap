@@ -134,6 +134,20 @@ jobs:
             printf '%s' "$matches"
           }
 
+          wait_for_release() {
+            local attempt release
+            for attempt in {1..10}; do
+              release="$(read_release)"
+              if [ "$(jq 'length' <<< "$release")" -eq 1 ]; then
+                printf '%s' "$release"
+                return 0
+              fi
+              sleep 1
+            done
+            echo "release $TAG did not become visible after $attempt checks" >&2
+            return 1
+          }
+
           verify_identity() {
             local release="$1"
             [ "$(jq 'length' <<< "$release")" -eq 1 ]
@@ -207,7 +221,7 @@ jobs:
           release="$(read_release)"
           if [ "$(jq 'length' <<< "$release")" -eq 0 ]; then
             gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --target "$TAG_SHA" --title "$TAG" --generate-notes
-            release="$(read_release)"
+            release="$(wait_for_release)"
           fi
           verify_identity "$release"
           state="$(jq -r 'if .[0].draft then "draft" else "public" end' <<< "$release")"
