@@ -33,6 +33,19 @@ fn release_contract_rejects_release_write_before_initial_read() {
 }
 
 #[test]
+fn release_contract_requires_draft_readback_retry() {
+    let workflow = normalized_workflow(RELEASE_WORKFLOW);
+    assert_eq!(release_contract(&workflow), Ok(()));
+    let mutated = mutate(
+        &workflow,
+        "release=\"$(wait_for_release)\"",
+        "release=\"$(read_release)\"",
+    );
+
+    assert!(release_contract(&mutated).is_err());
+}
+
+#[test]
 fn release_contract_rejects_critical_workflow_mutations() {
     let workflow = normalized_workflow(RELEASE_WORKFLOW);
     assert_eq!(release_contract(&workflow), Ok(()));
