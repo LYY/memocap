@@ -70,9 +70,21 @@ fn platform_matrix_runs_node_contracts() {
 
 #[test]
 fn platform_matrix_runs_node_contracts_on_crlf_checkout() {
-    let windows_workflow = CI_WORKFLOW.replace('\n', "\r\n");
+    let windows_workflow = windows_workflow(CI_WORKFLOW);
 
     assert_node_contract(&windows_workflow);
+}
+
+#[test]
+fn platform_matrix_runs_node_contracts_after_windows_checkout() {
+    let checked_out_windows = windows_workflow(CI_WORKFLOW);
+    let windows_workflow = windows_workflow(&checked_out_windows);
+
+    assert_node_contract(&windows_workflow);
+}
+
+fn windows_workflow(workflow: &str) -> String {
+    workflow.replace("\r\n", "\n").replace('\n', "\r\n")
 }
 
 fn assert_node_contract(workflow: &str) {
