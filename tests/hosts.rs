@@ -1,9 +1,35 @@
 use memocap::hosts;
 
 #[test]
-fn four_hosts_exist() {
-    let hosts = hosts::official_hosts();
-    assert_eq!(hosts.len(), 4);
+fn official_hosts_only_include_scoped_opencode_plugin() {
+    assert_eq!(
+        hosts::official_hosts().as_slice(),
+        &[hosts::OPENCODE_INSTALL]
+    );
+    assert_eq!(hosts::OPENCODE_INSTALL, "opencode plugin @lyy-gh/memocap");
+}
+
+#[test]
+fn official_hosts_keep_legacy_integrations_callable_but_unsupported() {
+    assert_eq!(hosts::CODEX_INSTALL, "memocap install");
+    assert_eq!(hosts::CLAUDE_INSTALL, "memocap install");
+    assert_eq!(hosts::PI_INSTALL, "pi install npm:@lyy-gh/memocap");
+
+    let skill = hosts::skill_markdown("memocap");
+    assert!(skill.contains("memocap recall"));
+}
+
+#[test]
+fn official_hosts_cli_help_is_opencode_only() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_memocap"))
+        .arg("--help")
+        .output()
+        .expect("memocap --help should run");
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8(output.stdout).expect("help output should be UTF-8");
+    assert!(stdout.contains("Local-first SQLite memory for OpenCode"));
+    assert!(!stdout.contains("four hosts"));
 }
 
 #[test]
@@ -35,9 +61,12 @@ fn skill_uses_cli_not_a_second_store() {
 }
 
 #[test]
-fn pi_skills_point_at_skill_md_dir() {
+fn package_keeps_legacy_skill_files() {
     let pkg = include_str!("../package.json");
-    assert!(pkg.contains("./skills/memocap"));
+    assert!(pkg.contains("\"skills\""));
+
+    let skill = include_str!("../skills/memocap/SKILL.md");
+    assert!(skill.contains("memocap remember"));
 }
 
 #[test]

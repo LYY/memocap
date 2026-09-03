@@ -1,17 +1,19 @@
 use crate::agents_block;
 
-/// Official host install paths. All four share one CLI and one SQLite store.
+/// Official OpenCode plugin registration command.
+pub const OPENCODE_INSTALL: &str = "opencode plugin @lyy-gh/memocap";
+
+/// Unsupported legacy compatibility commands retained for existing users.
 pub const CODEX_INSTALL: &str = "memocap install";
 pub const CLAUDE_INSTALL: &str = "memocap install";
-pub const PI_INSTALL: &str = "pi install npm:memocap";
-pub const OPENCODE_INSTALL: &str = "opencode plugin memocap";
+pub const PI_INSTALL: &str = "pi install npm:@lyy-gh/memocap";
 
 #[must_use]
-pub fn official_hosts() -> [&'static str; 4] {
-    [CODEX_INSTALL, CLAUDE_INSTALL, PI_INSTALL, OPENCODE_INSTALL]
+pub fn official_hosts() -> [&'static str; 1] {
+    [OPENCODE_INSTALL]
 }
 
-/// Claude / Pi skill body. Points at the shared CLI, not a second store.
+/// Unsupported Claude / Pi compatibility skill body using the shared CLI.
 #[must_use]
 pub fn skill_markdown(binary: &str) -> String {
     format!(
@@ -25,12 +27,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn four_official_hosts() {
-        let hosts = official_hosts();
-        assert_eq!(hosts.len(), 4);
-        assert!(hosts.contains(&"memocap install"));
-        assert!(hosts.contains(&"pi install npm:memocap"));
-        assert!(hosts.contains(&"opencode plugin memocap"));
+    fn opencode_is_the_only_official_host() {
+        assert_eq!(official_hosts(), [OPENCODE_INSTALL]);
+        assert_eq!(OPENCODE_INSTALL, "opencode plugin @lyy-gh/memocap");
     }
 
     #[test]

@@ -7,7 +7,7 @@ use memocap::{cli, config, config::Target, install, paths::Paths, remote, server
 #[command(
     name = "memocap",
     version,
-    about = "SQLite memory shared by four hosts"
+    about = "Local-first SQLite memory for OpenCode"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -47,18 +47,18 @@ enum Command {
     },
     /// Delete one memory by ID.
     Forget { id: i64 },
-    /// Copy this binary and configure official host rule files.
+    /// Configure legacy compatibility files (unsupported).
     Install {
-        /// Configure ~/.codex/AGENTS.md and ~/.claude instead of project files.
+        /// Write legacy compatibility files under the user home (unsupported).
         #[arg(long)]
         global: bool,
     },
-    /// Remove only memocap's managed rule blocks.
+    /// Remove only memocap's legacy compatibility blocks (unsupported).
     Uninstall {
         #[arg(long)]
         global: bool,
     },
-    /// Print install and database status.
+    /// Print legacy compatibility install and database status.
     Status {
         #[arg(long)]
         global: bool,
