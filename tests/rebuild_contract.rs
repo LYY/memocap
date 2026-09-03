@@ -26,7 +26,10 @@ npm bin 改为 `bin/cli.cjs`，从 GitHub Release 拉二进制。Trusted Publish
 
 #[test]
 fn rebuild_spec_has_ordered_scoped_opencode_install() {
-    let commands = install_commands(REBUILD).expect("REBUILD must contain a bash install block");
+    let official_section =
+        official_support_section(REBUILD).expect("REBUILD must contain the official section");
+    let commands =
+        install_commands(official_section).expect("REBUILD must contain a bash install block");
 
     assert_eq!(commands, vec![GLOBAL_INSTALL, PLUGIN_INSTALL]);
 }
@@ -76,11 +79,20 @@ fn changelog_preserves_every_byte_from_v013_onward() {
     assert_eq!(&CHANGELOG[historical_start..], HISTORICAL_CHANGELOG);
 }
 
-fn install_commands(rebuild: &str) -> Option<Vec<&str>> {
-    let install_section = rebuild
+#[test]
+fn real_rebuild_document_satisfies_strict_contract() {
+    assert!(rebuild_contract_is_valid(REBUILD));
+}
+
+fn official_support_section(rebuild: &str) -> Option<&str> {
+    rebuild
         .split_once("## 官方 OpenCode 集成")
         .and_then(|(_, rest)| rest.split_once("## 建议的数据模型"))
-        .map(|(section, _)| section)?;
+        .map(|(section, _)| section)
+}
+
+fn install_commands(official_section: &str) -> Option<Vec<&str>> {
+    let install_section = official_section;
     let install_section = install_section.split_once("### 共享安装")?.1;
     let mut in_shell_block = false;
     let mut commands = Vec::new();
@@ -143,7 +155,8 @@ fn has_broad_multi_host_support_claim(rebuild: &str) -> bool {
 }
 
 fn rebuild_contract_is_valid(rebuild: &str) -> bool {
-    let has_exact_install = install_commands(rebuild)
+    let has_exact_install = official_support_section(rebuild)
+        .and_then(install_commands)
         .is_some_and(|commands| commands == vec![GLOBAL_INSTALL, PLUGIN_INSTALL]);
     let has_support_boundary = rebuild.contains("OpenCode 是唯一官方支持的集成")
         && rebuild.contains("Codex、Claude Code、Pi 仅作历史兼容，不属于官方支持范围");
