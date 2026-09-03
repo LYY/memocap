@@ -4,19 +4,20 @@
 
 忆时记忆系统 - 类人记忆检索/存储/遗忘/胶囊/可视化。让 AI 拥有会遗忘、会联想、会涌现、会封存的记忆。触发词：忆时、记忆、记住、回想、回忆、recall、remember、时间胶囊、记忆检索、可视化、记忆脑图、人物画像。
 
-一份 SQLite。四个宿主，一条 `memocap`。每轮先 recall；决策、偏好、任务、约定查过同类再 store。
+一份 SQLite。OpenCode 是唯一官方支持的集成。每轮先 recall；决策、偏好、任务、约定查过同类再 store。
 
 ## 安装
 
-pnpm add -g memocap
+先安装全局 CLI，再注册 OpenCode 插件：
 
-Codex：`memocap install` 写 AGENTS.md。
+```sh
+pnpm add -g @lyy-gh/memocap@0.0.1
+opencode plugin @lyy-gh/memocap
+```
 
-Claude：`memocap install` 写 CLAUDE.md 和 skill。
+OpenCode 是唯一官方支持的集成。全局 CLI 必须在 PATH 中，因为插件会把 `memocap` 作为 sidecar 调用。
 
-Pi：pi install npm:memocap
-
-OpenCode：`opencode plugin memocap`
+插件命令会在全局 CLI 可用后注册 scoped package。
 
 ## 命令
 
@@ -31,7 +32,7 @@ remember [--force] / recall [--type] [--limit 3] / list / forget
 
 服务器（同一份库，需要 token）：
 
-    git clone https://github.com/luodaoyi/memocap
+    git clone https://github.com/LYY/memocap
     cd memocap
     export MEMOCAP_TOKEN=replace-me
     docker compose up -d
@@ -53,4 +54,4 @@ remember [--force] / recall [--type] [--limit 3] / list / forget
 | claude-mem | 自动抓会话 | Claude |
 | agentmemory | 自动抓，多端 MCP | 多端 MCP |
 | pi-memory | markdown | 只 Pi |
-| 本仓库 | 值必存 + 言必检 | 四端官方渠道，本机 SQLite 或带 token 的服务器 |
+| 本仓库 | 值必存 + 言必检 | 仅 OpenCode，本机 SQLite 或带 token 的服务器 |
