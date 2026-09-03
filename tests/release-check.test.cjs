@@ -12,6 +12,7 @@ const checkerPath = path.resolve(__dirname, "../scripts/check-release.mjs");
 function writeFixture(context, overrides = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-release-check-"));
   const bin = path.join(root, "bin");
+  const cargoArguments = path.join(root, "cargo-arguments.json");
   context.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(bin);
 
@@ -47,11 +48,20 @@ function writeFixture(context, overrides = {}) {
   );
   fs.writeFileSync(
     path.join(bin, "cargo"),
-    `#!${process.execPath}\nprocess.stdout.write(process.env.RELEASE_CHECK_METADATA);\n`,
+    `#!${process.execPath}
+const fs = require("node:fs");
+const arguments_ = process.argv.slice(2);
+fs.writeFileSync(process.env.RELEASE_CHECK_CARGO_ARGUMENTS, JSON.stringify(arguments_));
+if (JSON.stringify(arguments_) !== JSON.stringify(["metadata", "--locked", "--no-deps", "--format-version", "1"])) {
+  process.stderr.write("unexpected cargo metadata arguments\\n");
+  process.exit(1);
+}
+process.stdout.write(process.env.RELEASE_CHECK_METADATA);
+`,
     { mode: 0o755 },
   );
 
-  return { root, metadata };
+  return { cargoArguments, root, metadata };
 }
 
 function runCheck(fixture, tag) {
@@ -60,6 +70,7 @@ function runCheck(fixture, tag) {
     env: {
       ...process.env,
       PATH: `${path.join(fixture.root, "bin")}:${process.env.PATH}`,
+      RELEASE_CHECK_CARGO_ARGUMENTS: fixture.cargoArguments,
       RELEASE_CHECK_METADATA: JSON.stringify(fixture.metadata),
       RELEASE_TAG: tag,
     },
@@ -75,6 +86,10 @@ test("accepts synchronized v0.0.1 release metadata", (context) => {
 
   // Then
   assert.equal(execution.status, 0, execution.stderr);
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(fixture.cargoArguments, "utf8")),
+    ["metadata", "--locked", "--no-deps", "--format-version", "1"],
+  );
 });
 
 test("rejects malformed release tag", (context) => {
@@ -123,6 +138,30 @@ test("rejects package identity outside the LYY scope", (context) => {
   // Then
   assert.notEqual(execution.status, 0);
   assert.match(execution.stderr, /package name/);
+});
+
+test("rejects package repository outside LYY", (context) => {
+  // Given
+  const fixture = writeFixture(context, { repository: "https://github.com/other/memocap.git" });
+
+  // When
+  const execution = runCheck(fixture, "v0.0.1");
+
+  // Then
+  assert.notEqual(execution.status, 0);
+  assert.match(execution.stderr, /package\.json repository/);
+});
+
+test("rejects Cargo repository outside LYY", (context) => {
+  // Given
+  const fixture = writeFixture(context, { cargoRepository: "https://github.com/other/memocap" });
+
+  // When
+  const execution = runCheck(fixture, "v0.0.1");
+
+  // Then
+  assert.notEqual(execution.status, 0);
+  assert.match(execution.stderr, /Cargo metadata repository/);
 });
 
 test("rejects Cargo metadata version mismatch", (context) => {
