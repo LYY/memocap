@@ -2,6 +2,7 @@
 "use strict";
 
 const { spawnSync } = require("child_process");
+const crypto = require("crypto");
 const fs = require("fs");
 const https = require("https");
 const os = require("os");
@@ -26,6 +27,7 @@ function resolveReleaseAsset(platform, arch) {
   return {
     name,
     url: `https://github.com/LYY/memocap/releases/download/v${VERSION}/${name}`,
+    checksumUrl: `https://github.com/LYY/memocap/releases/download/v${VERSION}/${name}.sha256`,
   };
 }
 
@@ -89,23 +91,58 @@ function download(url, dest) {
     get(url, 0);
   }).then(() => {
     fs.renameSync(tmp, dest);
-    fs.chmodSync(dest, 0o755);
   });
+}
+
+function expectedChecksum(manifest, name) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = manifest.trim().match(new RegExp(`^([a-f0-9]{64})  ${escapedName}$`, "i"));
+  if (!match) throw new Error(`invalid checksum manifest for ${name}`);
+  return match[1].toLowerCase();
+}
+
+function verifyCachedBinary(binary, checksum, name) {
+  try {
+    const expected = Buffer.from(expectedChecksum(fs.readFileSync(checksum, "utf8"), name), "hex");
+    const actual = crypto.createHash("sha256").update(fs.readFileSync(binary)).digest();
+    return crypto.timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
+}
+
+async function replaceCachedBinary(release, binary) {
+  const checksum = `${binary}.sha256`;
+  fs.rmSync(binary, { force: true });
+  fs.rmSync(checksum, { force: true });
+  try {
+    await download(release.checksumUrl, checksum);
+    await download(release.url, binary);
+    if (!verifyCachedBinary(binary, checksum, release.name)) {
+      throw new Error(`checksum mismatch for ${release.name}`);
+    }
+    fs.chmodSync(binary, 0o755);
+    return binary;
+  } catch (error) {
+    fs.rmSync(binary, { force: true });
+    fs.rmSync(checksum, { force: true });
+    throw error;
+  }
 }
 
 async function resolveBinary() {
   if (process.env.MEMOCAP_BINARY) {
     return process.env.MEMOCAP_BINARY;
   }
-  const { name, url } = resolveReleaseAsset(process.platform, process.arch);
+  const release = resolveReleaseAsset(process.platform, process.arch);
   const dir = cacheDir();
   fs.mkdirSync(dir, { recursive: true });
-  const dest = path.join(dir, name);
-  if (fs.existsSync(dest) && fs.statSync(dest).size > 0) {
+  const dest = path.join(dir, release.name);
+  const checksum = `${dest}.sha256`;
+  if (verifyCachedBinary(dest, checksum, release.name)) {
     return dest;
   }
-  await download(url, dest);
-  return dest;
+  return replaceCachedBinary(release, dest);
 }
 
 async function main() {
@@ -123,7 +160,7 @@ async function main() {
   }
 }
 
-module.exports = { resolveReleaseAsset };
+module.exports = { resolveReleaseAsset, verifyCachedBinary };
 
 if (require.main === module) {
   main();

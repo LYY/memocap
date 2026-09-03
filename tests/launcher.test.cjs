@@ -4,10 +4,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 
 const launcherPath = path.resolve(__dirname, "../bin/cli.cjs");
+const { resolveReleaseAsset, verifyCachedBinary } = require(launcherPath);
 
 function runResolver(platform, arch) {
   const script = `
@@ -54,6 +56,7 @@ for (const target of [
     const expected = {
       name: target.name,
       url: `https://github.com/LYY/memocap/releases/download/v0.0.1/${target.name}`,
+      checksumUrl: `https://github.com/LYY/memocap/releases/download/v0.0.1/${target.name}.sha256`,
     };
 
     // When
@@ -90,6 +93,23 @@ test("rejects unsupported launcher target without network access", () => {
     execution.stderr,
     "unsupported platform freebsd/arm64. Supported: linux/x64, darwin/arm64, win32/x64.",
   );
+});
+
+test("rejects a cached binary whose checksum manifest does not match", (context) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-launcher-cache-"));
+  context.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
+  const name = "memocap-x86_64-unknown-linux-gnu";
+  const binary = path.join(tempDir, name);
+  const checksum = `${binary}.sha256`;
+  const digest = crypto.createHash("sha256").update("trusted").digest("hex");
+  fs.writeFileSync(binary, "trusted");
+  fs.writeFileSync(checksum, `${digest}  ${name}\n`);
+
+  assert.equal(verifyCachedBinary(binary, checksum, name), true);
+
+  fs.writeFileSync(binary, "modified");
+
+  assert.equal(verifyCachedBinary(binary, checksum, name), false);
 });
 
 test("loads release resolver without launching a child process", (context) => {
