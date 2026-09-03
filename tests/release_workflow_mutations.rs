@@ -1,7 +1,7 @@
 #[path = "support/release_workflow.rs"]
 mod release_workflow_contract;
 
-use release_workflow_contract::{release_contract, RELEASE_WORKFLOW};
+use release_workflow_contract::{normalized_workflow, release_contract, RELEASE_WORKFLOW};
 
 fn mutate(workflow: &str, before: &str, after: &str) -> String {
     assert_eq!(
@@ -22,8 +22,9 @@ fn mutate_registry(workflow: &str, before: &str, after: &str) -> String {
 
 #[test]
 fn release_contract_rejects_release_write_before_initial_read() {
+    let workflow = normalized_workflow(RELEASE_WORKFLOW);
     let mutated = mutate(
-        RELEASE_WORKFLOW,
+        &workflow,
         "release=\"$(read_release)\"\n          if",
         "gh release edit \"$TAG\" --draft\n          release=\"$(read_release)\"\n          if",
     );
@@ -33,7 +34,8 @@ fn release_contract_rejects_release_write_before_initial_read() {
 
 #[test]
 fn release_contract_rejects_critical_workflow_mutations() {
-    assert_eq!(release_contract(RELEASE_WORKFLOW), Ok(()));
+    let workflow = normalized_workflow(RELEASE_WORKFLOW);
+    assert_eq!(release_contract(&workflow), Ok(()));
     for (before, after) in [
         (
             "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
@@ -53,7 +55,7 @@ fn release_contract_rejects_critical_workflow_mutations() {
         ),
         (".[0].draft | type", ".[0].draft"),
     ] {
-        let mutated = mutate(RELEASE_WORKFLOW, before, after);
+        let mutated = mutate(&workflow, before, after);
         assert!(
             release_contract(&mutated).is_err(),
             "mutation accepted: {before}"
@@ -78,7 +80,7 @@ fn release_contract_rejects_critical_workflow_mutations() {
         ("[ \"$actual_assets\" = \"$expected_names\" ]", "true # skipped exact asset equality"),
         ("' <<< \"$audit\" >/dev/null", "' <<< \"$audit\" >/dev/null || true"),
     ] {
-        let mutated = mutate_registry(RELEASE_WORKFLOW, before, after);
+        let mutated = mutate_registry(&workflow, before, after);
         assert!(
             release_contract(&mutated).is_err(),
             "mutation accepted: {before}"

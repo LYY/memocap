@@ -1,4 +1,9 @@
 pub const RELEASE_WORKFLOW: &str = include_str!("../../.github/workflows/release.yml");
+
+pub fn normalized_workflow(workflow: &str) -> String {
+    workflow.replace("\r\n", "\n")
+}
+
 fn job<'a>(workflow: &'a str, name: &str) -> &'a str {
     let marker = format!("  {name}:\n");
     let (_, remainder) = workflow
@@ -51,6 +56,8 @@ fn before(text: &str, first: &str, second: &str) -> Result<(), String> {
 }
 
 pub fn release_contract(workflow: &str) -> Result<(), String> {
+    let normalized = normalized_workflow(workflow);
+    let workflow = normalized.as_str();
     let trigger = workflow
         .split_once("on:\n")
         .and_then(|(_, after)| after.split_once("permissions:\n"))
