@@ -247,6 +247,11 @@ jobs:
         run: |
           npm install --global npm@11.15.0
           test "$(npm --version)" = 11.15.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
       - name: Verify public Release assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -255,14 +260,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          expected_assets=(
+            memocap-x86_64-unknown-linux-gnu
+            memocap-aarch64-apple-darwin
+            memocap-x86_64-pc-windows-msvc.exe
+          )
+          cd release-assets
+          sha256sum --check ./*.sha256
+          cd "$GITHUB_WORKSPACE"
           release="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$TAG")"
           [ "$(jq -r '.draft' <<< "$release")" = false ]
+          [ "$(jq -r '.tag_name' <<< "$release")" = "$TAG" ]
           [ "$(jq -r '.target_commitish' <<< "$release")" = "$TAG_SHA" ]
-          for asset in \
-            memocap-x86_64-unknown-linux-gnu \
-            memocap-aarch64-apple-darwin \
-            memocap-x86_64-pc-windows-msvc.exe; do
-            jq -e --arg asset "$asset" '.assets | map(.name) | index($asset) != null' <<< "$release" >/dev/null
+          expected_names="$(printf '%s\n' "${expected_assets[@]}" | sort)"
+          actual_assets="$(jq -r '[.assets[].name] | sort | join("\n")' <<< "$release")"
+          [ "$actual_assets" = "$expected_names" ]
+          for asset in "${expected_assets[@]}"; do
+            count="$(jq --arg asset "$asset" '[.assets[] | select(.name == $asset)] | length' <<< "$release")"
+            [ "$count" -eq 1 ]
+            expected="$(awk '{print $1}' "release-assets/${asset}.sha256")"
+            directory="$(mktemp -d)"
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$asset" --dir "$directory"
+            actual="$(sha256sum "$directory/$asset" | awk '{print $1}')"
+            [ "$actual" = "$expected" ]
           done
       - id: registry
         name: Inspect registry package
@@ -280,8 +300,13 @@ jobs:
             cat "$error_file" >&2
             exit 1
           fi
-      - name: Verify existing package
-        if: steps.registry.outputs.state == 'present'
+      - name: Publish missing package
+        if: steps.registry.outputs.state == 'absent'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+        run: npm publish --access public --provenance
+      - name: Verify registry package and provenance
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
@@ -296,28 +321,13 @@ jobs:
           verify_directory="$(mktemp -d)"
           cd "$verify_directory"
           npm init --yes >/dev/null
-          npm install --package-lock-only --ignore-scripts "$package@$version"
-          npm audit signatures --package-lock-only --include-attestations
-      - name: Publish missing package
-        if: steps.registry.outputs.state == 'absent'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
-        run: npm publish --access public --provenance
-      - name: Verify published package
-        if: always() && steps.registry.outputs.state == 'absent'
-        shell: bash
-        run: |
-          set -euo pipefail
-          package="$(node -p "require('./package.json').name")"
-          version="$(node -p "require('./package.json').version")"
-          actual="$(npm view "$package@$version" --json)"
-          expected_integrity="$(npm pack --dry-run --json | jq -r '.[0].integrity')"
-          [ "$(jq -r '.name' <<< "$actual")" = "$package" ]
-          [ "$(jq -r '.version' <<< "$actual")" = "$version" ]
-          [ "$(jq -r '.repository.url' <<< "$actual")" = "https://github.com/LYY/memocap.git" ]
-          [ "$(jq -r '.dist.integrity' <<< "$actual")" = "$expected_integrity" ]
-          verify_directory="$(mktemp -d)"
-          cd "$verify_directory"
-          npm init --yes >/dev/null
-          npm install --package-lock-only --ignore-scripts "$package@$version"
-          npm audit signatures --package-lock-only --include-attestations
+          npm install --ignore-scripts --package-lock=false "$package@$version"
+          audit="$(npm audit signatures --json --include-attestations)"
+          jq -e --arg package "$package" --arg version "$version" '
+            (.verified | type == "array") and
+            any(.verified[];
+              .name == $package and
+              .version == $version and
+              .attestations.provenance.predicateType == "https://slsa.dev/provenance/v1"
+            )
+          ' <<< "$audit" >/dev/null
