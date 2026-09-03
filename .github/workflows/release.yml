@@ -27,7 +27,7 @@ jobs:
           git fetch --no-tags origin main
           tag="${GITHUB_REF_NAME}"
           sha="$(git rev-parse "${tag}^{commit}")"
-          git merge-base --is-ancestor "$sha" origin/main
+          [ "$sha" = "$(git rev-parse origin/main)" ]
           printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
           printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
       - name: Verify actionlint
@@ -137,9 +137,12 @@ jobs:
           verify_identity() {
             local release="$1"
             [ "$(jq 'length' <<< "$release")" -eq 1 ]
-            [ "$(jq -r '.[0].tag_name' <<< "$release")" = "$TAG" ]
-            [ "$(jq -r '.[0].target_commitish' <<< "$release")" = "$TAG_SHA" ]
-            [ "$(jq -r '.[0].prerelease' <<< "$release")" = false ]
+           [ "$(jq -r '.[0].tag_name' <<< "$release")" = "$TAG" ]
+           [ "$(jq -r '.[0].target_commitish' <<< "$release")" = "$TAG_SHA" ]
+          [ "$(jq -r '.[0].draft | type' <<< "$release")" = "boolean" ]
+          [ "$(jq -r '.[0].prerelease | type' <<< "$release")" = "boolean" ]
+          [ "$(jq -r '.[0].assets | type' <<< "$release")" = "array" ]
+           [ "$(jq -r '.[0].prerelease' <<< "$release")" = false ]
           }
 
           verify_asset() {

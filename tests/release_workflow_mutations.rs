@@ -36,8 +36,8 @@ fn release_contract_rejects_critical_workflow_mutations() {
     assert_eq!(release_contract(RELEASE_WORKFLOW), Ok(()));
     for (before, after) in [
         (
-            "git merge-base --is-ancestor \"$sha\" origin/main",
-            ": # skipped ancestor validation",
+            "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
+            ": # skipped exact main validation",
         ),
         (
             "verify_existing_assets \"$release\"",
@@ -47,6 +47,7 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "verify_existing_assets \"$release\"",
             "gh release edit \"$TAG\" --draft\n        verify_existing_assets \"$release\"",
         ),
+        (".[0].draft | type", ".[0].draft"),
     ] {
         let mutated = mutate(RELEASE_WORKFLOW, before, after);
         assert!(

@@ -61,7 +61,7 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     }
     for required in [
         "fetch-depth: 0",
-        "git merge-base --is-ancestor \"$sha\" origin/main",
+        "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
         "scripts/check-release.mjs",
         "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
     ] {
@@ -135,6 +135,13 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
         "verify_identity \"$release\"",
         "case \"$state\" in",
     )?;
+    for guard in [
+        ".[0].draft | type",
+        ".[0].prerelease | type",
+        ".[0].assets | type",
+    ] {
+        require(reconcile, guard)?;
+    }
     let draft = reconcile
         .split_once("draft)\n")
         .map(|(_, branch)| branch.split(";;").next().unwrap_or(branch))
