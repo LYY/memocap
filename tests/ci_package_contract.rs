@@ -56,7 +56,7 @@ fn package_contract_runs_release_gates_before_packaging() {
 
 #[test]
 fn package_contract_accepts_windows_crlf_checkout() {
-    let windows_workflow = CI_WORKFLOW.replace('\n', "\r\n");
+    let windows_workflow = CI_WORKFLOW.replace("\r\n", "\n").replace('\n', "\r\n");
 
     let package_contract = job(&windows_workflow, "package-contract");
 
