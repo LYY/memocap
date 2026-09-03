@@ -1,11 +1,11 @@
 [package]
 name = "memocap"
-version = "0.1.3"
+version = "0.0.1"
 edition = "2021"
 rust-version = "1.88"
-description = "SQLite memory CLI shared by Codex, Claude Code, Pi, and OpenCode"
+description = "Local-first SQLite memory CLI for OpenCode"
 license = "MIT"
-repository = "https://github.com/luodaoyi/memocap"
+repository = "https://github.com/LYY/memocap"
 
 [dependencies]
 anyhow = "1.0"
