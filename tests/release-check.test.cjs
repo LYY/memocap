@@ -47,10 +47,11 @@ function writeFixture(context, overrides = {}) {
     `version = 3\n\n[[package]]\nname = "memocap"\nversion = "${lockVersion}"\n`,
   );
   fs.writeFileSync(
-    path.join(bin, "cargo"),
-    `#!${process.execPath}
+    path.join(root, "metadata"),
+    `"use strict";
 const fs = require("node:fs");
-const arguments_ = process.argv.slice(2);
+const path = require("node:path");
+const arguments_ = [path.basename(process.argv[1]), ...process.argv.slice(2)];
 fs.writeFileSync(process.env.RELEASE_CHECK_CARGO_ARGUMENTS, JSON.stringify(arguments_));
 if (JSON.stringify(arguments_) !== JSON.stringify(["metadata", "--locked", "--no-deps", "--format-version", "1"])) {
   process.stderr.write("unexpected cargo metadata arguments\\n");
@@ -60,6 +61,13 @@ process.stdout.write(process.env.RELEASE_CHECK_METADATA);
 `,
     { mode: 0o755 },
   );
+  const cargo = path.join(bin, process.platform === "win32" ? "cargo.exe" : "cargo");
+  if (process.platform === "win32") {
+    fs.copyFileSync(process.execPath, cargo);
+  } else {
+    fs.symlinkSync(process.execPath, cargo);
+  }
+  fs.chmodSync(cargo, 0o755);
 
   return { cargoArguments, root, metadata };
 }
@@ -69,7 +77,7 @@ function runCheck(fixture, tag) {
     encoding: "utf8",
     env: {
       ...process.env,
-      PATH: `${path.join(fixture.root, "bin")}:${process.env.PATH}`,
+      PATH: `${path.join(fixture.root, "bin")}${path.delimiter}${process.env.PATH}`,
       RELEASE_CHECK_CARGO_ARGUMENTS: fixture.cargoArguments,
       RELEASE_CHECK_METADATA: JSON.stringify(fixture.metadata),
       RELEASE_TAG: tag,

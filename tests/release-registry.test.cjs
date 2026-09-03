@@ -10,7 +10,7 @@ const test = require("node:test");
 const releaseWorkflow = fs.readFileSync(
   path.resolve(__dirname, "../.github/workflows/release.yml"),
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 
 function workflowStep(marker) {
   const start = releaseWorkflow.indexOf(marker);
@@ -134,7 +134,7 @@ function writeFixture(context, overrides = {}) {
       encoding: "utf8",
       env: {
         ...process.env,
-        PATH: `${bin}:${process.env.PATH}`,
+        PATH: `${bin}${path.delimiter}${process.env.PATH}`,
         RUNNER_TEMP: temp,
         GITHUB_OUTPUT: output,
         FAKE_NPM_LOG: log,
