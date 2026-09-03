@@ -90,7 +90,7 @@ jobs:
         run: |
           Copy-Item "target/${{ matrix.target }}/release/memocap.exe" "${{ matrix.asset }}"
           $hash = (Get-FileHash -Algorithm SHA256 "${{ matrix.asset }}").Hash.ToLower()
-          "$hash  ${{ matrix.asset }}" | Out-File -Encoding ascii "${{ matrix.asset }}.sha256"
+          "$hash  ${{ matrix.asset }}`n" | Set-Content -NoNewline -Encoding ascii "${{ matrix.asset }}.sha256"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release-${{ matrix.target }}

@@ -62,6 +62,7 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     for required in [
         "fetch-depth: 0",
         "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
+        "Set-Content -NoNewline -Encoding ascii",
         "scripts/check-release.mjs",
         "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
     ] {

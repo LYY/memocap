@@ -40,6 +40,10 @@ fn release_contract_rejects_critical_workflow_mutations() {
             ": # skipped exact main validation",
         ),
         (
+            "Set-Content -NoNewline -Encoding ascii",
+            "Out-File -Encoding ascii",
+        ),
+        (
             "verify_existing_assets \"$release\"",
             ": # skipped asset verification",
         ),
