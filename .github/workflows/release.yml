@@ -313,7 +313,8 @@ jobs:
           package="$(node -p "require('./package.json').name")"
           version="$(node -p "require('./package.json').version")"
           expected_integrity="$(npm pack --dry-run --json | jq -r '.[0].integrity')"
-          actual="$RUNNER_TEMP/npm-package.json"
+          actual="$RUNNER_TEMP/npm-package-verified.json"
+          npm view "$package@$version" --json > "$actual"
           [ "$(jq -r '.name' "$actual")" = "$package" ]
           [ "$(jq -r '.version' "$actual")" = "$version" ]
           [ "$(jq -r '.repository.url' "$actual")" = "https://github.com/LYY/memocap.git" ]
