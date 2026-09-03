@@ -151,10 +151,17 @@ fn injected_legacy_host_in_chinese_repository_row_is_rejected() {
 
 #[test]
 fn inserted_unknown_command_between_install_steps_is_rejected() {
-    for readme in [ENGLISH, CHINESE] {
+    let english_crlf = ENGLISH.replace("\r\n", "\n").replace('\n', "\r\n");
+    let chinese_crlf = CHINESE.replace("\r\n", "\n").replace('\n', "\r\n");
+    for readme in [ENGLISH, CHINESE, &english_crlf, &chinese_crlf] {
+        let newline = if readme.contains("\r\n") {
+            "\r\n"
+        } else {
+            "\n"
+        };
         let mutated = readme.replace(
-            "pnpm add -g @lyy-gh/memocap@0.0.1\nopencode plugin @lyy-gh/memocap",
-            "pnpm add -g @lyy-gh/memocap@0.0.1\necho unexpected\nopencode plugin @lyy-gh/memocap",
+            &format!("pnpm add -g @lyy-gh/memocap@0.0.1{newline}opencode plugin @lyy-gh/memocap"),
+            &format!("pnpm add -g @lyy-gh/memocap@0.0.1{newline}echo unexpected{newline}opencode plugin @lyy-gh/memocap"),
         );
 
         assert!(!install_contract_is_valid(&mutated));
