@@ -15,16 +15,18 @@ const ASSETS = {
   "win32-x64": "memocap-x86_64-pc-windows-msvc.exe",
 };
 
-function assetName() {
-  const key = `${process.platform}-${process.arch}`;
+function resolveReleaseAsset(platform, arch) {
+  const key = `${platform}-${arch}`;
   const name = ASSETS[key];
   if (!name) {
-    console.error(
-      `memocap: unsupported platform ${process.platform}/${process.arch}. Supported: linux/x64, darwin/arm64, win32/x64.`,
+    throw new Error(
+      `unsupported platform ${platform}/${arch}. Supported: linux/x64, darwin/arm64, win32/x64.`,
     );
-    process.exit(1);
   }
-  return name;
+  return {
+    name,
+    url: `https://github.com/LYY/memocap/releases/download/v${VERSION}/${name}`,
+  };
 }
 
 function cacheDir() {
@@ -95,14 +97,13 @@ async function resolveBinary() {
   if (process.env.MEMOCAP_BINARY) {
     return process.env.MEMOCAP_BINARY;
   }
-  const name = assetName();
+  const { name, url } = resolveReleaseAsset(process.platform, process.arch);
   const dir = cacheDir();
   fs.mkdirSync(dir, { recursive: true });
   const dest = path.join(dir, name);
   if (fs.existsSync(dest) && fs.statSync(dest).size > 0) {
     return dest;
   }
-  const url = `https://github.com/luodaoyi/memocap/releases/download/v${VERSION}/${name}`;
   await download(url, dest);
   return dest;
 }
@@ -122,4 +123,8 @@ async function main() {
   }
 }
 
-main();
+module.exports = { resolveReleaseAsset };
+
+if (require.main === module) {
+  main();
+}
