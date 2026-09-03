@@ -1,7 +1,7 @@
 const CI_WORKFLOW: &str = include_str!("../.github/workflows/ci.yml");
 
 fn job<'a>(workflow: &'a str, name: &str) -> &'a str {
-    let marker = format!("  {name}:\n");
+    let marker = format!("  {name}:");
     let (_, remainder) = workflow
         .split_once(&marker)
         .unwrap_or_else(|| panic!("missing job {name}"));
@@ -15,8 +15,12 @@ fn job<'a>(workflow: &'a str, name: &str) -> &'a str {
 fn permissions(section: &str, indent: usize) -> Vec<(&str, &str)> {
     let prefix = " ".repeat(indent);
     let (_, remainder) = section
-        .split_once(&format!("{prefix}permissions:\n"))
+        .split_once(&format!("{prefix}permissions:"))
         .expect("missing permissions map");
+    let remainder = remainder
+        .strip_prefix("\r\n")
+        .or_else(|| remainder.strip_prefix('\n'))
+        .expect("permissions must end with a line break");
     remainder
         .lines()
         .take_while(|line| line.starts_with(&format!("{prefix}  ")))
@@ -48,4 +52,13 @@ fn package_contract_runs_release_gates_before_packaging() {
     assert!(
         package_contract.find("actionlint").unwrap() < package_contract.find("npm pack").unwrap()
     );
+}
+
+#[test]
+fn package_contract_accepts_windows_crlf_checkout() {
+    let windows_workflow = CI_WORKFLOW.replace('\n', "\r\n");
+
+    let package_contract = job(&windows_workflow, "package-contract");
+
+    assert_eq!(permissions(package_contract, 4), vec![("contents", "read")]);
 }
