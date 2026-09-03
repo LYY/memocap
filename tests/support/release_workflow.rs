@@ -98,6 +98,10 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     }
 
     let reconcile = job(workflow, "release");
+    require(
+        reconcile,
+        "gh release upload \"$TAG\" \"release-assets/$asset\" \"release-assets/$asset.sha256\"",
+    )?;
     let initial_read = "release=\"$(read_release)\"";
     let initial_read_position = reconcile
         .find(initial_read)
@@ -220,7 +224,7 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
         "npm install --ignore-scripts --package-lock=false",
         "npm audit signatures --json --include-attestations",
         "any(.verified[];",
-        ".attestations.provenance.predicateType == \"https://slsa.dev/provenance/v1\"",
+        "any(.attestationBundles[]?; .predicateType == \"https://slsa.dev/provenance/v1\")",
     ] {
         require(provenance, required)?;
     }

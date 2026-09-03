@@ -121,9 +121,9 @@ function writeFixture(context, overrides = {}) {
       {
         name: packageName,
         version,
-        attestations: {
-          provenance: { predicateType: "https://slsa.dev/provenance/v1" },
-        },
+        attestationBundles: [
+          { predicateType: "https://slsa.dev/provenance/v1" },
+        ],
       },
     ],
   };
@@ -191,6 +191,20 @@ for (const [name, overrides] of [
     },
   ],
   ["missing installed provenance", { audit: { verified: [] } }],
+  [
+    "non-provenance attestation bundle",
+    {
+      audit: {
+        verified: [
+          {
+            name: "@lyy-gh/memocap",
+            version: "0.0.1",
+            attestationBundles: [{ predicateType: "https://example.com/not-provenance" }],
+          },
+        ],
+      },
+    },
+  ],
 ]) {
   test(`first publish rejects ${name} without a second publish`, (context) => {
     const fixture = writeFixture(context, overrides);

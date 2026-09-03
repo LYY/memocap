@@ -146,19 +146,23 @@ jobs:
           }
 
           verify_asset() {
-            local asset="$1" expected actual directory
+            local asset="$1" checksum_asset expected remote_expected actual directory
+            checksum_asset="${asset}.sha256"
             directory="$(mktemp -d)"
             gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$asset" --dir "$directory"
-            expected="$(awk '{print $1}' "release-assets/${asset}.sha256")"
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$checksum_asset" --dir "$directory"
+            expected="$(awk '{print $1}' "release-assets/$checksum_asset")"
+            remote_expected="$(awk '{print $1}' "$directory/$checksum_asset")"
             actual="$(sha256sum "$directory/$asset" | awk '{print $1}')"
+            [ "$remote_expected" = "$expected" ]
             [ "$actual" = "$expected" ]
           }
 
           verify_known_assets() {
-            local release="$1" asset count remote
+            local release="$1" asset checksum_asset count checksum_count remote
             for remote in $(jq -r '.[0].assets[]?.name' <<< "$release"); do
               case "$remote" in
-                memocap-x86_64-unknown-linux-gnu|memocap-aarch64-apple-darwin|memocap-x86_64-pc-windows-msvc.exe) ;;
+                memocap-x86_64-unknown-linux-gnu|memocap-aarch64-apple-darwin|memocap-x86_64-pc-windows-msvc.exe|memocap-x86_64-unknown-linux-gnu.sha256|memocap-aarch64-apple-darwin.sha256|memocap-x86_64-pc-windows-msvc.exe.sha256) ;;
                 *) echo "unexpected release asset $remote" >&2; return 1 ;;
               esac
             done
@@ -166,17 +170,19 @@ jobs:
               memocap-x86_64-unknown-linux-gnu \
               memocap-aarch64-apple-darwin \
               memocap-x86_64-pc-windows-msvc.exe; do
+              checksum_asset="${asset}.sha256"
               count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
-              [ "$count" -eq 1 ] || { echo "missing or duplicate release asset $asset" >&2; return 1; }
+              checksum_count="$(jq --arg asset "$checksum_asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
+              [ "$count" -eq 1 ] && [ "$checksum_count" -eq 1 ] || { echo "missing or duplicate release asset $asset" >&2; return 1; }
               verify_asset "$asset"
             done
           }
 
           verify_existing_assets() {
-            local release="$1" asset count remote
+            local release="$1" asset checksum_asset count checksum_count remote
             for remote in $(jq -r '.[0].assets[]?.name' <<< "$release"); do
               case "$remote" in
-                memocap-x86_64-unknown-linux-gnu|memocap-aarch64-apple-darwin|memocap-x86_64-pc-windows-msvc.exe) ;;
+                memocap-x86_64-unknown-linux-gnu|memocap-aarch64-apple-darwin|memocap-x86_64-pc-windows-msvc.exe|memocap-x86_64-unknown-linux-gnu.sha256|memocap-aarch64-apple-darwin.sha256|memocap-x86_64-pc-windows-msvc.exe.sha256) ;;
                 *) echo "unexpected release asset $remote" >&2; return 1 ;;
               esac
             done
@@ -184,11 +190,13 @@ jobs:
               memocap-x86_64-unknown-linux-gnu \
               memocap-aarch64-apple-darwin \
               memocap-x86_64-pc-windows-msvc.exe; do
+              checksum_asset="${asset}.sha256"
               count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
-              case "$count" in
-                0) ;;
-                1) verify_asset "$asset" ;;
-                *) echo "duplicate release asset $asset" >&2; return 1 ;;
+              checksum_count="$(jq --arg asset "$checksum_asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
+              case "$count:$checksum_count" in
+                0:0) ;;
+                1:1) verify_asset "$asset" ;;
+                *) echo "missing or duplicate release asset $asset" >&2; return 1 ;;
               esac
             done
           }
@@ -210,7 +218,7 @@ jobs:
                 memocap-x86_64-pc-windows-msvc.exe; do
                 count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
                 if [ "$count" -eq 0 ]; then
-                  gh release upload "$TAG" "release-assets/$asset" --repo "$GITHUB_REPOSITORY"
+                  gh release upload "$TAG" "release-assets/$asset" "release-assets/$asset.sha256" --repo "$GITHUB_REPOSITORY"
                   release="$(read_release)"
                   verify_identity "$release"
                 fi
@@ -268,6 +276,10 @@ jobs:
             memocap-aarch64-apple-darwin
             memocap-x86_64-pc-windows-msvc.exe
           )
+          expected_files=()
+          for asset in "${expected_assets[@]}"; do
+            expected_files+=("$asset" "${asset}.sha256")
+          done
           cd release-assets
           sha256sum --check ./*.sha256
           cd "$GITHUB_WORKSPACE"
@@ -275,16 +287,22 @@ jobs:
           [ "$(jq -r '.draft' <<< "$release")" = false ]
           [ "$(jq -r '.tag_name' <<< "$release")" = "$TAG" ]
           [ "$(jq -r '.target_commitish' <<< "$release")" = "$TAG_SHA" ]
-          expected_names="$(printf '%s\n' "${expected_assets[@]}" | sort)"
+          expected_names="$(printf '%s\n' "${expected_files[@]}" | sort)"
           actual_assets="$(jq -r '[.assets[].name] | sort | join("\n")' <<< "$release")"
           [ "$actual_assets" = "$expected_names" ]
           for asset in "${expected_assets[@]}"; do
+            checksum_asset="${asset}.sha256"
             count="$(jq --arg asset "$asset" '[.assets[] | select(.name == $asset)] | length' <<< "$release")"
             [ "$count" -eq 1 ]
-            expected="$(awk '{print $1}' "release-assets/${asset}.sha256")"
+            checksum_count="$(jq --arg asset "$checksum_asset" '[.assets[] | select(.name == $asset)] | length' <<< "$release")"
+            [ "$checksum_count" -eq 1 ]
+            expected="$(awk '{print $1}' "release-assets/$checksum_asset")"
             directory="$(mktemp -d)"
             gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$asset" --dir "$directory"
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$checksum_asset" --dir "$directory"
+            remote_expected="$(awk '{print $1}' "$directory/$checksum_asset")"
             actual="$(sha256sum "$directory/$asset" | awk '{print $1}')"
+            [ "$remote_expected" = "$expected" ]
             [ "$actual" = "$expected" ]
           done
       - id: registry
@@ -332,6 +350,6 @@ jobs:
             any(.verified[];
               .name == $package and
               .version == $version and
-              .attestations.provenance.predicateType == "https://slsa.dev/provenance/v1"
+              any(.attestationBundles[]?; .predicateType == "https://slsa.dev/provenance/v1")
             )
           ' <<< "$audit" >/dev/null
