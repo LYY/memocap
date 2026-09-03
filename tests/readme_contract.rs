@@ -20,15 +20,23 @@ fn repository_row(readme: &str) -> &str {
 }
 
 fn install_commands(readme: &str) -> Vec<&str> {
-    install_section(readme)
-        .lines()
-        .map(str::trim)
-        .filter(|line| {
-            line.starts_with("pnpm add -g ")
-                || line.starts_with("opencode plugin ")
-                || line.starts_with("memocap ")
-        })
-        .collect()
+    let mut in_shell_block = false;
+    let mut commands = Vec::new();
+    for line in install_section(readme).lines() {
+        let line = line.trim();
+        if line == "```sh" {
+            in_shell_block = true;
+            continue;
+        }
+        if in_shell_block && line == "```" {
+            in_shell_block = false;
+            continue;
+        }
+        if in_shell_block && !line.is_empty() {
+            commands.push(line);
+        }
+    }
+    commands
 }
 
 fn install_contract_is_valid(readme: &str) -> bool {
@@ -139,4 +147,28 @@ fn injected_legacy_host_in_chinese_repository_row_is_rejected() {
     );
 
     assert!(!repository_row_is_opencode_only(&mutated));
+}
+
+#[test]
+fn inserted_unknown_command_between_install_steps_is_rejected() {
+    for readme in [ENGLISH, CHINESE] {
+        let mutated = readme.replace(
+            "pnpm add -g @lyy-gh/memocap@0.0.1\nopencode plugin @lyy-gh/memocap",
+            "pnpm add -g @lyy-gh/memocap@0.0.1\necho unexpected\nopencode plugin @lyy-gh/memocap",
+        );
+
+        assert!(!install_contract_is_valid(&mutated));
+    }
+}
+
+#[test]
+fn inserted_unknown_command_after_plugin_registration_is_rejected() {
+    for readme in [ENGLISH, CHINESE] {
+        let mutated = readme.replace(
+            "opencode plugin @lyy-gh/memocap",
+            "opencode plugin @lyy-gh/memocap\necho unexpected",
+        );
+
+        assert!(!install_contract_is_valid(&mutated));
+    }
 }
