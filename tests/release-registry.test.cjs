@@ -64,9 +64,8 @@ function writeFixture(context, overrides = {}) {
     JSON.stringify({ name: packageName, version }),
   );
   fs.writeFileSync(
-    path.join(bin, "npm"),
+    path.join(bin, "npm-stub.cjs"),
     [
-      `#!${process.execPath}`,
       '"use strict";',
       'const fs = require("node:fs");',
       "const command = process.argv[2];",
@@ -107,6 +106,11 @@ function writeFixture(context, overrides = {}) {
       "process.exit(1);",
       "",
     ].join("\n"),
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    path.join(bin, "npm"),
+    '#!/usr/bin/env bash\nexec node "$(dirname "$0")/npm-stub.cjs" "$@"\n',
     { mode: 0o755 },
   );
 

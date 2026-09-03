@@ -64,10 +64,10 @@ process.stdout.write(process.env.RELEASE_CHECK_METADATA);
   const cargo = path.join(bin, process.platform === "win32" ? "cargo.exe" : "cargo");
   if (process.platform === "win32") {
     fs.copyFileSync(process.execPath, cargo);
+    fs.chmodSync(cargo, 0o755);
   } else {
     fs.symlinkSync(process.execPath, cargo);
   }
-  fs.chmodSync(cargo, 0o755);
 
   return { cargoArguments, root, metadata };
 }
