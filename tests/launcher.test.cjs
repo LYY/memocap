@@ -25,7 +25,7 @@ function runResolver(platform, arch) {
 }
 
 function createTempBinary(context, source) {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-launcher-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "memocap launcher-"));
   context.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
   const binaryPath = path.join(tempDir, "memocap-test.cjs");
   fs.writeFileSync(binaryPath, `#!${process.execPath}\n${source}`, {
@@ -154,7 +154,7 @@ test("forwards child output and exit status through MEMOCAP_BINARY", (context) =
     env: {
       ...process.env,
       MEMOCAP_BINARY: process.execPath,
-      NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --require ${hookPath}`.trim(),
+      NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --require ${JSON.stringify(hookPath)}`.trim(),
     },
   });
 
