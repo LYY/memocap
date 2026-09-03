@@ -137,17 +137,25 @@ test("loads release resolver without launching a child process", (context) => {
 
 test("forwards child output and exit status through MEMOCAP_BINARY", (context) => {
   // Given
-  const binaryPath = createTempBinary(
+  const hookPath = createTempBinary(
     context,
-    'process.stdout.write(`stdout:${process.argv[2]}\\n`);\n' +
-      'process.stderr.write(`stderr:${process.argv[2]}\\n`);\n' +
-      "process.exit(17);\n",
+    'const path = require("node:path");\n' +
+      `if (path.resolve(process.argv[1]) !== ${JSON.stringify(launcherPath)}) {\n` +
+      '  const argument = path.relative(process.cwd(), process.argv[1]);\n' +
+      '  process.stdout.write(`stdout:${argument}\\n`);\n' +
+      '  process.stderr.write(`stderr:${argument}\\n`);\n' +
+      "  process.exit(17);\n" +
+      "}\n",
   );
 
   // When
   const execution = spawnSync(process.execPath, [launcherPath, "forwarded"], {
     encoding: "utf8",
-    env: { ...process.env, MEMOCAP_BINARY: binaryPath },
+    env: {
+      ...process.env,
+      MEMOCAP_BINARY: process.execPath,
+      NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --require ${hookPath}`.trim(),
+    },
   });
 
   // Then

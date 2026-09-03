@@ -34,7 +34,7 @@ test("plugin run invokes the global launcher on PATH", async (context) => {
   const originalBinary = process.env.MEMOCAP_BINARY;
   const originalPath = process.env.PATH;
   process.env.MEMOCAP_BINARY = bypassBinary;
-  process.env.PATH = tempDir;
+  process.env.PATH = `${tempDir}${path.delimiter}${originalPath ?? ""}`;
   try {
     const { run } = await import(`${pathToFileURL(pluginPath).href}?test=${Date.now()}`);
 
