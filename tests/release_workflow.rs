@@ -14,3 +14,10 @@ fn release_contract_accepts_windows_crlf_checkout() {
 
     assert_eq!(release_contract(&windows_checkout), Ok(()));
 }
+
+#[test]
+fn release_build_pins_cargo_minimum_toolchain() {
+    let workflow = normalized_workflow(RELEASE_WORKFLOW);
+
+    assert!(workflow.contains("toolchain: 1.88.0"));
+}
