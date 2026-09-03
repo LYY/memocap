@@ -18,9 +18,9 @@ use ratatui::{
 use crate::{install, paths::Paths, store};
 
 const ACTIONS: [&str; 5] = [
-    "为当前项目配置 AGENTS.md",
-    "为全部 Codex 项目配置 ~/.codex/AGENTS.md",
-    "移除当前项目的 memocap 配置",
+    "Legacy compatibility (unsupported): 为当前项目配置 AGENTS.md",
+    "Legacy compatibility (unsupported): 为全部 Codex 项目配置 ~/.codex/AGENTS.md",
+    "Legacy compatibility (unsupported): 移除当前项目的 memocap 配置",
     "查看本地状态",
     "退出",
 ];
@@ -60,9 +60,9 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()>
                     1 => message = install_message(true),
                     2 => {
                         message = match install::uninstall(false) {
-                            Ok(true) => "已移除当前项目的 memocap 标记块。".to_owned(),
-                            Ok(false) => "当前项目没有 memocap 标记块，未修改文件。".to_owned(),
-                            Err(error) => format!("移除失败：{error:#}"),
+                            Ok(true) => "Legacy compatibility (unsupported): 已移除当前项目的 memocap 标记块。".to_owned(),
+                            Ok(false) => "Legacy compatibility (unsupported): 当前项目没有 memocap 标记块，未修改文件。".to_owned(),
+                            Err(error) => format!("Legacy compatibility (unsupported): 移除失败：{error:#}"),
                         }
                     }
                     3 => message = status_message(),
@@ -77,7 +77,7 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()>
 fn install_message(global: bool) -> String {
     match install::install(global) {
         Ok(result) => format!(
-            "已配置 {}。重开 Codex 会话即可加载。",
+            "Legacy compatibility (unsupported): 已配置 {}。",
             result.agents_path.display()
         ),
         Err(error) => format!("配置失败：{error:#}"),
@@ -116,7 +116,7 @@ fn render(frame: &mut ratatui::Frame, selected: usize, message: &str) {
                     .fg(Color::Cyan)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw("  local memory for four hosts"),
+            Span::raw("  local-first SQLite memory for OpenCode"),
         ]))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL)),
@@ -153,10 +153,33 @@ impl Drop for RestoreTerminal {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ratatui::{backend::TestBackend, Terminal};
 
     #[test]
-    fn menu_has_project_and_global_options() {
+    fn menu_labels_project_and_global_actions_as_unsupported_legacy_compatibility() {
         assert!(ACTIONS[0].contains("当前项目"));
         assert!(ACTIONS[1].contains("全部"));
+        assert!(ACTIONS[0].contains("Legacy compatibility (unsupported)"));
+        assert!(ACTIONS[1].contains("Legacy compatibility (unsupported)"));
+    }
+
+    #[test]
+    fn render_presents_opencode_as_the_supported_product() {
+        let backend = TestBackend::new(100, 20);
+        let mut terminal = Terminal::new(backend).expect("test terminal should initialize");
+
+        terminal
+            .draw(|frame| render(frame, 0, "status"))
+            .expect("TUI should render");
+
+        let screen = terminal
+            .backend()
+            .buffer()
+            .content
+            .iter()
+            .map(ratatui::buffer::Cell::symbol)
+            .collect::<String>();
+        assert!(screen.contains("local-first SQLite memory for OpenCode"));
+        assert!(!screen.contains("four hosts"));
     }
 }
