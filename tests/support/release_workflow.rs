@@ -102,6 +102,10 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
         reconcile,
         "gh release upload \"$TAG\" \"release-assets/$asset\" \"release-assets/$asset.sha256\"",
     )?;
+    require(
+        reconcile,
+        "if [ \"$count\" -ne 1 ] || [ \"$checksum_count\" -ne 1 ]; then",
+    )?;
     let initial_read = "release=\"$(read_release)\"";
     let initial_read_position = reconcile
         .find(initial_read)

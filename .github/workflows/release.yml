@@ -173,7 +173,10 @@ jobs:
               checksum_asset="${asset}.sha256"
               count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
               checksum_count="$(jq --arg asset "$checksum_asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
-              [ "$count" -eq 1 ] && [ "$checksum_count" -eq 1 ] || { echo "missing or duplicate release asset $asset" >&2; return 1; }
+              if [ "$count" -ne 1 ] || [ "$checksum_count" -ne 1 ]; then
+                echo "missing or duplicate release asset $asset" >&2
+                return 1
+              fi
               verify_asset "$asset"
             done
           }
