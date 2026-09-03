@@ -77,6 +77,10 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "error_file=\"$RUNNER_TEMP/npm-view-error\"",
             "npm publish --access public --provenance\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
         ),
+        (
+            "run: npm publish --access public --provenance",
+            "env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}\n        run: npm publish --access public --provenance",
+        ),
         ("[ \"$actual_assets\" = \"$expected_names\" ]", "true # skipped exact asset equality"),
         ("' <<< \"$audit\" >/dev/null", "' <<< \"$audit\" >/dev/null || true"),
     ] {

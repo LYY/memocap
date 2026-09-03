@@ -221,6 +221,12 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
         return Err("registry state inspection publishes a package".to_owned());
     }
 
+    let publish = step(registry, "Publish missing package");
+    require(publish, "npm publish --access public --provenance")?;
+    if publish.contains("NODE_AUTH_TOKEN") || workflow.contains("NPM_PUBLISH_TOKEN") {
+        return Err("registry publishing must use trusted publishing OIDC only".to_owned());
+    }
+
     let provenance = step(registry, "Verify registry package and provenance");
     for required in [
         "actual=\"$RUNNER_TEMP/npm-package-verified.json\"",

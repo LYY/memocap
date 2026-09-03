@@ -326,8 +326,6 @@ jobs:
           fi
       - name: Publish missing package
         if: steps.registry.outputs.state == 'absent'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
         run: npm publish --access public --provenance
       - name: Verify registry package and provenance
         if: always()
