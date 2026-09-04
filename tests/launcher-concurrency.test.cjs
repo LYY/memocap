@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { spawn } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
 const test = require("node:test");
 
 const launcherPath = path.resolve(__dirname, "../bin/cli.cjs");
@@ -118,4 +118,63 @@ test("parallel cold starts publish one verified executable cache", async (contex
   if (process.platform !== "win32") {
     assert.notEqual(fs.statSync(binary).mode & 0o111, 0);
   }
+});
+
+test("reclaims a cache lease after its owner exits", async (context) => {
+  const asset = assets[`${process.platform}-${process.arch}`];
+  if (!asset) {
+    context.skip(`unsupported test platform ${process.platform}/${process.arch}`);
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-launcher-stale-lock-"));
+  context.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const owner = spawnSync(process.execPath, ["-e", ""], { encoding: "utf8" });
+  assert.equal(owner.status, 0, owner.stderr);
+  assert.ok(owner.pid);
+  const directory = cacheDirectory(root);
+  fs.mkdirSync(directory, { recursive: true });
+  fs.writeFileSync(
+    path.join(directory, `${asset}.lock.lease-${owner.pid}-stale`),
+    JSON.stringify({ pid: owner.pid, state: "owner", createdAt: Date.now() }),
+  );
+
+  const execution = await coldStart(root, downloadHook(root), asset, "stale", executableFixture(root));
+
+  assert.equal(execution.status, 0, execution.stderr);
+  const binary = path.join(directory, asset);
+  assert.equal(verifyCachedBinary(binary, `${binary}.sha256`, asset), true);
+  assert.deepEqual(fs.readdirSync(directory).sort(), [asset, `${asset}.sha256`].sort());
+});
+
+test("parallel contenders reclaim a stale cache lease without deleting its winner", async (context) => {
+  const asset = assets[`${process.platform}-${process.arch}`];
+  if (!asset) {
+    context.skip(`unsupported test platform ${process.platform}/${process.arch}`);
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-launcher-stale-race-"));
+  context.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const owner = spawnSync(process.execPath, ["-e", ""], { encoding: "utf8" });
+  assert.equal(owner.status, 0, owner.stderr);
+  assert.ok(owner.pid);
+  const directory = cacheDirectory(root);
+  fs.mkdirSync(directory, { recursive: true });
+  fs.writeFileSync(
+    path.join(directory, `${asset}.lock.lease-${owner.pid}-stale`),
+    JSON.stringify({ pid: owner.pid, state: "owner", createdAt: Date.now() }),
+  );
+  const hook = downloadHook(root);
+  const executable = executableFixture(root);
+
+  const executions = await Promise.all([
+    coldStart(root, hook, asset, "a", executable),
+    coldStart(root, hook, asset, "b", executable),
+  ]);
+
+  for (const execution of executions) {
+    assert.equal(execution.status, 0, execution.stderr);
+  }
+  const binary = path.join(directory, asset);
+  assert.equal(verifyCachedBinary(binary, `${binary}.sha256`, asset), true);
+  assert.deepEqual(fs.readdirSync(directory).sort(), [asset, `${asset}.sha256`].sort());
 });

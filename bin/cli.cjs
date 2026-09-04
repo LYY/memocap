@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 "use strict";
 
-const { spawnSync } = require("child_process");
-const crypto = require("crypto");
-const fs = require("fs");
-const https = require("https");
-const os = require("os");
-const path = require("path");
+const { spawnSync } = require("node:child_process");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const https = require("node:https");
+const os = require("node:os");
+const path = require("node:path");
+const { createCacheLock } = require("./cache-lock.cjs");
 
 const VERSION = require("../package.json").version;
 
@@ -130,17 +131,14 @@ async function acquireCacheLock(release, binary) {
     if (verifyCachedBinary(binary, checksum, release.name)) {
       return null;
     }
-    try {
-      return { file: fs.openSync(lockPath, "wx"), path: lockPath };
-    } catch (error) {
-      if (error?.code !== "EEXIST") {
-        throw error;
-      }
-      if (Date.now() >= deadline) {
-        throw new Error(`timed out waiting for cache download of ${release.name}`);
-      }
-      await delay(CACHE_LOCK_RETRY_MS);
+    const lock = await createCacheLock(lockPath);
+    if (lock) {
+      return lock;
     }
+    if (Date.now() >= deadline) {
+      throw new Error(`timed out waiting for cache download of ${release.name}`);
+    }
+    await delay(CACHE_LOCK_RETRY_MS);
   }
 }
 
@@ -166,11 +164,7 @@ async function downloadVerifiedCache(release, binary, checksum) {
 }
 
 function releaseCacheLock(lock) {
-  try {
-    fs.closeSync(lock.file);
-  } finally {
-    fs.rmSync(lock.path, { force: true });
-  }
+  fs.rmSync(lock.path, { force: true });
 }
 
 async function replaceCachedBinary(release, binary) {
