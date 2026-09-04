@@ -81,7 +81,7 @@ jobs:
             8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 \
             "$archive" | sha256sum --check --status
           tar --extract --gzip --file "$archive" --directory "$RUNNER_TEMP"
-          "$RUNNER_TEMP/actionlint" .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/npm-bootstrap-v0.0.1.yml
+          "$RUNNER_TEMP/actionlint" .github/workflows/ci.yml .github/workflows/release.yml
       - name: Check release contract
         env:
           RELEASE_TAG: v0.0.1
