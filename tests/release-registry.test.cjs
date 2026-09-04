@@ -23,23 +23,27 @@ function blockRun(step) {
   const marker = "        run: |\n";
   const start = step.indexOf(marker);
   assert.notEqual(start, -1, "missing block run command");
-  const lines = step.slice(start + marker.length).split("\n");
-  const script = [];
-  for (const line of lines) {
-    if (!line.startsWith("          ")) break;
-    script.push(line.slice(10));
-  }
-  return script.join("\n");
+  return step
+    .slice(start + marker.length)
+    .split("\n")
+    .filter((line) => line.startsWith("          "))
+    .map((line) => line.slice(10))
+    .join("\n");
 }
 
-function inlineRun(step) {
-  const match = step.match(/^        run: (.+)$/m);
-  assert.ok(match, "missing inline run command");
+function stepRun(step) {
+  const marker = "        run: |\n";
+  const start = step.indexOf(marker);
+  if (start !== -1) {
+    return blockRun(step);
+  }
+  const match = step.match(/^\s{8}run: (.+)$/m);
+  assert.ok(match, "missing workflow run command");
   return match[1];
 }
 
 const inspectRegistry = blockRun(workflowStep("      - id: registry\n"));
-const publishPackage = inlineRun(workflowStep("      - name: Publish missing package\n"));
+const publishPackage = stepRun(workflowStep("      - name: Publish missing package\n"));
 const verifyRegistry = blockRun(
   workflowStep("      - name: Verify registry package and provenance\n"),
 );
@@ -90,7 +94,7 @@ function writeFixture(context, overrides = {}) {
       "}",
       'if (command === "pack") {',
       '  record("pack");',
-      '  process.stdout.write("[{\\\"integrity\\\":\\\"sha512-fixture\\\"}]");',
+      '  process.stdout.write(JSON.stringify([{ integrity: "sha512-fixture" }]));',
       "  process.exit(0);",
       "}",
       'if (command === "init" || command === "install") {',
@@ -102,7 +106,7 @@ function writeFixture(context, overrides = {}) {
       "  process.stdout.write(process.env.FAKE_NPM_AUDIT);",
       "  process.exit(0);",
       "}",
-      'process.stderr.write(`unsupported npm command: ${command}\\n`);',
+      'process.stderr.write("unsupported npm command: " + command + "\\n");',
       "process.exit(1);",
       "",
     ].join("\n"),
@@ -113,6 +117,9 @@ function writeFixture(context, overrides = {}) {
     '#!/usr/bin/env bash\nexec node "$(dirname "$0")/npm-stub.cjs" "$@"\n',
     { mode: 0o755 },
   );
+  fs.writeFileSync(path.join(bin, "sleep"), "#!/usr/bin/env bash\nexit 0\n", {
+    mode: 0o755,
+  });
 
   const metadata = overrides.metadata ?? {
     name: packageName,
