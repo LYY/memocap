@@ -427,7 +427,7 @@ jobs:
           expected_repository="$(normalize_repository_url "$(node -p "require('./package.json').repository.url")")"
           expected_workflow=".github/workflows/release.yml"
           expected_ref="refs/tags/$TAG"
-          expected_invocation="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          expected_run="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           provenance_matches() {
             local audit="$1" payload statement
             while IFS= read -r payload; do
@@ -437,8 +437,9 @@ jobs:
                 --arg workflow "$expected_workflow" \
                 --arg ref "$expected_ref" \
                 --arg sha "$TAG_SHA" \
-                --arg invocation "$expected_invocation" '
+                --arg run "$expected_run" '
                   .predicate.buildDefinition.externalParameters.workflow as $provenance_workflow |
+                  (.predicate.runDetails.metadata.invocationId | strings) as $provenance_invocation |
                   $provenance_workflow.repository == $repository and
                   $provenance_workflow.path == $workflow and
                   $provenance_workflow.ref == $ref and
@@ -446,7 +447,8 @@ jobs:
                     .uri == ("git+" + $repository + "@" + $ref) and
                     .digest.gitCommit == $sha
                   ) and
-                  .predicate.runDetails.metadata.invocationId == $invocation
+                  ($provenance_invocation | startswith($run + "/attempts/")) and
+                  ($provenance_invocation | ltrimstr($run + "/attempts/") | test("^[0-9]+$"))
                 ' <<< "$statement" >/dev/null; then
                 return 0
               fi
@@ -478,11 +480,11 @@ jobs:
             )
           }
 
-          for attempt in {1..10}; do
+          for verification_attempt in {1..10}; do
             if registry_matches; then
               exit 0
             fi
-            if [ "$attempt" -lt 10 ]; then
+            if [ "$verification_attempt" -lt 10 ]; then
               sleep 2
             fi
           done
