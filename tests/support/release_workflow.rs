@@ -63,15 +63,25 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     let workflow = normalized.as_str();
     let trigger = workflow
         .split_once("on:\n")
-        .and_then(|(_, after)| after.split_once("permissions:\n"))
+        .and_then(|(_, after)| after.split_once("concurrency:\n"))
         .map(|(trigger, _)| trigger.trim())
         .ok_or_else(|| "missing trigger block".to_owned())?;
     if trigger != "push:\n    tags: [\"v*\"]" || workflow.contains("workflow_dispatch") {
         return Err("release must be tag-only".to_owned());
     }
+    let concurrency = workflow
+        .split_once("concurrency:\n")
+        .and_then(|(_, after)| after.split_once("permissions:\n"))
+        .map(|(concurrency, _)| concurrency.trim())
+        .ok_or_else(|| "missing release concurrency".to_owned())?;
+    if concurrency
+        != "group: release-${{ github.repository }}-${{ github.ref_name }}\n  cancel-in-progress: false"
+    {
+        return Err("release concurrency must serialize each repository tag".to_owned());
+    }
     for required in [
         "fetch-depth: 0",
-        "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
+        "git merge-base --is-ancestor \"$sha\" origin/main",
         "Set-Content -NoNewline -Encoding ascii",
         "scripts/check-release.mjs",
         "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",

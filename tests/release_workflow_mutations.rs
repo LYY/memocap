@@ -51,9 +51,14 @@ fn release_contract_rejects_critical_workflow_mutations() {
     assert_eq!(release_contract(&workflow), Ok(()));
     for (before, after) in [
         (
-            "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
-            ": # skipped exact main validation",
+            "git merge-base --is-ancestor \"$sha\" origin/main",
+            ": # skipped ancestry validation",
         ),
+        (
+            "group: release-${{ github.repository }}-${{ github.ref_name }}",
+            "group: release-${{ github.repository }}",
+        ),
+        ("cancel-in-progress: false", "cancel-in-progress: true"),
         (
             "Set-Content -NoNewline -Encoding ascii",
             "Out-File -Encoding ascii",
