@@ -48,6 +48,49 @@ const verifyRegistry = blockRun(
   workflowStep("      - name: Verify registry package and provenance\n"),
 );
 
+function provenanceAudit(packageName, version) {
+  const repository = "https://github.com/LYY/memocap";
+  const ref = `refs/tags/v${version}`;
+  const statement = {
+    predicate: {
+      buildDefinition: {
+        externalParameters: {
+          workflow: { repository, path: ".github/workflows/release.yml", ref },
+        },
+        resolvedDependencies: [
+          {
+            uri: `git+${repository}@${ref}`,
+            digest: { gitCommit: "0123456789012345678901234567890123456789" },
+          },
+        ],
+      },
+      runDetails: {
+        metadata: {
+          invocationId: "https://github.com/LYY/memocap/actions/runs/123/attempts/1",
+        },
+      },
+    },
+  };
+  return {
+    verified: [
+      {
+        name: packageName,
+        version,
+        attestationBundles: [
+          {
+            predicateType: "https://slsa.dev/provenance/v1",
+            bundle: {
+              dsseEnvelope: {
+                payload: Buffer.from(JSON.stringify(statement)).toString("base64"),
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function writeFixture(context, overrides = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-release-registry-"));
   const bin = path.join(root, "bin");
@@ -65,7 +108,11 @@ function writeFixture(context, overrides = {}) {
   fs.mkdirSync(temp);
   fs.writeFileSync(
     path.join(workspace, "package.json"),
-    JSON.stringify({ name: packageName, version }),
+    JSON.stringify({
+      name: packageName,
+      version,
+      repository: { url: "https://github.com/LYY/memocap.git" },
+    }),
   );
   fs.writeFileSync(
     path.join(bin, "npm-stub.cjs"),
@@ -127,17 +174,7 @@ function writeFixture(context, overrides = {}) {
     repository: { url: "https://github.com/LYY/memocap.git" },
     dist: { integrity: "sha512-fixture" },
   };
-  const audit = overrides.audit ?? {
-    verified: [
-      {
-        name: packageName,
-        version,
-        attestationBundles: [
-          { predicateType: "https://slsa.dev/provenance/v1" },
-        ],
-      },
-    ],
-  };
+  const audit = overrides.audit ?? provenanceAudit(packageName, version);
 
   return {
     commandOptions: {
@@ -148,6 +185,14 @@ function writeFixture(context, overrides = {}) {
         PATH: `${bin}${path.delimiter}${process.env.PATH}`,
         RUNNER_TEMP: temp,
         GITHUB_OUTPUT: output,
+        GITHUB_REF: `refs/tags/v${version}`,
+        GITHUB_REPOSITORY: "LYY/memocap",
+        GITHUB_RUN_ATTEMPT: "1",
+        GITHUB_RUN_ID: "123",
+        GITHUB_SERVER_URL: "https://github.com",
+        GITHUB_SHA: "0123456789012345678901234567890123456789",
+        TAG: `v${version}`,
+        TAG_SHA: "0123456789012345678901234567890123456789",
         FAKE_NPM_LOG: log,
         FAKE_NPM_STATE: state,
         FAKE_NPM_METADATA: JSON.stringify(metadata),

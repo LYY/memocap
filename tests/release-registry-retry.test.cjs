@@ -41,6 +41,47 @@ const verifyRegistry = stepRun(
   workflowStep("      - name: Verify registry package and provenance\n"),
 );
 
+function provenanceAudit(packageName, version, overrides) {
+  const repository = overrides.provenanceRepository ?? "https://github.com/LYY/memocap";
+  const ref = overrides.provenanceRef ?? `refs/tags/v${version}`;
+  const sha = overrides.provenanceSha ?? "0123456789012345678901234567890123456789";
+  const invocation =
+    overrides.provenanceInvocation ?? "https://github.com/LYY/memocap/actions/runs/123/attempts/1";
+  const statement = {
+    predicate: {
+      buildDefinition: {
+        externalParameters: {
+          workflow: {
+            repository,
+            path: overrides.provenanceWorkflow ?? ".github/workflows/release.yml",
+            ref,
+          },
+        },
+        resolvedDependencies: [{ uri: `git+${repository}@${ref}`, digest: { gitCommit: sha } }],
+      },
+      runDetails: { metadata: { invocationId: invocation } },
+    },
+  };
+  return {
+    verified: [
+      {
+        name: packageName,
+        version,
+        attestationBundles: [
+          {
+            predicateType: "https://slsa.dev/provenance/v1",
+            bundle: {
+              dsseEnvelope: {
+                payload: Buffer.from(JSON.stringify(statement)).toString("base64"),
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function writeFixture(context, overrides = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-registry-retry-"));
   const bin = path.join(root, "bin");
@@ -57,7 +98,14 @@ function writeFixture(context, overrides = {}) {
   fs.mkdirSync(workspace);
   fs.mkdirSync(temp);
   fs.mkdirSync(counters);
-  fs.writeFileSync(path.join(workspace, "package.json"), JSON.stringify({ name: packageName, version }));
+  fs.writeFileSync(
+    path.join(workspace, "package.json"),
+    JSON.stringify({
+      name: packageName,
+      version,
+      repository: { url: "https://github.com/LYY/memocap.git" },
+    }),
+  );
   fs.writeFileSync(
     path.join(bin, "npm-stub.cjs"),
     `"use strict";
@@ -118,18 +166,10 @@ process.exit(1);
   const metadata = {
     name: packageName,
     version,
-    repository: { url: "https://github.com/LYY/memocap.git" },
+    repository: { url: overrides.repositoryUrl ?? "https://github.com/LYY/memocap.git" },
     dist: { integrity: "sha512-fixture" },
   };
-  const audit = {
-    verified: [
-      {
-        name: packageName,
-        version,
-        attestationBundles: [{ predicateType: "https://slsa.dev/provenance/v1" }],
-      },
-    ],
-  };
+  const audit = overrides.audit ?? provenanceAudit(packageName, version, overrides);
   return {
     log,
     output,
@@ -141,6 +181,14 @@ process.exit(1);
         PATH: `${bin}${path.delimiter}${process.env.PATH}`,
         RUNNER_TEMP: temp,
         GITHUB_OUTPUT: output,
+        GITHUB_REF: `refs/tags/v${version}`,
+        GITHUB_REPOSITORY: "LYY/memocap",
+        GITHUB_RUN_ATTEMPT: "1",
+        GITHUB_RUN_ID: "123",
+        GITHUB_SERVER_URL: "https://github.com",
+        GITHUB_SHA: "0123456789012345678901234567890123456789",
+        TAG: `v${version}`,
+        TAG_SHA: "0123456789012345678901234567890123456789",
         FAKE_NPM_AUDIT: JSON.stringify(audit),
         FAKE_NPM_BAD_INTEGRITY_VIEWS: String(overrides.badIntegrityViews ?? 0),
         FAKE_NPM_COUNTERS: counters,
@@ -188,4 +236,29 @@ test("retries delayed integrity and provenance visibility", (context) => {
   const calls = fs.readFileSync(fixture.log, "utf8").trim().split("\n");
   assert.ok(calls.filter((call) => call === "audit").length >= 2);
   assert.equal(calls.filter((call) => call === "publish").length, 1);
+});
+
+test("accepts a git+https registry repository URL", (context) => {
+  const fixture = writeFixture(context, {
+    repositoryUrl: "git+https://github.com/LYY/memocap.git",
+  });
+
+  const verification = runFirstPublish(fixture);
+
+  assert.equal(verification.status, 0, verification.stderr);
+});
+
+test("rejects provenance not bound to this release workflow invocation", (context) => {
+  for (const overrides of [
+    { provenanceRepository: "https://github.com/other/memocap" },
+    { provenanceWorkflow: ".github/workflows/other.yml" },
+    { provenanceRef: "refs/tags/v0.0.1" },
+    { provenanceSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+    { provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/122/attempts/1" },
+  ]) {
+    const fixture = writeFixture(context, overrides);
+    const verification = runFirstPublish(fixture);
+
+    assert.notEqual(verification.status, 0);
+  }
 });
