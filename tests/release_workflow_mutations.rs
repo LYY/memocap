@@ -84,6 +84,18 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "release=\"$(read_release)\"",
         ),
         (".[0].draft | type", ".[0].draft"),
+        ("GITHUB_WORKFLOW_SHA", "GITHUB_SHA"),
+        ("GITHUB_WORKFLOW_REF", "GITHUB_REF"),
+        (
+            "release_recovery_sha=\"86b4c20a79db2d4cac3eeaeebf19143778e572d2\"",
+            "release_recovery_sha=\"0000000000000000000000000000000000000000\"",
+        ),
+        ("[ \"$workflow_identity\" = \"$tag_workflow\" ]", "true"),
+        (
+            "[ \"$GITHUB_WORKFLOW_REF\" = \"$expected_workflow_ref\" ]",
+            "true",
+        ),
+        ("[ \"$tag_workflow\" = \"$main_workflow\" ]", "true"),
     ] {
         let mutated = mutate(&workflow, before, after);
         assert!(
