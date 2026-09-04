@@ -111,13 +111,14 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "true",
         ),
         (
-            ".predicate.runDetails.metadata.invocationId == $invocation",
+            "startswith($run + \"/attempts/\")",
             "true",
         ),
         (
-            "expected_invocation=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"",
-            "expected_invocation=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT\"",
+            "expected_run=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"",
+            "expected_run=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT\"",
         ),
+        ("test(\"^[0-9]+$\")", "test(\".+\")"),
         (
             "error_file=\"$RUNNER_TEMP/npm-view-error\"",
             "npm publish --access public --provenance\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
@@ -127,7 +128,10 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}\n          if npm publish --access public --provenance; then",
         ),
         ("[ \"$actual_assets\" = \"$expected_names\" ]", "true # skipped exact asset equality"),
-        ("for attempt in {1..10}; do", "for attempt in {1..1}; do"),
+        (
+            "for verification_attempt in {1..10}; do",
+            "for verification_attempt in {1..1}; do",
+        ),
         ("if registry_matches; then", "if false; then"),
         (
             "if npm publish --access public --provenance; then",

@@ -29,7 +29,6 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
     if inspection.contains("npm publish") {
         return Err("registry state inspection publishes a package".to_owned());
     }
-
     let publish = step(registry, "Publish missing package");
     require(publish, "npm publish --access public --provenance")?;
     require(publish, "if npm publish --access public --provenance; then")?;
@@ -58,13 +57,15 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
         "refs/tags/$TAG",
         "$TAG_SHA",
         "$GITHUB_RUN_ID",
-        "expected_invocation=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"",
+        "expected_run=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"",
+        "startswith($run + \"/attempts/\")",
+        "ltrimstr($run + \"/attempts/\") | test(\"^[0-9]+$\")",
         "$provenance_workflow.repository == $repository",
         "$provenance_workflow.path == $workflow",
         "$provenance_workflow.ref == $ref",
         ".digest.gitCommit == $sha",
-        ".predicate.runDetails.metadata.invocationId == $invocation",
-        "for attempt in {1..10}; do",
+        "--arg run \"$expected_run\"",
+        "for verification_attempt in {1..10}; do",
         "if registry_matches; then",
     ] {
         require(provenance, required)?;

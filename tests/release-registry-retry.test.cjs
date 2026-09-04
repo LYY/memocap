@@ -45,7 +45,7 @@ function provenanceAudit(packageName, version, overrides) {
   const repository = overrides.provenanceRepository ?? "https://github.com/LYY/memocap";
   const ref = overrides.provenanceRef ?? `refs/tags/v${version}`;
   const sha = overrides.provenanceSha ?? "0123456789012345678901234567890123456789";
-  const invocation = overrides.provenanceInvocation ?? "https://github.com/LYY/memocap/actions/runs/123";
+  const invocation = overrides.provenanceInvocation ?? "https://github.com/LYY/memocap/actions/runs/123/attempts/1";
   const statement = {
     predicate: {
       buildDefinition: {
@@ -202,9 +202,7 @@ process.exit(1);
   };
 }
 
-function run(command, fixture) {
-  return spawnSync("bash", ["-c", command], fixture.commandOptions);
-}
+function run(command, fixture) { return spawnSync("bash", ["-c", command], fixture.commandOptions); }
 
 function runFirstPublish(fixture) {
   const inspection = run(inspectRegistry, fixture);
@@ -217,7 +215,7 @@ function runFirstPublish(fixture) {
 
 test("recovery accepts a package from an earlier attempt of the same run", (context) => {
   const fixture = writeFixture(context, {
-    provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/123",
+    provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/123/attempts/1",
     publishStatus: 1,
   });
   assert.equal(run(inspectRegistry, fixture).status, 0);
@@ -259,7 +257,7 @@ test("rejects provenance not bound to this release workflow invocation", (contex
     { provenanceWorkflow: ".github/workflows/other.yml" },
     { provenanceRef: "refs/tags/v0.0.1" },
     { provenanceSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
-    { provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/122" },
+    { provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/122/attempts/not-a-number" },
   ]) {
     const fixture = writeFixture(context, overrides);
     const verification = runFirstPublish(fixture);
