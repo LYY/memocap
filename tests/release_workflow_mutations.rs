@@ -71,6 +71,14 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "verify_existing_assets \"$release\"",
             "gh release edit \"$TAG\" --draft\n        verify_existing_assets \"$release\"",
         ),
+        (
+            "1:0) verify_existing_binary \"$asset\" ;;",
+            "1:0) : # skipped binary verification ;;;",
+        ),
+        (
+            "0:1) verify_existing_checksum \"$asset\" ;;",
+            "0:1) : # skipped checksum verification ;;;",
+        ),
         (".[0].draft | type", ".[0].draft"),
     ] {
         let mutated = mutate(&workflow, before, after);
@@ -96,11 +104,17 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "npm publish --access public --provenance\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
         ),
         (
-            "run: npm publish --access public --provenance",
-            "env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}\n        run: npm publish --access public --provenance",
+            "if npm publish --access public --provenance; then",
+            "env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}\n          if npm publish --access public --provenance; then",
         ),
         ("[ \"$actual_assets\" = \"$expected_names\" ]", "true # skipped exact asset equality"),
         ("' <<< \"$audit\" >/dev/null", "' <<< \"$audit\" >/dev/null || true"),
+        ("for attempt in {1..10}; do", "for attempt in {1..1}; do"),
+        ("if registry_matches; then", "if false; then"),
+        (
+            "if npm publish --access public --provenance; then",
+            "npm publish --access public --provenance",
+        ),
     ] {
         let mutated = mutate_registry(&workflow, before, after);
         assert!(

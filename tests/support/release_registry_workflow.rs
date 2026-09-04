@@ -32,6 +32,11 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
 
     let publish = step(registry, "Publish missing package");
     require(publish, "npm publish --access public --provenance")?;
+    require(publish, "if npm publish --access public --provenance; then")?;
+    require(
+        publish,
+        "npm publish reported failure; checking registry visibility",
+    )?;
     if publish.contains("NODE_AUTH_TOKEN") || workflow.contains("NPM_PUBLISH_TOKEN") {
         return Err("registry publishing must use trusted publishing OIDC only".to_owned());
     }
@@ -44,6 +49,9 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
         "npm audit signatures --json --include-attestations",
         "any(.verified[];",
         "any(.attestationBundles[]?; .predicateType == \"https://slsa.dev/provenance/v1\")",
+        "registry_matches() {",
+        "for attempt in {1..10}; do",
+        "if registry_matches; then",
     ] {
         require(provenance, required)?;
     }

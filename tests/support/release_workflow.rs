@@ -111,10 +111,16 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     }
 
     let reconcile = job(workflow, "release");
-    require(
-        reconcile,
-        "gh release upload \"$TAG\" \"release-assets/$asset\" \"release-assets/$asset.sha256\"",
-    )?;
+    for required in [
+        "verify_existing_binary() {",
+        "verify_existing_checksum() {",
+        "1:0) verify_existing_binary \"$asset\" ;;",
+        "0:1) verify_existing_checksum \"$asset\" ;;",
+        "missing=()",
+        "gh release upload \"$TAG\" \"${missing[@]}\" --repo \"$GITHUB_REPOSITORY\"",
+    ] {
+        require(reconcile, required)?;
+    }
     require(reconcile, "wait_for_release() {")?;
     require(reconcile, "release=\"$(wait_for_release)\"")?;
     before(

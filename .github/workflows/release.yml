@@ -199,6 +199,23 @@ jobs:
             done
           }
 
+          verify_existing_binary() {
+            local asset="$1" expected actual directory
+            directory="$(mktemp -d)"
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$asset" --dir "$directory"
+            expected="$(awk '{print $1}' "release-assets/${asset}.sha256")"
+            actual="$(sha256sum "$directory/$asset" | awk '{print $1}')"
+            [ "$actual" = "$expected" ]
+          }
+
+          verify_existing_checksum() {
+            local asset="$1" checksum_asset directory
+            checksum_asset="${asset}.sha256"
+            directory="$(mktemp -d)"
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$checksum_asset" --dir "$directory"
+            cmp --silent "release-assets/$checksum_asset" "$directory/$checksum_asset"
+          }
+
           verify_existing_assets() {
             local release="$1" asset checksum_asset count checksum_count remote
             for remote in $(jq -r '.[0].assets[]?.name' <<< "$release"); do
@@ -216,6 +233,8 @@ jobs:
               checksum_count="$(jq --arg asset "$checksum_asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
               case "$count:$checksum_count" in
                 0:0) ;;
+                1:0) verify_existing_binary "$asset" ;;
+                0:1) verify_existing_checksum "$asset" ;;
                 1:1) verify_asset "$asset" ;;
                 *) echo "missing or duplicate release asset $asset" >&2; return 1 ;;
               esac
@@ -234,12 +253,21 @@ jobs:
             draft)
               verify_existing_assets "$release"
               for asset in \
-                memocap-x86_64-unknown-linux-gnu \
-                memocap-aarch64-apple-darwin \
-                memocap-x86_64-pc-windows-msvc.exe; do
+              memocap-x86_64-unknown-linux-gnu \
+              memocap-aarch64-apple-darwin \
+              memocap-x86_64-pc-windows-msvc.exe; do
+                checksum_asset="${asset}.sha256"
                 count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
+                checksum_count="$(jq --arg asset "$checksum_asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
+                missing=()
                 if [ "$count" -eq 0 ]; then
-                  gh release upload "$TAG" "release-assets/$asset" "release-assets/$asset.sha256" --repo "$GITHUB_REPOSITORY"
+                  missing+=("release-assets/$asset")
+                fi
+                if [ "$checksum_count" -eq 0 ]; then
+                  missing+=("release-assets/$checksum_asset")
+                fi
+                if [ "${#missing[@]}" -gt 0 ]; then
+                  gh release upload "$TAG" "${missing[@]}" --repo "$GITHUB_REPOSITORY"
                   release="$(read_release)"
                   verify_identity "$release"
                 fi
@@ -344,7 +372,14 @@ jobs:
           fi
       - name: Publish missing package
         if: steps.registry.outputs.state == 'absent'
-        run: npm publish --access public --provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npm publish --access public --provenance; then
+            :
+          else
+            echo "npm publish reported failure; checking registry visibility" >&2
+          fi
       - name: Verify registry package and provenance
         if: always()
         shell: bash
@@ -354,21 +389,36 @@ jobs:
           version="$(node -p "require('./package.json').version")"
           expected_integrity="$(npm pack --dry-run --json | jq -r '.[0].integrity')"
           actual="$RUNNER_TEMP/npm-package-verified.json"
-          npm view "$package@$version" --json > "$actual"
-          [ "$(jq -r '.name' "$actual")" = "$package" ]
-          [ "$(jq -r '.version' "$actual")" = "$version" ]
-          [ "$(jq -r '.repository.url' "$actual")" = "https://github.com/LYY/memocap.git" ]
-          [ "$(jq -r '.dist.integrity' "$actual")" = "$expected_integrity" ]
-          verify_directory="$(mktemp -d)"
-          cd "$verify_directory"
-          npm init --yes >/dev/null
-          npm install --ignore-scripts --package-lock=false "$package@$version"
-          audit="$(npm audit signatures --json --include-attestations)"
-          jq -e --arg package "$package" --arg version "$version" '
-            (.verified | type == "array") and
-            any(.verified[];
-              .name == $package and
-              .version == $version and
-              any(.attestationBundles[]?; .predicateType == "https://slsa.dev/provenance/v1")
+          registry_matches() {
+            npm view "$package@$version" --json > "$actual" || return 1
+            [ "$(jq -r '.name' "$actual")" = "$package" ] || return 1
+            [ "$(jq -r '.version' "$actual")" = "$version" ] || return 1
+            [ "$(jq -r '.repository.url' "$actual")" = "https://github.com/LYY/memocap.git" ] || return 1
+            [ "$(jq -r '.dist.integrity' "$actual")" = "$expected_integrity" ] || return 1
+            verify_directory="$(mktemp -d)"
+            (
+              cd "$verify_directory"
+              npm init --yes >/dev/null || exit 1
+              npm install --ignore-scripts --package-lock=false "$package@$version" || exit 1
+              audit="$(npm audit signatures --json --include-attestations)" || exit 1
+              jq -e --arg package "$package" --arg version "$version" '
+                (.verified | type == "array") and
+                any(.verified[];
+                  .name == $package and
+                  .version == $version and
+                  any(.attestationBundles[]?; .predicateType == "https://slsa.dev/provenance/v1")
+                )
+              ' <<< "$audit" >/dev/null
             )
-          ' <<< "$audit" >/dev/null
+          }
+
+          for attempt in {1..10}; do
+            if registry_matches; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 10 ]; then
+              sleep 2
+            fi
+          done
+          echo "registry package or provenance did not become visible" >&2
+          exit 1
