@@ -427,7 +427,7 @@ jobs:
           expected_repository="$(normalize_repository_url "$(node -p "require('./package.json').repository.url")")"
           expected_workflow=".github/workflows/release.yml"
           expected_ref="refs/tags/$TAG"
-          expected_invocation="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT"
+          expected_invocation="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           provenance_matches() {
             local audit="$1" payload statement
             while IFS= read -r payload; do

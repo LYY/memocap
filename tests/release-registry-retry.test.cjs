@@ -45,8 +45,7 @@ function provenanceAudit(packageName, version, overrides) {
   const repository = overrides.provenanceRepository ?? "https://github.com/LYY/memocap";
   const ref = overrides.provenanceRef ?? `refs/tags/v${version}`;
   const sha = overrides.provenanceSha ?? "0123456789012345678901234567890123456789";
-  const invocation =
-    overrides.provenanceInvocation ?? "https://github.com/LYY/memocap/actions/runs/123/attempts/1";
+  const invocation = overrides.provenanceInvocation ?? "https://github.com/LYY/memocap/actions/runs/123";
   const statement = {
     predicate: {
       buildDefinition: {
@@ -216,15 +215,21 @@ function runFirstPublish(fixture) {
   return run(verifyRegistry, fixture);
 }
 
-test("accepts a visible package after npm publish reports failure", (context) => {
-  const fixture = writeFixture(context, { invisibleViews: 1, publishStatus: 1 });
-
-  const verification = runFirstPublish(fixture);
+test("recovery accepts a package from an earlier attempt of the same run", (context) => {
+  const fixture = writeFixture(context, {
+    provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/123",
+    publishStatus: 1,
+  });
+  assert.equal(run(inspectRegistry, fixture).status, 0);
+  assert.equal(run(publishPackage, fixture).status, 0);
+  fixture.commandOptions.env.GITHUB_RUN_ATTEMPT = "2";
+  assert.equal(run(inspectRegistry, fixture).status, 0);
+  assert.match(fs.readFileSync(fixture.output, "utf8"), /^state=present$/m);
+  const verification = run(verifyRegistry, fixture);
 
   assert.equal(verification.status, 0, verification.stderr);
   const calls = fs.readFileSync(fixture.log, "utf8").trim().split("\n");
   assert.equal(calls.filter((call) => call === "publish").length, 1);
-  assert.ok(calls.filter((call) => call === "view").length >= 3);
 });
 
 test("retries delayed integrity and provenance visibility", (context) => {
@@ -254,7 +259,7 @@ test("rejects provenance not bound to this release workflow invocation", (contex
     { provenanceWorkflow: ".github/workflows/other.yml" },
     { provenanceRef: "refs/tags/v0.0.1" },
     { provenanceSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
-    { provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/122/attempts/1" },
+    { provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/122" },
   ]) {
     const fixture = writeFixture(context, overrides);
     const verification = runFirstPublish(fixture);

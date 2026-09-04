@@ -66,7 +66,7 @@ function provenanceAudit(packageName, version) {
       },
       runDetails: {
         metadata: {
-          invocationId: "https://github.com/LYY/memocap/actions/runs/123/attempts/1",
+          invocationId: "https://github.com/LYY/memocap/actions/runs/123",
         },
       },
     },
