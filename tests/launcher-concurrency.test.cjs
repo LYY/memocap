@@ -136,7 +136,7 @@ test("reclaims a cache lease after its owner exits", async (context) => {
   fs.mkdirSync(directory, { recursive: true });
   fs.writeFileSync(
     path.join(directory, `${asset}.lock.lease-${owner.pid}-stale`),
-    JSON.stringify({ pid: owner.pid, state: "owner", createdAt: Date.now() }),
+    JSON.stringify({ pid: owner.pid, processStart: "dead-owner", state: "owner", createdAt: Date.now() }),
   );
 
   const execution = await coldStart(root, downloadHook(root), asset, "stale", executableFixture(root));
@@ -162,7 +162,7 @@ test("parallel contenders reclaim a stale cache lease without deleting its winne
   fs.mkdirSync(directory, { recursive: true });
   fs.writeFileSync(
     path.join(directory, `${asset}.lock.lease-${owner.pid}-stale`),
-    JSON.stringify({ pid: owner.pid, state: "owner", createdAt: Date.now() }),
+    JSON.stringify({ pid: owner.pid, processStart: "dead-owner", state: "owner", createdAt: Date.now() }),
   );
   const hook = downloadHook(root);
   const executable = executableFixture(root);
