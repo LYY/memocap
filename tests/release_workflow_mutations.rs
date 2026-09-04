@@ -79,6 +79,10 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "0:1) verify_existing_checksum \"$asset\" ;;",
             "0:1) : # skipped checksum verification ;;;",
         ),
+        (
+            "release=\"$(wait_for_uploaded_assets \"$release\" \"${missing[@]}\")\"",
+            "release=\"$(read_release)\"",
+        ),
         (".[0].draft | type", ".[0].draft"),
     ] {
         let mutated = mutate(&workflow, before, after);
@@ -98,7 +102,18 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "npm install --ignore-scripts --package-lock=false",
             "npm install --ignore-scripts --no-save --package-lock=false",
         ),
-        ("any(.verified[];", "any([][];"),
+        (
+            ".bundle.dsseEnvelope.payload",
+            ".bundle.dsseEnvelope.encodedPayload",
+        ),
+        (
+            "$provenance_workflow.repository == $repository",
+            "true",
+        ),
+        (
+            ".predicate.runDetails.metadata.invocationId == $invocation",
+            "true",
+        ),
         (
             "error_file=\"$RUNNER_TEMP/npm-view-error\"",
             "npm publish --access public --provenance\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
@@ -108,7 +123,6 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}\n          if npm publish --access public --provenance; then",
         ),
         ("[ \"$actual_assets\" = \"$expected_names\" ]", "true # skipped exact asset equality"),
-        ("' <<< \"$audit\" >/dev/null", "' <<< \"$audit\" >/dev/null || true"),
         ("for attempt in {1..10}; do", "for attempt in {1..1}; do"),
         ("if registry_matches; then", "if false; then"),
         (

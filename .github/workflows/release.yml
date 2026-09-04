@@ -241,6 +241,32 @@ jobs:
             done
           }
 
+          wait_for_uploaded_assets() {
+            local release="$1" asset count attempt visible
+            shift
+            for attempt in {1..10}; do
+              if release="$(read_release)" && verify_identity "$release"; then
+                visible=true
+                for asset in "$@"; do
+                  asset="$(basename "$asset")"
+                  count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
+                  if [ "$count" -ne 1 ]; then
+                    visible=false
+                    break
+                  fi
+                done
+                if [ "$visible" = true ]; then
+                  printf '%s' "$release"
+                  return 0
+                fi
+              fi
+              if [ "$attempt" -lt 10 ]; then
+                sleep 2
+              fi
+            done
+            return 1
+          }
+
           release="$(read_release)"
           if [ "$(jq 'length' <<< "$release")" -eq 0 ]; then
             gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --target "$TAG_SHA" --title "$TAG" --generate-notes
@@ -268,8 +294,7 @@ jobs:
                 fi
                 if [ "${#missing[@]}" -gt 0 ]; then
                   gh release upload "$TAG" "${missing[@]}" --repo "$GITHUB_REPOSITORY"
-                  release="$(read_release)"
-                  verify_identity "$release"
+                  release="$(wait_for_uploaded_assets "$release" "${missing[@]}")"
                 fi
               done
               verify_known_assets "$release"
@@ -382,6 +407,9 @@ jobs:
           fi
       - name: Verify registry package and provenance
         if: always()
+        env:
+          TAG: ${{ needs.validate.outputs.tag }}
+          TAG_SHA: ${{ needs.validate.outputs.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -389,11 +417,56 @@ jobs:
           version="$(node -p "require('./package.json').version")"
           expected_integrity="$(npm pack --dry-run --json | jq -r '.[0].integrity')"
           actual="$RUNNER_TEMP/npm-package-verified.json"
+          normalize_repository_url() {
+            local repository="$1"
+            repository="${repository#git+}"
+            repository="${repository%/}"
+            repository="${repository%.git}"
+            printf '%s' "$repository"
+          }
+          expected_repository="$(normalize_repository_url "$(node -p "require('./package.json').repository.url")")"
+          expected_workflow=".github/workflows/release.yml"
+          expected_ref="refs/tags/$TAG"
+          expected_invocation="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT"
+          provenance_matches() {
+            local audit="$1" payload statement
+            while IFS= read -r payload; do
+              statement="$(node -e 'process.stdout.write(Buffer.from(process.argv[1], "base64").toString("utf8"))' "$payload")" || continue
+              if jq -e \
+                --arg repository "$expected_repository" \
+                --arg workflow "$expected_workflow" \
+                --arg ref "$expected_ref" \
+                --arg sha "$TAG_SHA" \
+                --arg invocation "$expected_invocation" '
+                  .predicate.buildDefinition.externalParameters.workflow as $provenance_workflow |
+                  $provenance_workflow.repository == $repository and
+                  $provenance_workflow.path == $workflow and
+                  $provenance_workflow.ref == $ref and
+                  any(.predicate.buildDefinition.resolvedDependencies[]?;
+                    .uri == ("git+" + $repository + "@" + $ref) and
+                    .digest.gitCommit == $sha
+                  ) and
+                  .predicate.runDetails.metadata.invocationId == $invocation
+                ' <<< "$statement" >/dev/null; then
+                return 0
+              fi
+            done < <(
+              jq -r --arg package "$package" --arg version "$version" '
+                .verified[]? |
+                select(.name == $package and .version == $version) |
+                .attestationBundles[]? |
+                select(.predicateType == "https://slsa.dev/provenance/v1") |
+                .bundle.dsseEnvelope.payload // empty
+              ' <<< "$audit"
+            )
+            return 1
+          }
           registry_matches() {
             npm view "$package@$version" --json > "$actual" || return 1
             [ "$(jq -r '.name' "$actual")" = "$package" ] || return 1
             [ "$(jq -r '.version' "$actual")" = "$version" ] || return 1
-            [ "$(jq -r '.repository.url' "$actual")" = "https://github.com/LYY/memocap.git" ] || return 1
+            registry_repository="$(normalize_repository_url "$(jq -r '.repository.url' "$actual")")"
+            [ "$registry_repository" = "$expected_repository" ] || return 1
             [ "$(jq -r '.dist.integrity' "$actual")" = "$expected_integrity" ] || return 1
             verify_directory="$(mktemp -d)"
             (
@@ -401,14 +474,7 @@ jobs:
               npm init --yes >/dev/null || exit 1
               npm install --ignore-scripts --package-lock=false "$package@$version" || exit 1
               audit="$(npm audit signatures --json --include-attestations)" || exit 1
-              jq -e --arg package "$package" --arg version "$version" '
-                (.verified | type == "array") and
-                any(.verified[];
-                  .name == $package and
-                  .version == $version and
-                  any(.attestationBundles[]?; .predicateType == "https://slsa.dev/provenance/v1")
-                )
-              ' <<< "$audit" >/dev/null
+              provenance_matches "$audit"
             )
           }
 

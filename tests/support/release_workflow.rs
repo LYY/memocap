@@ -118,6 +118,8 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
         "0:1) verify_existing_checksum \"$asset\" ;;",
         "missing=()",
         "gh release upload \"$TAG\" \"${missing[@]}\" --repo \"$GITHUB_REPOSITORY\"",
+        "wait_for_uploaded_assets() {",
+        "release=\"$(wait_for_uploaded_assets \"$release\"",
     ] {
         require(reconcile, required)?;
     }
@@ -132,7 +134,7 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
         reconcile,
         "if [ \"$count\" -ne 1 ] || [ \"$checksum_count\" -ne 1 ]; then",
     )?;
-    let initial_read = "release=\"$(read_release)\"";
+    let initial_read = "release=\"$(read_release)\"\n          if";
     let initial_read_position = reconcile
         .find(initial_read)
         .ok_or("missing initial release read")?;
