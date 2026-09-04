@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.2 (2026-09-04)
+
+发布恢复候选：保留 `v0.0.1` 的既有 tag、Release 和 npm 包，不重发、不覆盖。
+
+- release workflow 允许 tag commit 是 `origin/main` 的祖先，使用同一仓库和 tag 的非取消并发组串行 reconcile，确保 provenance 只来自 tag 触发的成功发布。
+- launcher 为冷缓存下载使用每进程唯一临时文件和独占缓存锁，校验 SHA-256 后原子发布并保留可执行权限。
+
 ## 0.0.1 (2026-09-02)
 
 独立发布 `@lyy-gh/memocap`，发布源为 [LYY/memocap](https://github.com/LYY/memocap)。OpenCode 是唯一官方支持的集成。

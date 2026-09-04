@@ -1,6 +1,6 @@
 const REBUILD: &str = include_str!("../docs/REBUILD.md");
 const CHANGELOG: &str = include_str!("../CHANGELOG.md");
-const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.1";
+const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.2";
 const PLUGIN_INSTALL: &str = "opencode plugin @lyy-gh/memocap";
 
 fn with_lf_line_endings(text: &str) -> String {
@@ -26,6 +26,15 @@ npm bin 改为 `bin/cli.cjs`，从 GitHub Release 拉二进制。Trusted Publish
 ## 0.1.0 — 2026-08-25
 
 第一版。一份 SQLite，四端共用 `remember` / `recall` / `list` / `forget`。不设地址只走本机；设了 ADDR 和 token 走 HTTP / Compose 8787。
+"#;
+
+const V001_CHANGELOG: &str = r#"## 0.0.1 (2026-09-02)
+
+独立发布 `@lyy-gh/memocap`，发布源为 [LYY/memocap](https://github.com/LYY/memocap)。OpenCode 是唯一官方支持的集成。
+
+- 通过 Git tag 发布，并保留 tag、源码仓库和构建 artifact 的 release provenance。
+- 发布包由 LYY/memocap GitHub Release 提供，OpenCode 插件通过全局 `memocap` CLI 工作。
+
 "#;
 
 #[test]
@@ -60,14 +69,15 @@ fn rebuild_spec_has_no_stale_host_install_claims() {
 }
 
 #[test]
-fn changelog_starts_with_v001_release_contract() {
+fn changelog_starts_with_v002_release_contract() {
     let changelog = with_lf_line_endings(CHANGELOG);
     let top_section = changelog
         .split_once("## 0.1.3")
         .map(|(section, _)| section)
         .expect("CHANGELOG must retain historical releases");
 
-    assert!(top_section.starts_with("# Changelog\n\n## 0.0.1 (2026-09-02)"));
+    assert!(top_section.starts_with("# Changelog\n\n## 0.0.2 (2026-09-04)"));
+    assert!(top_section.contains("## 0.0.1 (2026-09-02)"));
     assert!(top_section.contains("@lyy-gh/memocap"));
     assert!(top_section.contains("https://github.com/LYY/memocap"));
     assert!(top_section.contains("OpenCode"));
@@ -83,6 +93,20 @@ fn changelog_preserves_historical_content_from_v013_onward() {
         .expect("CHANGELOG must retain the 0.1.3 release");
 
     assert_eq!(&changelog[historical_start..], HISTORICAL_CHANGELOG);
+}
+
+#[test]
+fn changelog_preserves_v001_release_entry() {
+    let changelog = with_lf_line_endings(CHANGELOG);
+    let start = changelog
+        .find("## 0.0.1")
+        .expect("CHANGELOG must retain the v0.0.1 release");
+    let end = changelog[start..]
+        .find("## 0.1.3")
+        .map(|index| start + index)
+        .expect("CHANGELOG must retain the historical releases");
+
+    assert_eq!(&changelog[start..end], V001_CHANGELOG);
 }
 
 #[test]
@@ -199,8 +223,8 @@ fn rebuild_contract_rejects_extra_install_command_mutation() {
 #[test]
 fn rebuild_contract_rejects_missing_opening_install_fence_mutation() {
     let mutated = with_lf_line_endings(REBUILD).replacen(
-        "```bash\npnpm add -g @lyy-gh/memocap@0.0.1",
-        "pnpm add -g @lyy-gh/memocap@0.0.1",
+        "```bash\npnpm add -g @lyy-gh/memocap@0.0.2",
+        "pnpm add -g @lyy-gh/memocap@0.0.2",
         1,
     );
 
