@@ -8,6 +8,7 @@ const { spawn, spawnSync } = require("node:child_process");
 const test = require("node:test");
 
 const launcherPath = path.resolve(__dirname, "../bin/cli.cjs");
+const { createCacheLock } = require("../bin/cache-lock.cjs");
 const { verifyCachedBinary } = require(launcherPath);
 
 const assets = {
@@ -177,4 +178,24 @@ test("parallel contenders reclaim a stale cache lease without deleting its winne
   const binary = path.join(directory, asset);
   assert.equal(verifyCachedBinary(binary, `${binary}.sha256`, asset), true);
   assert.deepEqual(fs.readdirSync(directory).sort(), [asset, `${asset}.sha256`].sort());
+});
+
+test("reclaims a lease when its PID belongs to a different process identity", async (context) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-launcher-pid-reuse-"));
+  context.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const lockPath = path.join(directory, "memocap.lock");
+  fs.writeFileSync(
+    `${lockPath}.lease-${process.pid}-reused`,
+    JSON.stringify({
+      pid: process.pid,
+      processStart: "reused-process",
+      state: "owner",
+      createdAt: Date.now(),
+    }),
+  );
+
+  const lock = await createCacheLock(lockPath);
+
+  assert.ok(lock);
+  fs.rmSync(lock.path);
 });
