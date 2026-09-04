@@ -58,6 +58,7 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
         "refs/tags/$TAG",
         "$TAG_SHA",
         "$GITHUB_RUN_ID",
+        "expected_invocation=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"",
         "$provenance_workflow.repository == $repository",
         "$provenance_workflow.path == $workflow",
         "$provenance_workflow.ref == $ref",
@@ -73,6 +74,9 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
     }
     if provenance.contains("|| true") {
         return Err("provenance verification may not suppress errors".to_owned());
+    }
+    if provenance.contains("GITHUB_RUN_ATTEMPT") {
+        return Err("provenance verification must bind a stable GitHub run ID".to_owned());
     }
     before(
         provenance,

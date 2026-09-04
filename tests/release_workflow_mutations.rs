@@ -115,6 +115,10 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "true",
         ),
         (
+            "expected_invocation=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"",
+            "expected_invocation=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT\"",
+        ),
+        (
             "error_file=\"$RUNNER_TEMP/npm-view-error\"",
             "npm publish --access public --provenance\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
         ),
