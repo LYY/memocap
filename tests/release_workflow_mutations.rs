@@ -120,6 +120,10 @@ fn release_contract_rejects_critical_workflow_mutations() {
         ),
         ("test(\"^[0-9]+$\")", "test(\".+\")"),
         (
+            "if [ \"$GITHUB_RUN_ATTEMPT\" -eq 1 ]; then",
+            "if true; then",
+        ),
+        (
             "error_file=\"$RUNNER_TEMP/npm-view-error\"",
             "npm publish --access public --provenance\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
         ),
@@ -128,6 +132,7 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}\n          if npm publish --access public --provenance; then",
         ),
         ("[ \"$actual_assets\" = \"$expected_names\" ]", "true # skipped exact asset equality"),
+        ("for attempt in {1..10}; do", "for attempt in {1..1}; do"),
         (
             "for verification_attempt in {1..10}; do",
             "for verification_attempt in {1..1}; do",

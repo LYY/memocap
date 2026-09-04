@@ -29,6 +29,13 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
     if inspection.contains("npm publish") {
         return Err("registry state inspection publishes a package".to_owned());
     }
+    for required in [
+        "if [ \"$GITHUB_RUN_ATTEMPT\" -eq 1 ]; then",
+        "for attempt in {1..10}; do",
+        "sleep 2",
+    ] {
+        require(inspection, required)?;
+    }
     let publish = step(registry, "Publish missing package");
     require(publish, "npm publish --access public --provenance")?;
     require(publish, "if npm publish --access public --provenance; then")?;

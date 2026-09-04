@@ -215,6 +215,7 @@ function runFirstPublish(fixture) {
 
 test("recovery accepts a package from an earlier attempt of the same run", (context) => {
   const fixture = writeFixture(context, {
+    invisibleViews: 2,
     provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/123/attempts/1",
     publishStatus: 1,
   });
@@ -228,6 +229,7 @@ test("recovery accepts a package from an earlier attempt of the same run", (cont
   assert.equal(verification.status, 0, verification.stderr);
   const calls = fs.readFileSync(fixture.log, "utf8").trim().split("\n");
   assert.equal(calls.filter((call) => call === "publish").length, 1);
+  assert.ok(calls.filter((call) => call === "view").length >= 4);
 });
 
 test("retries delayed integrity and provenance visibility", (context) => {

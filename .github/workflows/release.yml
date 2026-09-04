@@ -389,11 +389,24 @@ jobs:
           error_file="$RUNNER_TEMP/npm-view-error"
           if npm view "$package@$version" --json > "$RUNNER_TEMP/npm-package.json" 2> "$error_file"; then
             printf 'state=present\n' >> "$GITHUB_OUTPUT"
-          elif grep -q 'E404' "$error_file"; then
-            printf 'state=absent\n' >> "$GITHUB_OUTPUT"
-          else
+          elif ! grep -q 'E404' "$error_file"; then
             cat "$error_file" >&2
             exit 1
+          elif [ "$GITHUB_RUN_ATTEMPT" -eq 1 ]; then
+            printf 'state=absent\n' >> "$GITHUB_OUTPUT"
+          else
+            for attempt in {1..10}; do
+              if npm view "$package@$version" --json > "$RUNNER_TEMP/npm-package.json" 2> "$error_file"; then
+                printf 'state=present\n' >> "$GITHUB_OUTPUT"
+                exit 0
+              elif ! grep -q 'E404' "$error_file"; then
+                cat "$error_file" >&2
+                exit 1
+              elif [ "$attempt" -lt 10 ]; then
+                sleep 2
+              fi
+            done
+            printf 'state=absent\n' >> "$GITHUB_OUTPUT"
           fi
       - name: Publish missing package
         if: steps.registry.outputs.state == 'absent'
