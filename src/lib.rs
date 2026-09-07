@@ -7,6 +7,7 @@ pub mod hosts;
 pub mod install;
 pub mod paths;
 pub mod remote;
+pub mod scope;
 pub mod server;
 pub mod store;
 pub mod tui;
