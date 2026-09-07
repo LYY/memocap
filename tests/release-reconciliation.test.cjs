@@ -44,9 +44,8 @@ function writeAsset(directory, name) {
 
 function writeGhStub(bin) {
   fs.writeFileSync(
-    path.join(bin, "gh"),
-    `#!${process.execPath}
-"use strict";
+    path.join(bin, "gh.cjs"),
+    `"use strict";
 const fs = require("node:fs");
 const path = require("node:path");
 const args = process.argv.slice(2);
@@ -103,6 +102,11 @@ if (args[1] === "edit") {
 }
 process.exit(1);
 `,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    path.join(bin, "gh"),
+    '#!/usr/bin/env bash\nexec node "$(dirname "$0")/gh.cjs" "$@"\n',
     { mode: 0o755 },
   );
 }
