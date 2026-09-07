@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.3 (2026-09-07)
+
+范围文档与当前 CLI 行为对齐，明确本机仓库 scope、global scope、topic shadow、迁移和严格远程 scope。
+
+- 默认 `remember`、`recall`、`list`、`forget` 使用当前仓库 scope；仓库中的 `recall` 和 `list` 可见当前仓库与 global memory，`--global` 显式限制为 global scope。
+- `--topic` 只建立显式替换关系：仓库中相同的非空 topic 会在 recall 时遮蔽 global memory，不会自动复制或删除。
+- `scope show` 展示当前不透明 scope ID；`scope migrate` 仅限本地，必须显式选择一个 ID 或全部记录，并用 dry-run 或 yes 确认全部迁移。不会自动分类或迁移，非 Git 目录移动也遵循此规则。
+- 设置 `MEMOCAP_ADDR` 后必须同时设置 `MEMOCAP_TOKEN`，不会回退到本地；远程请求携带并严格校验 scope ID。
+- 验证证据：文档 contract tests 与临时 Git 仓库 CLI transcript 均通过。
+
 ## 0.0.2 (2026-09-04)
 
 发布恢复候选：保留 `v0.0.1` 的既有 tag、Release 和 npm 包，不重发、不覆盖。
