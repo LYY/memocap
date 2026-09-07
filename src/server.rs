@@ -6,7 +6,10 @@ use rusqlite::Connection;
 use serde::Deserialize;
 use tiny_http::{Header, Method, Response, Server, StatusCode};
 
-use crate::store;
+use crate::{
+    scope::ScopeId,
+    store::{self, RememberOptions},
+};
 
 #[derive(Debug)]
 pub struct Incoming {
@@ -25,6 +28,7 @@ pub struct Outgoing {
 
 #[derive(Debug, Deserialize)]
 struct RememberIn {
+    scope: String,
     content: String,
     #[serde(default = "default_kind")]
     r#type: String,
@@ -34,6 +38,8 @@ struct RememberIn {
     force: bool,
     #[serde(default)]
     id: Option<i64>,
+    #[serde(default)]
+    topic_key: Option<String>,
 }
 
 fn default_kind() -> String {
@@ -42,6 +48,7 @@ fn default_kind() -> String {
 
 #[derive(Debug, Deserialize)]
 struct ForgetIn {
+    scope: String,
     id: i64,
 }
 
@@ -101,6 +108,20 @@ fn json(status: u16, body: impl serde::Serialize) -> Outgoing {
     }
 }
 
+fn invalid_scope() -> Outgoing {
+    json(400, serde_json::json!({"error": "invalid memory scope"}))
+}
+
+fn parse_scope(value: &str) -> std::result::Result<ScopeId, Outgoing> {
+    value.parse().map_err(|_| invalid_scope())
+}
+
+fn query_scope(query: &str) -> std::result::Result<ScopeId, Outgoing> {
+    query_param(query, "scope")
+        .ok_or_else(invalid_scope)
+        .and_then(|value| parse_scope(&value))
+}
+
 pub fn handle(connection: &Connection, expected_token: &str, req: &Incoming) -> Outgoing {
     if !token_ok(expected_token, req.token.as_deref()) {
         return json(401, serde_json::json!({"error": "unauthorized"}));
@@ -108,31 +129,52 @@ pub fn handle(connection: &Connection, expected_token: &str, req: &Incoming) -> 
     match (req.method.as_str(), req.path.as_str()) {
         ("POST", "/remember") => remember(connection, &req.body),
         ("GET", "/recall") => {
+            let scope = match query_scope(&req.query) {
+                Ok(scope) => scope,
+                Err(response) => return response,
+            };
             let query = query_param(&req.query, "q").unwrap_or_default();
             let limit = query_param(&req.query, "limit")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(store::DEFAULT_RECALL_LIMIT);
             let kind = query_param(&req.query, "type");
             let max_chars = query_param(&req.query, "max_chars").and_then(|v| v.parse().ok());
-            match store::recall(connection, &query, limit, kind.as_deref(), max_chars) {
+            match store::recall_scoped(
+                connection,
+                &scope,
+                &query,
+                limit,
+                kind.as_deref(),
+                max_chars,
+            ) {
                 Ok(memories) => json(200, serde_json::json!({"memories": memories})),
                 Err(error) => json(500, serde_json::json!({"error": error.to_string()})),
             }
         }
         ("GET", "/list") => {
+            let scope = match query_scope(&req.query) {
+                Ok(scope) => scope,
+                Err(response) => return response,
+            };
             let limit = query_param(&req.query, "limit")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(20);
-            match store::list(connection, limit) {
+            match store::list_scoped(connection, &scope, limit) {
                 Ok(memories) => json(200, serde_json::json!({"memories": memories})),
                 Err(error) => json(500, serde_json::json!({"error": error.to_string()})),
             }
         }
         ("POST", "/forget") => forget(connection, &req.body),
-        ("GET", "/count") => match store::count(connection) {
-            Ok(count) => json(200, serde_json::json!({"count": count})),
-            Err(error) => json(500, serde_json::json!({"error": error.to_string()})),
-        },
+        ("GET", "/count") => {
+            let scope = match query_scope(&req.query) {
+                Ok(scope) => scope,
+                Err(response) => return response,
+            };
+            match store::count_scoped(connection, &scope) {
+                Ok(count) => json(200, serde_json::json!({"count": count})),
+                Err(error) => json(500, serde_json::json!({"error": error.to_string()})),
+            }
+        }
         _ => json(404, serde_json::json!({"error": "not found"})),
     }
 }
@@ -142,14 +184,21 @@ fn remember(connection: &Connection, body: &str) -> Outgoing {
         Ok(value) => value,
         Err(error) => return json(400, serde_json::json!({"error": error.to_string()})),
     };
-    match store::remember(
+    let scope = match parse_scope(&parsed.scope) {
+        Ok(scope) => scope,
+        Err(response) => return response,
+    };
+    match store::remember_scoped(
         connection,
+        &scope,
         &parsed.content,
         &parsed.r#type,
         &parsed.tags,
-        "global",
-        parsed.force,
-        parsed.id,
+        RememberOptions {
+            topic_key: parsed.topic_key.as_deref(),
+            force: parsed.force,
+            overwrite_id: parsed.id,
+        },
     ) {
         Ok(id) => json(200, serde_json::json!({"id": id})),
         Err(error) => {
@@ -173,7 +222,11 @@ fn forget(connection: &Connection, body: &str) -> Outgoing {
         Ok(value) => value,
         Err(error) => return json(400, serde_json::json!({"error": error.to_string()})),
     };
-    match store::forget(connection, parsed.id) {
+    let scope = match parse_scope(&parsed.scope) {
+        Ok(scope) => scope,
+        Err(response) => return response,
+    };
+    match store::forget_scoped(connection, &scope, parsed.id) {
         Ok(deleted) => json(200, serde_json::json!({"deleted": deleted})),
         Err(error) => json(500, serde_json::json!({"error": error.to_string()})),
     }
@@ -269,7 +322,8 @@ mod tests {
             path: "/remember".to_owned(),
             query: String::new(),
             token: token.map(ToOwned::to_owned),
-            body: "{\"content\":\"alpha\",\"type\":\"note\",\"tags\":\"\"}".to_owned(),
+            body: "{\"scope\":\"global\",\"content\":\"alpha\",\"type\":\"note\",\"tags\":\"\"}"
+                .to_owned(),
         }
     }
 
@@ -316,7 +370,9 @@ mod tests {
         assert!(again.body.contains("alpha"));
         assert_eq!(store::count(&connection).unwrap(), 1);
         let mut forced = req(Some("secret"));
-        forced.body = r#"{"content":"alpha","type":"note","tags":"","force":true}"#.to_owned();
+        forced.body =
+            r#"{"scope":"global","content":"alpha","type":"note","tags":"","force":true}"#
+                .to_owned();
         let forced = handle(&connection, "secret", &forced);
         assert_eq!(forced.status, 200);
         assert_eq!(store::count(&connection).unwrap(), 2);
@@ -354,7 +410,7 @@ mod tests {
             &Incoming {
                 method: "GET".to_owned(),
                 path: "/recall".to_owned(),
-                query: "q=shared+token".to_owned(),
+                query: "scope=global&q=shared+token".to_owned(),
                 token: Some("secret".to_owned()),
                 body: String::new(),
             },
@@ -368,7 +424,7 @@ mod tests {
             &Incoming {
                 method: "GET".to_owned(),
                 path: "/recall".to_owned(),
-                query: "q=shared+token&type=preference&limit=10".to_owned(),
+                query: "scope=global&q=shared+token&type=preference&limit=10".to_owned(),
                 token: Some("secret".to_owned()),
                 body: String::new(),
             },

@@ -33,9 +33,19 @@ pub(crate) fn run(command: Command) -> Result<()> {
                         },
                     )?
                 }
-                Target::Remote { address, token } => {
-                    remote::remember(&address, &token, &content, &r#type, &tags, force, id)?
-                }
+                Target::Remote { address, token } => remote::remember(
+                    &address,
+                    &token,
+                    remote::RememberRequest {
+                        scope: &cli::memory_scope(global)?,
+                        content: &content,
+                        kind: &r#type,
+                        tags: &tags,
+                        topic_key: topic.as_deref(),
+                        force,
+                        overwrite_id: id,
+                    },
+                )?,
             };
             println!("saved #{id}");
         }
@@ -61,9 +71,17 @@ pub(crate) fn run(command: Command) -> Result<()> {
                         },
                     )?
                 }
-                Target::Remote { address, token } => {
-                    remote::recall(&address, &token, &query, limit, kind, max_chars)?
-                }
+                Target::Remote { address, token } => remote::recall(
+                    &address,
+                    &token,
+                    remote::RecallRequest {
+                        scope: &cli::memory_scope(global)?,
+                        query: &query,
+                        limit,
+                        kind,
+                        max_chars,
+                    },
+                )?,
             };
             print!("{}", cli::format_memories(&memories));
         }
@@ -72,7 +90,9 @@ pub(crate) fn run(command: Command) -> Result<()> {
                 Target::Local { database } => {
                     cli::list_scoped(&database, &cli::memory_scope(global)?, limit)?
                 }
-                Target::Remote { address, token } => remote::list(&address, &token, limit)?,
+                Target::Remote { address, token } => {
+                    remote::list(&address, &token, &cli::memory_scope(global)?, limit)?
+                }
             };
             print!("{}", cli::format_memories(&memories));
         }
@@ -81,7 +101,9 @@ pub(crate) fn run(command: Command) -> Result<()> {
                 Target::Local { database } => {
                     cli::forget_scoped(&database, &cli::memory_scope(global)?, id)?
                 }
-                Target::Remote { address, token } => remote::forget(&address, &token, id)?,
+                Target::Remote { address, token } => {
+                    remote::forget(&address, &token, &cli::memory_scope(global)?, id)?
+                }
             };
             println!(
                 "{}",
@@ -183,7 +205,8 @@ fn run_status(global: bool) -> Result<()> {
             );
         }
         Target::Remote { address, token } => {
-            let count = remote::count(&address, &token)?;
+            let scope = cli::current_scope()?;
+            let count = remote::count(&address, &token, scope.scope())?;
             print!(
                 "{}",
                 cli::format_remote_status(&address, count, &result.agents_path, result.configured)
