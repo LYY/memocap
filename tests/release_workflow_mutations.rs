@@ -51,8 +51,8 @@ fn release_contract_rejects_critical_workflow_mutations() {
     assert_eq!(release_contract(&workflow), Ok(()));
     for (before, after) in [
         (
+            "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
             "git merge-base --is-ancestor \"$sha\" origin/main",
-            ": # skipped ancestry validation",
         ),
         (
             "group: release-${{ github.repository }}-${{ github.ref_name }}",
@@ -86,10 +86,6 @@ fn release_contract_rejects_critical_workflow_mutations() {
         (".[0].draft | type", ".[0].draft"),
         ("GITHUB_WORKFLOW_SHA", "GITHUB_SHA"),
         ("GITHUB_WORKFLOW_REF", "GITHUB_REF"),
-        (
-            "release_recovery_sha=\"86b4c20a79db2d4cac3eeaeebf19143778e572d2\"",
-            "release_recovery_sha=\"0000000000000000000000000000000000000000\"",
-        ),
         ("[ \"$workflow_identity\" = \"$tag_workflow\" ]", "true"),
         (
             "[ \"$GITHUB_WORKFLOW_REF\" = \"$expected_workflow_ref\" ]",
@@ -104,6 +100,12 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "mutation accepted: {before}"
         );
     }
+    let historical_recovery = mutate(
+        &workflow,
+        "[ \"$tag_workflow\" = \"$main_workflow\" ]",
+        "release_recovery_sha=\"86b4c20a79db2d4cac3eeaeebf19143778e572d2\"\n          if [ \"$sha\" = \"$release_recovery_sha\" ]; then\n            true\n          else\n            [ \"$tag_workflow\" = \"$main_workflow\" ]\n          fi",
+    );
+    assert!(release_contract(&historical_recovery).is_err());
     for (before, after) in [
         ("[.assets[].name] | sort | join", "[.assets[].name] | join"),
         (

@@ -81,17 +81,15 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     }
     for required in [
         "fetch-depth: 0",
-        "git merge-base --is-ancestor \"$sha\" origin/main",
+        "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
         "GITHUB_WORKFLOW_SHA",
         "GITHUB_WORKFLOW_REF",
-        "release_recovery_sha=\"86b4c20a79db2d4cac3eeaeebf19143778e572d2\"",
         "tag_workflow=\"$(git rev-parse \"$sha:.github/workflows/release.yml\")\"",
         "main_workflow=\"$(git rev-parse \"origin/main:.github/workflows/release.yml\")\"",
         "workflow_identity=\"$(git rev-parse \"$GITHUB_WORKFLOW_SHA:.github/workflows/release.yml\")\"",
         "expected_workflow_ref=\"$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/tags/$tag\"",
         "[ \"$workflow_identity\" = \"$tag_workflow\" ]",
         "[ \"$GITHUB_WORKFLOW_REF\" = \"$expected_workflow_ref\" ]",
-        "if [ \"$sha\" = \"$release_recovery_sha\" ]; then",
         "[ \"$tag_workflow\" = \"$main_workflow\" ]",
         "Set-Content -NoNewline -Encoding ascii",
         "scripts/check-release.mjs",
@@ -244,8 +242,11 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
             return Err(format!("action is not SHA pinned: {reference}"));
         }
     }
-    if workflow.contains("--clobber") || workflow.contains("overwrite:") {
-        return Err("release may overwrite assets".to_owned());
+    if workflow.contains("--clobber")
+        || workflow.contains("overwrite:")
+        || workflow.contains("release_recovery_sha")
+    {
+        return Err("release may overwrite assets or allow historical recovery".to_owned());
     }
     Ok(())
 }

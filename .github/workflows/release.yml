@@ -31,20 +31,14 @@ jobs:
           git fetch --no-tags origin main
           tag="${GITHUB_REF_NAME}"
           sha="$(git rev-parse "${tag}^{commit}")"
-          git merge-base --is-ancestor "$sha" origin/main
-          release_recovery_sha="86b4c20a79db2d4cac3eeaeebf19143778e572d2"
+          [ "$sha" = "$(git rev-parse origin/main)" ]
           tag_workflow="$(git rev-parse "$sha:.github/workflows/release.yml")"
           main_workflow="$(git rev-parse "origin/main:.github/workflows/release.yml")"
-          recovery_workflow="$(git rev-parse "$release_recovery_sha:.github/workflows/release.yml")"
           workflow_identity="$(git rev-parse "$GITHUB_WORKFLOW_SHA:.github/workflows/release.yml")"
           expected_workflow_ref="$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/tags/$tag"
           [ "$workflow_identity" = "$tag_workflow" ]
           [ "$GITHUB_WORKFLOW_REF" = "$expected_workflow_ref" ]
-          if [ "$sha" = "$release_recovery_sha" ]; then
-            [ "$tag_workflow" = "$recovery_workflow" ]
-          else
-            [ "$tag_workflow" = "$main_workflow" ]
-          fi
+          [ "$tag_workflow" = "$main_workflow" ]
           printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
           printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
       - name: Verify actionlint
