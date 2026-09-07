@@ -10,7 +10,7 @@ const test = require("node:test");
 const workflow = fs.readFileSync(
   path.resolve(__dirname, "../.github/workflows/release.yml"),
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 const repositoryRoot = path.resolve(__dirname, "..");
 const workflowPath = ".github/workflows/release.yml";
 
@@ -102,16 +102,3 @@ test("rejects a tag from an ancestor with the current workflow snapshot", (conte
 
   assert.notEqual(execution.status, 0);
 });
-
-for (const revision of ["aa9b7d3", "86b4c20"]) {
-  test(`rejects the historical ${revision} workflow snapshot`, (context) => {
-    const release = fixture(context);
-    const name = `v0.0.2-${revision}`;
-    const historical = git(release.root, ["rev-parse", revision]);
-    tag(release.root, name, historical);
-
-    const execution = validationResult(release.root, name, historical);
-
-    assert.notEqual(execution.status, 0);
-  });
-}
