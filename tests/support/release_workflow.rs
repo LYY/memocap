@@ -63,15 +63,34 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     let workflow = normalized.as_str();
     let trigger = workflow
         .split_once("on:\n")
-        .and_then(|(_, after)| after.split_once("permissions:\n"))
+        .and_then(|(_, after)| after.split_once("concurrency:\n"))
         .map(|(trigger, _)| trigger.trim())
         .ok_or_else(|| "missing trigger block".to_owned())?;
     if trigger != "push:\n    tags: [\"v*\"]" || workflow.contains("workflow_dispatch") {
         return Err("release must be tag-only".to_owned());
     }
+    let concurrency = workflow
+        .split_once("concurrency:\n")
+        .and_then(|(_, after)| after.split_once("permissions:\n"))
+        .map(|(concurrency, _)| concurrency.trim())
+        .ok_or_else(|| "missing release concurrency".to_owned())?;
+    if concurrency
+        != "group: release-${{ github.repository }}-${{ github.ref_name }}\n  cancel-in-progress: false"
+    {
+        return Err("release concurrency must serialize each repository tag".to_owned());
+    }
     for required in [
         "fetch-depth: 0",
         "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
+        "GITHUB_WORKFLOW_SHA",
+        "GITHUB_WORKFLOW_REF",
+        "tag_workflow=\"$(git rev-parse \"$sha:.github/workflows/release.yml\")\"",
+        "main_workflow=\"$(git rev-parse \"origin/main:.github/workflows/release.yml\")\"",
+        "workflow_identity=\"$(git rev-parse \"$GITHUB_WORKFLOW_SHA:.github/workflows/release.yml\")\"",
+        "expected_workflow_ref=\"$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/tags/$tag\"",
+        "[ \"$workflow_identity\" = \"$tag_workflow\" ]",
+        "[ \"$GITHUB_WORKFLOW_REF\" = \"$expected_workflow_ref\" ]",
+        "[ \"$tag_workflow\" = \"$main_workflow\" ]",
         "Set-Content -NoNewline -Encoding ascii",
         "scripts/check-release.mjs",
         "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
@@ -89,6 +108,7 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     require(job(workflow, "binaries"), "needs: validate")?;
     require(job(workflow, "release"), "needs: [validate, binaries]")?;
     require(job(workflow, "registry"), "needs: [validate, release]")?;
+    require(job(workflow, "registry"), "environment: npm-release")?;
 
     if permissions(workflow, 0) != vec![("contents", "read")]
         || permissions(job(workflow, "validate"), 4) != vec![("contents", "read")]
@@ -101,10 +121,18 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     }
 
     let reconcile = job(workflow, "release");
-    require(
-        reconcile,
-        "gh release upload \"$TAG\" \"release-assets/$asset\" \"release-assets/$asset.sha256\"",
-    )?;
+    for required in [
+        "verify_existing_binary() {",
+        "verify_existing_checksum() {",
+        "1:0) verify_existing_binary \"$asset\" ;;",
+        "0:1) verify_existing_checksum \"$asset\" ;;",
+        "missing=()",
+        "gh release upload \"$TAG\" \"${missing[@]}\" --repo \"$GITHUB_REPOSITORY\"",
+        "wait_for_uploaded_assets() {",
+        "release=\"$(wait_for_uploaded_assets \"$release\"",
+    ] {
+        require(reconcile, required)?;
+    }
     require(reconcile, "wait_for_release() {")?;
     require(reconcile, "release=\"$(wait_for_release)\"")?;
     before(
@@ -116,7 +144,7 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
         reconcile,
         "if [ \"$count\" -ne 1 ] || [ \"$checksum_count\" -ne 1 ]; then",
     )?;
-    let initial_read = "release=\"$(read_release)\"";
+    let initial_read = "release=\"$(read_release)\"\n          if";
     let initial_read_position = reconcile
         .find(initial_read)
         .ok_or("missing initial release read")?;
@@ -214,8 +242,11 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
             return Err(format!("action is not SHA pinned: {reference}"));
         }
     }
-    if workflow.contains("--clobber") || workflow.contains("overwrite:") {
-        return Err("release may overwrite assets".to_owned());
+    if workflow.contains("--clobber")
+        || workflow.contains("overwrite:")
+        || workflow.contains("release_recovery_sha")
+    {
+        return Err("release may overwrite assets or allow historical recovery".to_owned());
     }
     Ok(())
 }

@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 "use strict";
 
-const { spawnSync } = require("child_process");
-const crypto = require("crypto");
-const fs = require("fs");
-const https = require("https");
-const os = require("os");
-const path = require("path");
+const { spawnSync } = require("node:child_process");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const https = require("node:https");
+const os = require("node:os");
+const path = require("node:path");
+const { createCacheLock } = require("./cache-lock.cjs");
 
 const VERSION = require("../package.json").version;
 
@@ -15,6 +16,9 @@ const ASSETS = {
   "darwin-arm64": "memocap-aarch64-apple-darwin",
   "win32-x64": "memocap-x86_64-pc-windows-msvc.exe",
 };
+
+const CACHE_LOCK_RETRY_MS = 100;
+const CACHE_LOCK_TIMEOUT_MS = 60_000;
 
 function resolveReleaseAsset(platform, arch) {
   const key = `${platform}-${arch}`;
@@ -44,8 +48,16 @@ function cacheDir() {
   return path.join(base, "memocap", VERSION);
 }
 
+function temporaryPath(destination) {
+  return `${destination}.${process.pid}.${crypto.randomBytes(8).toString("hex")}`;
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 function download(url, dest) {
-  const tmp = `${dest}.partial`;
+  const tmp = `${temporaryPath(dest)}.partial`;
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(tmp);
     const fail = (err) => {
@@ -111,22 +123,65 @@ function verifyCachedBinary(binary, checksum, name) {
   }
 }
 
-async function replaceCachedBinary(release, binary) {
+async function acquireCacheLock(release, binary) {
   const checksum = `${binary}.sha256`;
-  fs.rmSync(binary, { force: true });
-  fs.rmSync(checksum, { force: true });
+  const lockPath = `${binary}.lock`;
+  const deadline = Date.now() + CACHE_LOCK_TIMEOUT_MS;
+  for (;;) {
+    if (verifyCachedBinary(binary, checksum, release.name)) {
+      return null;
+    }
+    const lock = await createCacheLock(lockPath);
+    if (lock) {
+      return lock;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`timed out waiting for cache download of ${release.name}`);
+    }
+    await delay(CACHE_LOCK_RETRY_MS);
+  }
+}
+
+async function downloadVerifiedCache(release, binary, checksum) {
+  const stagedChecksum = temporaryPath(checksum);
+  const stagedBinary = temporaryPath(binary);
   try {
-    await download(release.checksumUrl, checksum);
-    await download(release.url, binary);
-    if (!verifyCachedBinary(binary, checksum, release.name)) {
+    await download(release.checksumUrl, stagedChecksum);
+    await download(release.url, stagedBinary);
+    if (!verifyCachedBinary(stagedBinary, stagedChecksum, release.name)) {
       throw new Error(`checksum mismatch for ${release.name}`);
     }
-    fs.chmodSync(binary, 0o755);
-    return binary;
-  } catch (error) {
+    fs.chmodSync(stagedBinary, 0o755);
     fs.rmSync(binary, { force: true });
     fs.rmSync(checksum, { force: true });
-    throw error;
+    fs.renameSync(stagedChecksum, checksum);
+    fs.renameSync(stagedBinary, binary);
+    return binary;
+  } finally {
+    fs.rmSync(stagedChecksum, { force: true });
+    fs.rmSync(stagedBinary, { force: true });
+  }
+}
+
+function releaseCacheLock(lock) {
+  fs.rmSync(lock.path, { force: true });
+}
+
+async function replaceCachedBinary(release, binary) {
+  const checksum = `${binary}.sha256`;
+  const lock = await acquireCacheLock(release, binary);
+  if (!lock) {
+    fs.chmodSync(binary, 0o755);
+    return binary;
+  }
+  try {
+    if (verifyCachedBinary(binary, checksum, release.name)) {
+      fs.chmodSync(binary, 0o755);
+      return binary;
+    }
+    return await downloadVerifiedCache(release, binary, checksum);
+  } finally {
+    releaseCacheLock(lock);
   }
 }
 
@@ -140,6 +195,7 @@ async function resolveBinary() {
   const dest = path.join(dir, release.name);
   const checksum = `${dest}.sha256`;
   if (verifyCachedBinary(dest, checksum, release.name)) {
+    fs.chmodSync(dest, 0o755);
     return dest;
   }
   return replaceCachedBinary(release, dest);

@@ -11,7 +11,7 @@
 先安装全局 CLI，再注册 OpenCode 插件：
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.0.1
+pnpm add -g @lyy-gh/memocap@0.0.2
 opencode plugin @lyy-gh/memocap
 ```
 

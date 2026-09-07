@@ -23,26 +23,73 @@ function blockRun(step) {
   const marker = "        run: |\n";
   const start = step.indexOf(marker);
   assert.notEqual(start, -1, "missing block run command");
-  const lines = step.slice(start + marker.length).split("\n");
-  const script = [];
-  for (const line of lines) {
-    if (!line.startsWith("          ")) break;
-    script.push(line.slice(10));
-  }
-  return script.join("\n");
+  return step
+    .slice(start + marker.length)
+    .split("\n")
+    .filter((line) => line.startsWith("          "))
+    .map((line) => line.slice(10))
+    .join("\n");
 }
 
-function inlineRun(step) {
-  const match = step.match(/^        run: (.+)$/m);
-  assert.ok(match, "missing inline run command");
+function stepRun(step) {
+  const marker = "        run: |\n";
+  const start = step.indexOf(marker);
+  if (start !== -1) {
+    return blockRun(step);
+  }
+  const match = step.match(/^\s{8}run: (.+)$/m);
+  assert.ok(match, "missing workflow run command");
   return match[1];
 }
 
 const inspectRegistry = blockRun(workflowStep("      - id: registry\n"));
-const publishPackage = inlineRun(workflowStep("      - name: Publish missing package\n"));
+const publishPackage = stepRun(workflowStep("      - name: Publish missing package\n"));
 const verifyRegistry = blockRun(
   workflowStep("      - name: Verify registry package and provenance\n"),
 );
+
+function provenanceAudit(packageName, version) {
+  const repository = "https://github.com/LYY/memocap";
+  const ref = `refs/tags/v${version}`;
+  const statement = {
+    predicate: {
+      buildDefinition: {
+        externalParameters: {
+          workflow: { repository, path: ".github/workflows/release.yml", ref },
+        },
+        resolvedDependencies: [
+          {
+            uri: `git+${repository}@${ref}`,
+            digest: { gitCommit: "0123456789012345678901234567890123456789" },
+          },
+        ],
+      },
+      runDetails: {
+        metadata: {
+          invocationId: "https://github.com/LYY/memocap/actions/runs/123/attempts/1",
+        },
+      },
+    },
+  };
+  return {
+    verified: [
+      {
+        name: packageName,
+        version,
+        attestationBundles: [
+          {
+            predicateType: "https://slsa.dev/provenance/v1",
+            bundle: {
+              dsseEnvelope: {
+                payload: Buffer.from(JSON.stringify(statement)).toString("base64"),
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
 
 function writeFixture(context, overrides = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-release-registry-"));
@@ -61,7 +108,11 @@ function writeFixture(context, overrides = {}) {
   fs.mkdirSync(temp);
   fs.writeFileSync(
     path.join(workspace, "package.json"),
-    JSON.stringify({ name: packageName, version }),
+    JSON.stringify({
+      name: packageName,
+      version,
+      repository: { url: "https://github.com/LYY/memocap.git" },
+    }),
   );
   fs.writeFileSync(
     path.join(bin, "npm-stub.cjs"),
@@ -90,10 +141,10 @@ function writeFixture(context, overrides = {}) {
       "}",
       'if (command === "pack") {',
       '  record("pack");',
-      '  process.stdout.write("[{\\\"integrity\\\":\\\"sha512-fixture\\\"}]");',
+      '  process.stdout.write(JSON.stringify([{ integrity: "sha512-fixture" }]));',
       "  process.exit(0);",
       "}",
-      'if (command === "init" || command === "install") {',
+      'if (command === "install") {',
       "  record(command);",
       "  process.exit(0);",
       "}",
@@ -102,7 +153,7 @@ function writeFixture(context, overrides = {}) {
       "  process.stdout.write(process.env.FAKE_NPM_AUDIT);",
       "  process.exit(0);",
       "}",
-      'process.stderr.write(`unsupported npm command: ${command}\\n`);',
+      'process.stderr.write("unsupported npm command: " + command + "\\n");',
       "process.exit(1);",
       "",
     ].join("\n"),
@@ -113,6 +164,9 @@ function writeFixture(context, overrides = {}) {
     '#!/usr/bin/env bash\nexec node "$(dirname "$0")/npm-stub.cjs" "$@"\n',
     { mode: 0o755 },
   );
+  fs.writeFileSync(path.join(bin, "sleep"), "#!/usr/bin/env bash\nexit 0\n", {
+    mode: 0o755,
+  });
 
   const metadata = overrides.metadata ?? {
     name: packageName,
@@ -120,17 +174,7 @@ function writeFixture(context, overrides = {}) {
     repository: { url: "https://github.com/LYY/memocap.git" },
     dist: { integrity: "sha512-fixture" },
   };
-  const audit = overrides.audit ?? {
-    verified: [
-      {
-        name: packageName,
-        version,
-        attestationBundles: [
-          { predicateType: "https://slsa.dev/provenance/v1" },
-        ],
-      },
-    ],
-  };
+  const audit = overrides.audit ?? provenanceAudit(packageName, version);
 
   return {
     commandOptions: {
@@ -141,6 +185,14 @@ function writeFixture(context, overrides = {}) {
         PATH: `${bin}${path.delimiter}${process.env.PATH}`,
         RUNNER_TEMP: temp,
         GITHUB_OUTPUT: output,
+        GITHUB_REF: `refs/tags/v${version}`,
+        GITHUB_REPOSITORY: "LYY/memocap",
+        GITHUB_RUN_ATTEMPT: "1",
+        GITHUB_RUN_ID: "123",
+        GITHUB_SERVER_URL: "https://github.com",
+        GITHUB_SHA: "0123456789012345678901234567890123456789",
+        TAG: `v${version}`,
+        TAG_SHA: "0123456789012345678901234567890123456789",
         FAKE_NPM_LOG: log,
         FAKE_NPM_STATE: state,
         FAKE_NPM_METADATA: JSON.stringify(metadata),
@@ -177,7 +229,7 @@ test("first publish re-reads matching registry metadata before provenance verifi
   const verification = runFirstPublish(fixture);
 
   assert.equal(verification.status, 0, verification.stderr);
-  assert.deepEqual(npmCalls(fixture), ["view", "publish", "pack", "view", "init", "install", "audit"]);
+  assert.deepEqual(npmCalls(fixture), ["view", "publish", "pack", "view", "install", "audit"]);
 });
 
 for (const [name, overrides] of [

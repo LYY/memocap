@@ -84,7 +84,7 @@ jobs:
           "$RUNNER_TEMP/actionlint" .github/workflows/ci.yml .github/workflows/release.yml
       - name: Check release contract
         env:
-          RELEASE_TAG: v0.0.1
+          RELEASE_TAG: v0.0.2
         run: node scripts/check-release.mjs
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:

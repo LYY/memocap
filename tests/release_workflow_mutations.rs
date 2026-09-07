@@ -52,8 +52,13 @@ fn release_contract_rejects_critical_workflow_mutations() {
     for (before, after) in [
         (
             "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
-            ": # skipped exact main validation",
+            "git merge-base --is-ancestor \"$sha\" origin/main",
         ),
+        (
+            "group: release-${{ github.repository }}-${{ github.ref_name }}",
+            "group: release-${{ github.repository }}",
+        ),
+        ("cancel-in-progress: false", "cancel-in-progress: true"),
         (
             "Set-Content -NoNewline -Encoding ascii",
             "Out-File -Encoding ascii",
@@ -66,7 +71,28 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "verify_existing_assets \"$release\"",
             "gh release edit \"$TAG\" --draft\n        verify_existing_assets \"$release\"",
         ),
+        (
+            "1:0) verify_existing_binary \"$asset\" ;;",
+            "1:0) : # skipped binary verification ;;;",
+        ),
+        (
+            "0:1) verify_existing_checksum \"$asset\" ;;",
+            "0:1) : # skipped checksum verification ;;;",
+        ),
+        (
+            "release=\"$(wait_for_uploaded_assets \"$release\" \"${missing[@]}\")\"",
+            "release=\"$(read_release)\"",
+        ),
         (".[0].draft | type", ".[0].draft"),
+        ("GITHUB_WORKFLOW_SHA", "GITHUB_SHA"),
+        ("GITHUB_WORKFLOW_REF", "GITHUB_REF"),
+        ("[ \"$workflow_identity\" = \"$tag_workflow\" ]", "true"),
+        (
+            "[ \"$GITHUB_WORKFLOW_REF\" = \"$expected_workflow_ref\" ]",
+            "true",
+        ),
+        ("[ \"$tag_workflow\" = \"$main_workflow\" ]", "true"),
+        ("environment: npm-release", "environment: npm-stage"),
     ] {
         let mutated = mutate(&workflow, before, after);
         assert!(
@@ -74,6 +100,12 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "mutation accepted: {before}"
         );
     }
+    let historical_recovery = mutate(
+        &workflow,
+        "[ \"$tag_workflow\" = \"$main_workflow\" ]",
+        "release_recovery_sha=\"86b4c20a79db2d4cac3eeaeebf19143778e572d2\"\n          if [ \"$sha\" = \"$release_recovery_sha\" ]; then\n            true\n          else\n            [ \"$tag_workflow\" = \"$main_workflow\" ]\n          fi",
+    );
+    assert!(release_contract(&historical_recovery).is_err());
     for (before, after) in [
         ("[.assets[].name] | sort | join", "[.assets[].name] | join"),
         (
@@ -85,17 +117,56 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "npm install --ignore-scripts --package-lock=false",
             "npm install --ignore-scripts --no-save --package-lock=false",
         ),
-        ("any(.verified[];", "any([][];"),
+        (
+            ".bundle.dsseEnvelope.payload",
+            ".bundle.dsseEnvelope.encodedPayload",
+        ),
+        (
+            "$provenance_workflow.repository == $repository",
+            "true",
+        ),
+        (
+            "startswith($run + \"/attempts/\")",
+            "true",
+        ),
+        (
+            "expected_run=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"",
+            "expected_run=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT\"",
+        ),
+        ("test(\"^[1-9][0-9]*$\")", "test(\"^[0-9]+$\")"),
+        ("test(\"^[1-9][0-9]*$\")", "test(\"^0$\")"),
+        ("test(\"^[1-9][0-9]*$\")", "test(\"^0[0-9]+$\")"),
+        (
+            "if [ \"$GITHUB_RUN_ATTEMPT\" -eq 1 ]; then",
+            "if true; then",
+        ),
         (
             "error_file=\"$RUNNER_TEMP/npm-view-error\"",
-            "npm publish --access public --provenance\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
+            "npm publish --access public --provenance --ignore-scripts\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
         ),
         (
-            "run: npm publish --access public --provenance",
-            "env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}\n        run: npm publish --access public --provenance",
+            "if npm publish --access public --provenance --ignore-scripts; then",
+            "env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}\n          if npm publish --access public --provenance; then",
+        ),
+        (
+            "npm publish --access public --provenance --ignore-scripts",
+            "npm publish --access public --provenance",
+        ),
+        (
+            "npm pack --ignore-scripts --dry-run --json",
+            "npm pack --dry-run --json",
         ),
         ("[ \"$actual_assets\" = \"$expected_names\" ]", "true # skipped exact asset equality"),
-        ("' <<< \"$audit\" >/dev/null", "' <<< \"$audit\" >/dev/null || true"),
+        ("for attempt in {1..10}; do", "for attempt in {1..1}; do"),
+        (
+            "for verification_attempt in {1..10}; do",
+            "for verification_attempt in {1..1}; do",
+        ),
+        ("if registry_matches; then", "if false; then"),
+        (
+            "if npm publish --access public --provenance --ignore-scripts; then",
+            "npm publish --access public --provenance --ignore-scripts",
+        ),
     ] {
         let mutated = mutate_registry(&workflow, before, after);
         assert!(

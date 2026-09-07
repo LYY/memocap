@@ -40,6 +40,7 @@ fn package_contract_runs_release_gates_before_packaging() {
         "actionlint_1.7.12_linux_amd64.tar.gz",
         "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
         "scripts/check-release.mjs",
+        "RELEASE_TAG: v0.0.2",
         "node --check",
         "node --test tests/*.test.cjs",
         "npm pack --dry-run --json",
