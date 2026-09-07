@@ -96,6 +96,7 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "true",
         ),
         ("[ \"$tag_workflow\" = \"$main_workflow\" ]", "true"),
+        ("environment: npm-release", "environment: npm-stage"),
     ] {
         let mutated = mutate(&workflow, before, after);
         assert!(

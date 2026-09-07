@@ -329,6 +329,7 @@ jobs:
   registry:
     needs: [validate, release]
     runs-on: ubuntu-24.04
+    environment: npm-release
     permissions:
       contents: read
       id-token: write

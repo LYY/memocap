@@ -110,6 +110,7 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     require(job(workflow, "binaries"), "needs: validate")?;
     require(job(workflow, "release"), "needs: [validate, binaries]")?;
     require(job(workflow, "registry"), "needs: [validate, release]")?;
+    require(job(workflow, "registry"), "environment: npm-release")?;
 
     if permissions(workflow, 0) != vec![("contents", "read")]
         || permissions(job(workflow, "validate"), 4) != vec![("contents", "read")]
