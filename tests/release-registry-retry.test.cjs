@@ -260,6 +260,8 @@ test("rejects provenance not bound to this release workflow invocation", (contex
     { provenanceRef: "refs/tags/v0.0.1" },
     { provenanceSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
     { provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/122/attempts/not-a-number" },
+    { provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/123/attempts/0" },
+    { provenanceInvocation: "https://github.com/LYY/memocap/actions/runs/123/attempts/01" },
   ]) {
     const fixture = writeFixture(context, overrides);
     const verification = runFirstPublish(fixture);

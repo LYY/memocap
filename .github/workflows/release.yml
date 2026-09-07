@@ -470,7 +470,7 @@ jobs:
                     .digest.gitCommit == $sha
                   ) and
                   ($provenance_invocation | startswith($run + "/attempts/")) and
-                  ($provenance_invocation | ltrimstr($run + "/attempts/") | test("^[0-9]+$"))
+                  ($provenance_invocation | ltrimstr($run + "/attempts/") | test("^[1-9][0-9]*$"))
                 ' <<< "$statement" >/dev/null; then
                 return 0
               fi

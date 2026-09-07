@@ -73,7 +73,7 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
         "$GITHUB_RUN_ID",
         "expected_run=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"",
         "startswith($run + \"/attempts/\")",
-        "ltrimstr($run + \"/attempts/\") | test(\"^[0-9]+$\")",
+        "ltrimstr($run + \"/attempts/\") | test(\"^[1-9][0-9]*$\")",
         "$provenance_workflow.repository == $repository",
         "$provenance_workflow.path == $workflow",
         "$provenance_workflow.ref == $ref",

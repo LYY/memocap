@@ -130,7 +130,9 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "expected_run=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"",
             "expected_run=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT\"",
         ),
-        ("test(\"^[0-9]+$\")", "test(\".+\")"),
+        ("test(\"^[1-9][0-9]*$\")", "test(\"^[0-9]+$\")"),
+        ("test(\"^[1-9][0-9]*$\")", "test(\"^0$\")"),
+        ("test(\"^[1-9][0-9]*$\")", "test(\"^0[0-9]+$\")"),
         (
             "if [ \"$GITHUB_RUN_ATTEMPT\" -eq 1 ]; then",
             "if true; then",
