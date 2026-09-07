@@ -144,7 +144,7 @@ function writeFixture(context, overrides = {}) {
       '  process.stdout.write(JSON.stringify([{ integrity: "sha512-fixture" }]));',
       "  process.exit(0);",
       "}",
-      'if (command === "init" || command === "install") {',
+      'if (command === "install") {',
       "  record(command);",
       "  process.exit(0);",
       "}",
@@ -229,7 +229,7 @@ test("first publish re-reads matching registry metadata before provenance verifi
   const verification = runFirstPublish(fixture);
 
   assert.equal(verification.status, 0, verification.stderr);
-  assert.deepEqual(npmCalls(fixture), ["view", "publish", "pack", "view", "init", "install", "audit"]);
+  assert.deepEqual(npmCalls(fixture), ["view", "publish", "pack", "view", "install", "audit"]);
 });
 
 for (const [name, overrides] of [

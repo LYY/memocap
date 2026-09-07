@@ -137,11 +137,19 @@ fn release_contract_rejects_critical_workflow_mutations() {
         ),
         (
             "error_file=\"$RUNNER_TEMP/npm-view-error\"",
-            "npm publish --access public --provenance\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
+            "npm publish --access public --provenance --ignore-scripts\n          error_file=\"$RUNNER_TEMP/npm-view-error\"",
         ),
         (
-            "if npm publish --access public --provenance; then",
+            "if npm publish --access public --provenance --ignore-scripts; then",
             "env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}\n          if npm publish --access public --provenance; then",
+        ),
+        (
+            "npm publish --access public --provenance --ignore-scripts",
+            "npm publish --access public --provenance",
+        ),
+        (
+            "npm pack --ignore-scripts --dry-run --json",
+            "npm pack --dry-run --json",
         ),
         ("[ \"$actual_assets\" = \"$expected_names\" ]", "true # skipped exact asset equality"),
         ("for attempt in {1..10}; do", "for attempt in {1..1}; do"),
@@ -151,8 +159,8 @@ fn release_contract_rejects_critical_workflow_mutations() {
         ),
         ("if registry_matches; then", "if false; then"),
         (
-            "if npm publish --access public --provenance; then",
-            "npm publish --access public --provenance",
+            "if npm publish --access public --provenance --ignore-scripts; then",
+            "npm publish --access public --provenance --ignore-scripts",
         ),
     ] {
         let mutated = mutate_registry(&workflow, before, after);

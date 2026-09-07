@@ -37,8 +37,14 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
         require(inspection, required)?;
     }
     let publish = step(registry, "Publish missing package");
-    require(publish, "npm publish --access public --provenance")?;
-    require(publish, "if npm publish --access public --provenance; then")?;
+    require(
+        publish,
+        "npm publish --access public --provenance --ignore-scripts",
+    )?;
+    require(
+        publish,
+        "if npm publish --access public --provenance --ignore-scripts; then",
+    )?;
     require(
         publish,
         "npm publish reported failure; checking registry visibility",
@@ -51,7 +57,8 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
     for required in [
         "actual=\"$RUNNER_TEMP/npm-package-verified.json\"",
         "npm view \"$package@$version\" --json > \"$actual\"",
-        "npm install --ignore-scripts --package-lock=false",
+        "npm pack --ignore-scripts --dry-run --json",
+        "npm install --ignore-scripts --package-lock=false --prefix \"$verify_directory\"",
         "npm audit signatures --json --include-attestations",
         ".verified[]?",
         "registry_matches() {",
@@ -85,6 +92,11 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
     }
     if provenance.contains("GITHUB_RUN_ATTEMPT") {
         return Err("provenance verification must bind a stable GitHub run ID".to_owned());
+    }
+    if workflow.contains("npm install --global") || provenance.contains("npm init") {
+        return Err(
+            "registry workflow must not execute global install lifecycle scripts".to_owned(),
+        );
     }
     before(
         provenance,

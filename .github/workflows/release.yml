@@ -341,10 +341,6 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-      - name: Pin npm
-        run: |
-          npm install --global npm@11.15.0
-          test "$(npm --version)" = 11.15.0
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           pattern: release-*
@@ -426,7 +422,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if npm publish --access public --provenance; then
+          if npm publish --access public --provenance --ignore-scripts; then
             :
           else
             echo "npm publish reported failure; checking registry visibility" >&2
@@ -441,7 +437,7 @@ jobs:
           set -euo pipefail
           package="$(node -p "require('./package.json').name")"
           version="$(node -p "require('./package.json').version")"
-          expected_integrity="$(npm pack --dry-run --json | jq -r '.[0].integrity')"
+          expected_integrity="$(npm pack --ignore-scripts --dry-run --json | jq -r '.[0].integrity')"
           actual="$RUNNER_TEMP/npm-package-verified.json"
           normalize_repository_url() {
             local repository="$1"
@@ -498,9 +494,8 @@ jobs:
             [ "$(jq -r '.dist.integrity' "$actual")" = "$expected_integrity" ] || return 1
             verify_directory="$(mktemp -d)"
             (
+              npm install --ignore-scripts --package-lock=false --prefix "$verify_directory" "$package@$version" || exit 1
               cd "$verify_directory"
-              npm init --yes >/dev/null || exit 1
-              npm install --ignore-scripts --package-lock=false "$package@$version" || exit 1
               audit="$(npm audit signatures --json --include-attestations)" || exit 1
               provenance_matches "$audit"
             )
