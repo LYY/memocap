@@ -70,6 +70,7 @@ function validationResult(root, tag, workflowSha) {
     encoding: "utf8",
     env: {
       ...process.env,
+      MSYS_NO_PATHCONV: "1",
       GITHUB_OUTPUT: output,
       GITHUB_REF_NAME: tag,
       GITHUB_REPOSITORY: "LYY/memocap",
