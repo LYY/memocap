@@ -11,10 +11,9 @@ const pluginPath = path.join(root, "plugin/cli.js");
 const staticSkillPath = path.join(root, "skills/memocap/SKILL.md");
 const generatedRulesPath = path.join(root, "src/lib.rs");
 
-function generatedRules() {
-  const source = fs.readFileSync(generatedRulesPath, "utf8");
+function generatedRules(source = fs.readFileSync(generatedRulesPath, "utf8")) {
   const start = source.indexOf('r#"{AGENTS_BEGIN}');
-  const end = source.indexOf('{AGENTS_END}\n"#', start);
+  const end = source.indexOf("{AGENTS_END}", start);
   assert.notEqual(start, -1, "generated rules template should exist");
   assert.notEqual(end, -1, "generated rules template should end");
   return source.slice(start, end);
@@ -143,6 +142,28 @@ function guidanceStatements(text) {
     .map((line) => line.trim().replace(/^-\s+/, ""))
     .filter(Boolean);
 }
+
+test("generated rules extraction accepts CRLF source", (context) => {
+  const source = fs.readFileSync(generatedRulesPath, "utf8");
+  const crlfSource = source.replace(/\r?\n/g, "\r\n");
+  context.mock.method(
+    fs,
+    "readFileSync",
+    () => 'r#"{AGENTS_BEGIN}\r\n{AGENTS_END}\r\n"#',
+  );
+
+  const crlfRules = generatedRules(crlfSource);
+  const lfRules = generatedRules(source);
+
+  assert.deepEqual(
+    {
+      crlfStatements: guidanceStatements(crlfRules).length,
+      lfStatements: guidanceStatements(lfRules).length,
+      usesCRLF: crlfRules.includes("\r\n"),
+    },
+    { crlfStatements: 15, lfStatements: 15, usesCRLF: true },
+  );
+});
 
 test("memory scope guidance accepts equivalents and rejects inverted rules", () => {
   for (const rule of scopeGuidanceMatrix) {
