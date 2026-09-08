@@ -306,19 +306,22 @@ pub fn migrate_scope(
     if source == destination {
         anyhow::bail!("source and destination scopes must differ");
     }
-    let moved = scope_migration_count(connection, source, migration)?;
-    if dry_run || moved == 0 {
-        return Ok(moved);
+    if dry_run {
+        return scope_migration_count(connection, source, migration);
     }
     let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    match migration {
+    let moved = match migration {
         ScopeMigration::One(id) => move_memory(&transaction, source, destination, id)?,
         ScopeMigration::All => {
-            for id in migration_ids(&transaction, source)? {
+            let ids = migration_ids(&transaction, source)?;
+            let moved = i64::try_from(ids.len())
+                .context("scope migration row count exceeds SQLite range")?;
+            for id in ids {
                 move_memory(&transaction, source, destination, id)?;
             }
+            moved
         }
-    }
+    };
     transaction.commit()?;
     Ok(moved)
 }
@@ -392,7 +395,7 @@ fn move_memory(
     source: &ScopeId,
     destination: &ScopeId,
     id: i64,
-) -> Result<()> {
+) -> Result<i64> {
     let updated = transaction.execute(
         "UPDATE memories SET scope = ?1 WHERE id = ?2 AND scope = ?3",
         params![destination.as_str(), id, source.as_str()],
@@ -400,7 +403,7 @@ fn move_memory(
     if updated != 1 {
         anyhow::bail!("memory #{id} not found in source scope");
     }
-    Ok(())
+    i64::try_from(updated).context("scope migration row count exceeds SQLite range")
 }
 
 fn sqlite_limit(limit: usize) -> Result<i64> {

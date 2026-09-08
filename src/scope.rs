@@ -9,6 +9,9 @@ use anyhow::{anyhow, bail, Result};
 use sha2::{Digest, Sha256};
 use url::Url;
 
+#[cfg(unix)]
+use std::os::unix::ffi::OsStrExt;
+
 const SCOPE_PREFIX: &str = "scope:v1:";
 const HASH_DOMAIN: &[u8] = b"memocap\0scope\0v1\0";
 
@@ -132,7 +135,7 @@ fn derive_scope(cwd: &Path, common_dir: &Path) -> Result<ResolvedScope> {
             ResolutionSource::Remote,
         ),
         None => (
-            scope_from_path("git-common-dir", common_dir),
+            scope_from_path("git-common-dir", common_dir)?,
             ResolutionSource::GitCommonDir,
         ),
     };
@@ -142,7 +145,7 @@ fn derive_scope(cwd: &Path, common_dir: &Path) -> Result<ResolvedScope> {
 
 fn directory_scope(cwd: &Path) -> Result<ResolvedScope> {
     Ok(ResolvedScope {
-        scope: scope_from_path("directory", cwd),
+        scope: scope_from_path("directory", cwd)?,
         source: ResolutionSource::Directory,
     })
 }
@@ -276,16 +279,29 @@ fn canonicalize_remote_parts(host: &str, path: &str, port: Option<u16>) -> Optio
     Some(format!("{host}/{path}"))
 }
 
-fn scope_from_path(kind: &str, path: &Path) -> ScopeId {
-    scope_from_identity(kind, &path.to_string_lossy())
+#[cfg(unix)]
+fn scope_from_path(kind: &str, path: &Path) -> Result<ScopeId> {
+    Ok(scope_from_bytes(kind, path.as_os_str().as_bytes()))
+}
+
+#[cfg(not(unix))]
+fn scope_from_path(kind: &str, path: &Path) -> Result<ScopeId> {
+    let identity = path
+        .to_str()
+        .ok_or_else(|| anyhow!("scope path is not valid UTF-8"))?;
+    Ok(scope_from_identity(kind, identity))
 }
 
 fn scope_from_identity(kind: &str, identity: &str) -> ScopeId {
+    scope_from_bytes(kind, identity.as_bytes())
+}
+
+fn scope_from_bytes(kind: &str, identity: &[u8]) -> ScopeId {
     let mut digest = Sha256::new();
     digest.update(HASH_DOMAIN);
     digest.update(kind);
     digest.update(b"\0");
-    digest.update(identity.as_bytes());
+    digest.update(identity);
     ScopeId(format!("{SCOPE_PREFIX}{:x}", digest.finalize()))
 }
 
@@ -322,4 +338,27 @@ fn remove_terminal_newline(value: &str) -> &str {
 
 const fn is_lowercase_hex(byte: u8) -> bool {
     matches!(byte, b'0'..=b'9' | b'a'..=b'f')
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use std::{ffi::OsStr, os::unix::ffi::OsStrExt, path::Path};
+
+    use super::scope_from_path;
+
+    #[test]
+    fn distinguishes_non_utf8_paths_with_same_lossy_form() {
+        // Given
+        let left = Path::new(OsStr::from_bytes(b"same-\x80"));
+        let right = Path::new(OsStr::from_bytes(b"same-\x81"));
+        assert_ne!(left, right);
+        assert_eq!(left.to_string_lossy(), right.to_string_lossy());
+
+        // When
+        let left_scope = scope_from_path("directory", left).unwrap();
+        let right_scope = scope_from_path("directory", right).unwrap();
+
+        // Then
+        assert_ne!(left_scope, right_scope);
+    }
 }

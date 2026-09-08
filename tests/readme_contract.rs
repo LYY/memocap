@@ -41,7 +41,7 @@ fn install_commands(readme: &str) -> Vec<&str> {
 
 fn install_contract_is_valid(readme: &str) -> bool {
     let section = install_section(readme);
-    let global_install = "pnpm add -g @lyy-gh/memocap@0.0.3";
+    let global_install = "pnpm add -g @lyy-gh/memocap@0.0.4";
     let plugin_install = "opencode plugin @lyy-gh/memocap";
     let Some(global_position) = section.find(global_install) else {
         return false;
@@ -121,7 +121,7 @@ fn repository_rows_name_only_opencode_without_changing_third_party_rows() {
 #[test]
 fn bilingual_install_contract_has_same_machine_consumed_values() {
     for value in [
-        "pnpm add -g @lyy-gh/memocap@0.0.3",
+        "pnpm add -g @lyy-gh/memocap@0.0.4",
         "opencode plugin @lyy-gh/memocap",
         "git clone https://github.com/LYY/memocap",
     ] {
@@ -272,8 +272,8 @@ fn inserted_unknown_command_between_install_steps_is_rejected() {
             "\n"
         };
         let mutated = readme.replace(
-            &format!("pnpm add -g @lyy-gh/memocap@0.0.3{newline}opencode plugin @lyy-gh/memocap"),
-            &format!("pnpm add -g @lyy-gh/memocap@0.0.3{newline}echo unexpected{newline}opencode plugin @lyy-gh/memocap"),
+            &format!("pnpm add -g @lyy-gh/memocap@0.0.4{newline}opencode plugin @lyy-gh/memocap"),
+            &format!("pnpm add -g @lyy-gh/memocap@0.0.4{newline}echo unexpected{newline}opencode plugin @lyy-gh/memocap"),
         );
 
         assert!(!install_contract_is_valid(&mutated));
