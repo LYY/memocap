@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.4 (2026-09-08)
+
+Scope hotfix：强化 native-path scope isolation 与 transactional scope migration，同时保持已发布的 `v0.0.3` 不变。
+
+- Unix scope identity 直接哈希原生路径字节；有效 UTF-8 路径保持既有 identity，非 UTF-8 路径不再因有损转换发生碰撞。
+- 非 dry-run migration 在读取 source scope 前启动 immediate transaction，使选择、计数和更新共享同一事务边界；单条迁移返回实际更新数。
+- 回归测试覆盖非 UTF-8 路径隔离、事务获取顺序、竞争写入以及失败时完整回滚。
+
 ## 0.0.3 (2026-09-07)
 
 范围文档与当前 CLI 行为对齐，明确本机仓库 scope、global scope、topic shadow、迁移和严格远程 scope。

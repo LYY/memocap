@@ -55,8 +55,8 @@ for (const target of [
     // Given
     const expected = {
       name: target.name,
-      url: `https://github.com/LYY/memocap/releases/download/v0.0.3/${target.name}`,
-      checksumUrl: `https://github.com/LYY/memocap/releases/download/v0.0.3/${target.name}.sha256`,
+      url: `https://github.com/LYY/memocap/releases/download/v0.0.4/${target.name}`,
+      checksumUrl: `https://github.com/LYY/memocap/releases/download/v0.0.4/${target.name}.sha256`,
     };
 
     // When

@@ -7,7 +7,7 @@
 - 「开口才记」作废。
 - 言必检：每句话先 recall 再答。
 - 值必存：有决策、偏好、任务、约定、上下文就主动存。先查同类再 store，存了要告诉你。卡住先翻记忆。
-- OpenCode 唯一官方集成。严格两步安装：先 `pnpm add -g @lyy-gh/memocap@0.0.3`，再 `opencode plugin @lyy-gh/memocap`。
+- OpenCode 唯一官方集成。严格两步安装：先 `pnpm add -g @lyy-gh/memocap@0.0.4`，再 `opencode plugin @lyy-gh/memocap`。
 - Codex、Claude Code、Pi 仅作历史兼容，不属于官方支持范围；不提供其安装、规则注入或行为保证。
 - 同一份 SQLite。默认本机、不联网。配了地址和 token 才走 HTTP。
 - Compose：数据卷 + 一个端口。薄 HTTP。共享 token，不多租户。没配地址继续本地。
@@ -67,7 +67,7 @@
 包管理器只负责把原生程序放到 PATH。后续不依赖 npx。
 
 ```bash
-pnpm add -g @lyy-gh/memocap@0.0.3
+pnpm add -g @lyy-gh/memocap@0.0.4
 opencode plugin @lyy-gh/memocap
 ```
 
