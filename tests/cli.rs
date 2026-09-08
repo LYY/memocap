@@ -387,12 +387,16 @@ fn topic_shadow_keeps_inventory_visible_and_status_preserves_legacy_global_flag(
     assert!(status.contains("repository_count: 1"));
     assert!(status.contains("global_count: 1"));
     assert!(status.contains("visible_count: 2"));
-    let expected_agents_path = fixture.repo_a.canonicalize().unwrap().join("AGENTS.md");
-    let expected_agents_path = expected_agents_path.to_string_lossy();
-    let expected_agents_path = expected_agents_path
-        .strip_prefix(r"\\?\")
-        .unwrap_or(expected_agents_path.as_ref());
-    assert!(status.contains(&format!("AGENTS.md: {expected_agents_path}")));
+    let agents_path = status
+        .lines()
+        .find_map(|line| line.strip_prefix("AGENTS.md: "))
+        .map(Path::new)
+        .unwrap();
+    assert!(agents_path.ends_with("AGENTS.md"));
+    assert_eq!(
+        agents_path.parent().unwrap().canonicalize().unwrap(),
+        fixture.repo_a.canonicalize().unwrap()
+    );
 
     let global_status = fixture.run(&fixture.repo_a, &["status", "--global"]);
     assert_success(&global_status);
