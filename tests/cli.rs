@@ -387,15 +387,12 @@ fn topic_shadow_keeps_inventory_visible_and_status_preserves_legacy_global_flag(
     assert!(status.contains("repository_count: 1"));
     assert!(status.contains("global_count: 1"));
     assert!(status.contains("visible_count: 2"));
-    assert!(status.contains(&format!(
-        "AGENTS.md: {}",
-        fixture
-            .repo_a
-            .canonicalize()
-            .unwrap()
-            .join("AGENTS.md")
-            .display()
-    )));
+    let expected_agents_path = fixture.repo_a.canonicalize().unwrap().join("AGENTS.md");
+    let expected_agents_path = expected_agents_path.to_string_lossy();
+    let expected_agents_path = expected_agents_path
+        .strip_prefix(r"\\?\")
+        .unwrap_or(expected_agents_path.as_ref());
+    assert!(status.contains(&format!("AGENTS.md: {expected_agents_path}")));
 
     let global_status = fixture.run(&fixture.repo_a, &["status", "--global"]);
     assert_success(&global_status);
@@ -560,6 +557,6 @@ fn status_surfaces_database_and_remote_count_errors() {
     );
     assert_failure(
         &fixture.run_remote(&fixture.repo_a, &["status"]),
-        "Connection refused",
+        "http://127.0.0.1:1/count?scope=",
     );
 }
