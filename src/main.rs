@@ -1,7 +1,9 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{ArgGroup, Parser, Subcommand};
 
-use memocap::{cli, config, config::Target, install, paths::Paths, remote, server, tui};
+use memocap::scope;
+
+mod commands;
 
 #[derive(Parser)]
 #[command(
@@ -15,7 +17,7 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
-enum Command {
+pub(crate) enum Command {
     /// Store an explicit memory.
     Remember {
         content: String,
@@ -29,6 +31,12 @@ enum Command {
         /// Overwrite an existing memory by id.
         #[arg(long)]
         id: Option<i64>,
+        /// Store in the global memory scope.
+        #[arg(long)]
+        global: bool,
+        /// Topic used to replace a global memory during repository recall.
+        #[arg(long)]
+        topic: Option<String>,
     },
     /// Search memory using SQLite full-text search.
     Recall {
@@ -39,14 +47,30 @@ enum Command {
         r#type: Option<String>,
         #[arg(long)]
         max_chars: Option<usize>,
+        /// Search only global memories.
+        #[arg(long)]
+        global: bool,
     },
     /// Show newest memories.
     List {
         #[arg(long, default_value_t = 20)]
         limit: usize,
+        /// Show only global memories.
+        #[arg(long)]
+        global: bool,
     },
     /// Delete one memory by ID.
-    Forget { id: i64 },
+    Forget {
+        id: i64,
+        /// Delete only from the global memory scope.
+        #[arg(long)]
+        global: bool,
+    },
+    /// Inspect or migrate local memory scopes.
+    Scope {
+        #[command(subcommand)]
+        command: ScopeCommand,
+    },
     /// Configure legacy compatibility files (unsupported).
     Install {
         /// Write legacy compatibility files under the user home (unsupported).
@@ -72,117 +96,26 @@ enum Command {
     Ui,
 }
 
+#[derive(Subcommand)]
+pub(crate) enum ScopeCommand {
+    /// Show the current opaque repository scope.
+    Show,
+    /// Move global or historical memories into the current repository scope.
+    #[command(group = ArgGroup::new("migration_selector").required(true))]
+    Migrate {
+        #[arg(long)]
+        from: scope::ScopeId,
+        #[arg(long, group = "migration_selector")]
+        id: Option<i64>,
+        #[arg(long, group = "migration_selector")]
+        all: bool,
+        #[arg(long, conflicts_with = "yes")]
+        dry_run: bool,
+        #[arg(long, requires = "all", conflicts_with = "dry_run")]
+        yes: bool,
+    },
+}
+
 fn main() -> Result<()> {
-    let args = Cli::parse();
-    match args.command.unwrap_or(Command::Ui) {
-        Command::Remember {
-            content,
-            r#type,
-            tags,
-            force,
-            id,
-        } => {
-            let id = match config::resolve_target()? {
-                Target::Local { database } => {
-                    cli::remember(&database, &content, &r#type, &tags, force, id)?
-                }
-                Target::Remote { address, token } => {
-                    remote::remember(&address, &token, &content, &r#type, &tags, force, id)?
-                }
-            };
-            println!("saved #{id}");
-        }
-        Command::Recall {
-            query,
-            limit,
-            r#type,
-            max_chars,
-        } => {
-            let kind = r#type.as_deref();
-            let memories = match config::resolve_target()? {
-                Target::Local { database } => {
-                    cli::recall(&database, &query, limit, kind, max_chars)?
-                }
-                Target::Remote { address, token } => {
-                    remote::recall(&address, &token, &query, limit, kind, max_chars)?
-                }
-            };
-            print!("{}", cli::format_memories(&memories));
-        }
-        Command::List { limit } => {
-            let memories = match config::resolve_target()? {
-                Target::Local { database } => cli::list(&database, limit)?,
-                Target::Remote { address, token } => remote::list(&address, &token, limit)?,
-            };
-            print!("{}", cli::format_memories(&memories));
-        }
-        Command::Forget { id } => {
-            let deleted = match config::resolve_target()? {
-                Target::Local { database } => cli::forget(&database, id)?,
-                Target::Remote { address, token } => remote::forget(&address, &token, id)?,
-            };
-            println!(
-                "{}",
-                if deleted {
-                    format!("deleted #{id}")
-                } else {
-                    format!("not found #{id}")
-                }
-            );
-        }
-        Command::Install { global } => {
-            let result = install::install(global)?;
-            println!("已配置：{}", result.agents_path.display());
-            println!("CLAUDE.md：{}", result.claude_path.display());
-            println!("skill：{}", result.skill_path.display());
-            println!("程序：{}", result.binary.display());
-            println!("数据库：{}", result.database.display());
-        }
-        Command::Uninstall { global } => {
-            println!(
-                "{}",
-                if install::uninstall(global)? {
-                    "removed memocap config"
-                } else {
-                    "no memocap config found"
-                }
-            );
-        }
-        Command::Status { global } => {
-            let result = install::status(global)?;
-            match config::resolve_target()? {
-                Target::Local { database } => {
-                    let count = cli::count(&database).unwrap_or(0);
-                    print!(
-                        "{}",
-                        cli::format_status(
-                            &database,
-                            count,
-                            &result.agents_path,
-                            result.configured
-                        )
-                    );
-                }
-                Target::Remote { address, token } => {
-                    let count = remote::count(&address, &token).unwrap_or(0);
-                    print!(
-                        "{}",
-                        cli::format_remote_status(
-                            &address,
-                            count,
-                            &result.agents_path,
-                            result.configured
-                        )
-                    );
-                }
-            }
-        }
-        Command::Serve { bind } => {
-            let token = config::require_token()?;
-            let paths = Paths::discover()?;
-            server::serve(&bind, &token, &paths.database)?;
-        }
-        Command::Ui => tui::run()?,
-    }
-    Ok(())
+    commands::run(Cli::parse().command.unwrap_or(Command::Ui))
 }

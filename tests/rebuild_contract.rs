@@ -1,7 +1,16 @@
 const REBUILD: &str = include_str!("../docs/REBUILD.md");
 const CHANGELOG: &str = include_str!("../CHANGELOG.md");
-const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.2";
+const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.3";
 const PLUGIN_INSTALL: &str = "opencode plugin @lyy-gh/memocap";
+
+const V002_CHANGELOG: &str = r#"## 0.0.2 (2026-09-04)
+
+发布恢复候选：保留 `v0.0.1` 的既有 tag、Release 和 npm 包，不重发、不覆盖。
+
+- release workflow 仅接受最终合入 `origin/main` 且携带当前 hardened workflow 的 tag commit，使用同一仓库和 tag 的非取消并发组串行 reconcile，确保 provenance 只来自 tag 触发的成功发布；恢复只能 rerun 同一 current-tag workflow，不能为历史 SHA 打 tag。
+- launcher 为冷缓存下载使用每进程唯一临时文件和独占缓存锁，校验 SHA-256 后原子发布并保留可执行权限。
+
+"#;
 
 fn with_lf_line_endings(text: &str) -> String {
     text.replace("\r\n", "\n")
@@ -69,20 +78,36 @@ fn rebuild_spec_has_no_stale_host_install_claims() {
 }
 
 #[test]
-fn changelog_starts_with_v002_release_contract() {
+fn changelog_starts_with_v003_release_contract() {
     let changelog = with_lf_line_endings(CHANGELOG);
     let top_section = changelog
         .split_once("## 0.1.3")
         .map(|(section, _)| section)
         .expect("CHANGELOG must retain historical releases");
 
-    assert!(top_section.starts_with("# Changelog\n\n## 0.0.2 (2026-09-04)"));
+    assert!(top_section.starts_with("# Changelog\n\n## 0.0.3 (2026-09-07)"));
+    assert!(top_section.contains("## 0.0.2 (2026-09-04)"));
     assert!(top_section.contains("## 0.0.1 (2026-09-02)"));
+    assert!(top_section.contains("scope"));
     assert!(top_section.contains("@lyy-gh/memocap"));
     assert!(top_section.contains("https://github.com/LYY/memocap"));
     assert!(top_section.contains("OpenCode"));
     assert!(top_section.contains("tag"));
     assert!(top_section.contains("provenance"));
+}
+
+#[test]
+fn changelog_preserves_v002_release_entry() {
+    let changelog = with_lf_line_endings(CHANGELOG);
+    let start = changelog
+        .find("## 0.0.2")
+        .expect("CHANGELOG must retain the v0.0.2 release");
+    let end = changelog[start..]
+        .find("## 0.0.1")
+        .map(|index| start + index)
+        .expect("CHANGELOG must retain the v0.0.1 release");
+
+    assert_eq!(&changelog[start..end], V002_CHANGELOG);
 }
 
 #[test]
@@ -223,8 +248,8 @@ fn rebuild_contract_rejects_extra_install_command_mutation() {
 #[test]
 fn rebuild_contract_rejects_missing_opening_install_fence_mutation() {
     let mutated = with_lf_line_endings(REBUILD).replacen(
-        "```bash\npnpm add -g @lyy-gh/memocap@0.0.2",
-        "pnpm add -g @lyy-gh/memocap@0.0.2",
+        "```bash\npnpm add -g @lyy-gh/memocap@0.0.3",
+        "pnpm add -g @lyy-gh/memocap@0.0.3",
         1,
     );
 

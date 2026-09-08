@@ -7,7 +7,7 @@
 - 「开口才记」作废。
 - 言必检：每句话先 recall 再答。
 - 值必存：有决策、偏好、任务、约定、上下文就主动存。先查同类再 store，存了要告诉你。卡住先翻记忆。
-- OpenCode 唯一官方集成。严格两步安装：先 `pnpm add -g @lyy-gh/memocap@0.0.2`，再 `opencode plugin @lyy-gh/memocap`。
+- OpenCode 唯一官方集成。严格两步安装：先 `pnpm add -g @lyy-gh/memocap@0.0.3`，再 `opencode plugin @lyy-gh/memocap`。
 - Codex、Claude Code、Pi 仅作历史兼容，不属于官方支持范围；不提供其安装、规则注入或行为保证。
 - 同一份 SQLite。默认本机、不联网。配了地址和 token 才走 HTTP。
 - Compose：数据卷 + 一个端口。薄 HTTP。共享 token，不多租户。没配地址继续本地。
@@ -67,7 +67,7 @@
 包管理器只负责把原生程序放到 PATH。后续不依赖 npx。
 
 ```bash
-pnpm add -g @lyy-gh/memocap@0.0.2
+pnpm add -g @lyy-gh/memocap@0.0.3
 opencode plugin @lyy-gh/memocap
 ```
 
@@ -78,6 +78,46 @@ CLI 无参数启动进 TUI；非交互使用 `memocap ui`。
 ## 兼容性边界
 
 Codex、Claude Code、Pi 仅作历史兼容，不属于官方支持范围。不会为这些宿主提供安装命令、规则注入、插件包或行为保证。
+
+## Memory scope
+
+本机使用一份 SQLite。默认使用当前仓库 scope；`--global` 才使用 global
+scope。仓库中的 recall 会同时检索当前仓库 scope 和 global scope，list 也
+会显示两个 scope；`--global` 把操作限制为 global scope。`forget` 只删除
+指定 scope 中的 ID。
+
+```bash
+memocap scope show
+memocap remember --global --type preference "Use UTC timestamps"
+memocap recall --global "timestamps"
+memocap remember --topic "release-process" "Tag releases from the final commit"
+```
+
+`scope show` 显示不透明的 scope ID，例如
+`scope:v1:<64 个小写十六进制字符>`。Git 仓库优先使用稳定且受支持的单一
+remote identity；remote 不可用或有歧义时使用 Git common directory。非 Git
+目录使用规范化的非 Git 目录路径作为 identity。
+
+仓库 memory 的相同非空 topic 会在 recall 时遮蔽 global memory 中相同的
+topic。`--topic` 只建立显式替换关系，不会自动复制或删除 global memory。
+
+迁移只在本地进行，必须显式执行，不会自动迁移或自动分类。source 可以是
+`global` 或旧 scope ID。`--id` 和 `--all` 只能选择一个；使用 `--all` 时，
+`--dry-run` 和 `--yes` 只能选择一个。目标始终是当前仓库 scope：
+
+```bash
+memocap scope migrate --from global --id 42 --dry-run
+memocap scope migrate --from global --all --dry-run
+memocap scope migrate --from global --all --yes
+```
+
+非 Git 目录移动前后都运行 `scope show`，然后从旧 scope ID 显式迁移。移动
+可能改变规范化目录 identity；CLI 不会自动分类或迁移这些 memory。
+
+远程 target 必须同时设置地址和 token。设置 `MEMOCAP_ADDR` 后缺少
+`MEMOCAP_TOKEN` 会报错，不会回退到本地。远程 remember、recall、list、
+forget 都必须携带有效 scope ID，服务器会严格校验。`scope migrate` 不支持
+远程 target。
 
 ## 建议的数据模型
 
@@ -121,7 +161,8 @@ OpenCode 插件与 CLI 使用同一组动词和同一对 memocap 标记。
 
 同一份 SQLite。Compose = 数据卷 + 一个端口。薄 HTTP。共享 token，不多租户。
 
-- CLI 只有配置了地址和 token 才连远程；地址未设则继续走本机，不发起网络。
+- CLI 只有配置了地址和 token 才连远程；地址未设则继续走本机，不发起网络；
+  地址已设但缺 token 时失败，不回退到本机。
 - 远程库仍是同一份记忆、同一套 remember / recall / list / forget。不另抄 Python / Chroma，不发明自动检索。
 
 ## 开发顺序

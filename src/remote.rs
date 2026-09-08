@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::store::Memory;
+use crate::{scope::ScopeId, store::Memory};
 
 #[derive(Debug, Deserialize)]
 struct RememberReply {
@@ -22,6 +22,24 @@ struct ForgetReply {
 #[derive(Debug, Deserialize)]
 struct CountReply {
     count: i64,
+}
+
+pub struct RememberRequest<'a> {
+    pub scope: &'a ScopeId,
+    pub content: &'a str,
+    pub kind: &'a str,
+    pub tags: &'a str,
+    pub topic_key: Option<&'a str>,
+    pub force: bool,
+    pub overwrite_id: Option<i64>,
+}
+
+pub struct RecallRequest<'a> {
+    pub scope: &'a ScopeId,
+    pub query: &'a str,
+    pub limit: usize,
+    pub kind: Option<&'a str>,
+    pub max_chars: Option<usize>,
 }
 
 fn base(address: &str) -> String {
@@ -45,24 +63,20 @@ fn send(req: ureq::Request, token: &str, body: Option<serde_json::Value>) -> Res
     }
 }
 
-pub fn remember(
-    address: &str,
-    token: &str,
-    content: &str,
-    kind: &str,
-    tags: &str,
-    force: bool,
-    overwrite_id: Option<i64>,
-) -> Result<i64> {
+pub fn remember(address: &str, token: &str, memory: RememberRequest<'_>) -> Result<i64> {
     let req = ureq::post(&format!("{}/remember", base(address)))
         .set("Authorization", &format!("Bearer {token}"));
-    let payload = json!({
-        "content": content,
-        "type": kind,
-        "tags": tags,
-        "force": force,
-        "id": overwrite_id,
+    let mut payload = json!({
+        "scope": memory.scope.as_str(),
+        "content": memory.content,
+        "type": memory.kind,
+        "tags": memory.tags,
+        "force": memory.force,
+        "id": memory.overwrite_id,
     });
+    if let Some(topic_key) = memory.topic_key {
+        payload["topic_key"] = serde_json::Value::String(topic_key.to_owned());
+    }
     match req.send_json(payload) {
         Ok(resp) => {
             let text = resp.into_string().context("read body")?;
@@ -90,21 +104,15 @@ pub fn remember(
     }
 }
 
-pub fn recall(
-    address: &str,
-    token: &str,
-    query: &str,
-    limit: usize,
-    kind: Option<&str>,
-    max_chars: Option<usize>,
-) -> Result<Vec<Memory>> {
+pub fn recall(address: &str, token: &str, recall: RecallRequest<'_>) -> Result<Vec<Memory>> {
     let mut req = ureq::get(&format!("{}/recall", base(address)))
-        .query("q", query)
-        .query("limit", &limit.to_string());
-    if let Some(kind) = kind {
+        .query("scope", recall.scope.as_str())
+        .query("q", recall.query)
+        .query("limit", &recall.limit.to_string());
+    if let Some(kind) = recall.kind {
         req = req.query("type", kind);
     }
-    if let Some(max_chars) = max_chars {
+    if let Some(max_chars) = recall.max_chars {
         req = req.query("max_chars", &max_chars.to_string());
     }
     let text = send(req, token, None)?;
@@ -112,9 +120,11 @@ pub fn recall(
     Ok(reply.memories)
 }
 
-pub fn list(address: &str, token: &str, limit: usize) -> Result<Vec<Memory>> {
+pub fn list(address: &str, token: &str, scope: &ScopeId, limit: usize) -> Result<Vec<Memory>> {
     let text = send(
-        ureq::get(&format!("{}/list", base(address))).query("limit", &limit.to_string()),
+        ureq::get(&format!("{}/list", base(address)))
+            .query("scope", scope.as_str())
+            .query("limit", &limit.to_string()),
         token,
         None,
     )?;
@@ -122,18 +132,22 @@ pub fn list(address: &str, token: &str, limit: usize) -> Result<Vec<Memory>> {
     Ok(reply.memories)
 }
 
-pub fn forget(address: &str, token: &str, id: i64) -> Result<bool> {
+pub fn forget(address: &str, token: &str, scope: &ScopeId, id: i64) -> Result<bool> {
     let text = send(
         ureq::post(&format!("{}/forget", base(address))),
         token,
-        Some(json!({"id": id})),
+        Some(json!({"scope": scope.as_str(), "id": id})),
     )?;
     let reply: ForgetReply = serde_json::from_str(&text).context("forget reply")?;
     Ok(reply.deleted)
 }
 
-pub fn count(address: &str, token: &str) -> Result<i64> {
-    let text = send(ureq::get(&format!("{}/count", base(address))), token, None)?;
+pub fn count(address: &str, token: &str, scope: &ScopeId) -> Result<i64> {
+    let text = send(
+        ureq::get(&format!("{}/count", base(address))).query("scope", scope.as_str()),
+        token,
+        None,
+    )?;
     let reply: CountReply = serde_json::from_str(&text).context("count reply")?;
     Ok(reply.count)
 }

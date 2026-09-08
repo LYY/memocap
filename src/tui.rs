@@ -15,7 +15,7 @@ use ratatui::{
     Terminal,
 };
 
-use crate::{install, paths::Paths, store};
+use crate::{cli, install, paths::Paths};
 
 const ACTIONS: [&str; 5] = [
     "Legacy compatibility (unsupported): 为当前项目配置 AGENTS.md",
@@ -92,8 +92,16 @@ fn status_message() -> String {
         Ok(paths) => paths,
         Err(error) => return format!("读取状态失败：{error:#}"),
     };
-    match store::open(&paths.database).and_then(|connection| store::count(&connection)) {
-        Ok(count) => format!("本地记忆：{count} 条；数据库：{}", paths.database.display()),
+    let active_scope = match cli::current_scope() {
+        Ok(scope) => scope,
+        Err(error) => return format!("读取 scope 失败：{error:#}"),
+    };
+    match cli::scope_counts(&paths.database, active_scope.scope()) {
+        Ok(counts) => format!(
+            "{}数据库：{}",
+            cli::format_scope_status(active_scope.scope(), counts),
+            paths.database.display()
+        ),
         Err(error) => format!("读取数据库失败：{error:#}"),
     }
 }
