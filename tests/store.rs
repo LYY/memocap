@@ -1,5 +1,14 @@
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
+
 use memocap::scope::ScopeId;
 use memocap::store;
+use rusqlite::{
+    hooks::{AuthAction, AuthContext, Authorization, TransactionOperation},
+    ErrorCode,
+};
 
 fn scope_id(seed: char) -> ScopeId {
     format!("scope:v1:{}", seed.to_string().repeat(64))
@@ -526,4 +535,58 @@ fn scope_migration_counts_dry_runs_and_rolls_back_batch_failures() {
     assert!(
         store::migrate_scope(&mut c, &global, &global, store::ScopeMigration::All, true).is_err()
     );
+}
+
+#[test]
+fn scope_migration_begins_immediate_before_reading_source_rows() {
+    // Given
+    let d = dir();
+    let database = d.path().join("db");
+    let mut migrating = store::open(&database).unwrap();
+    let blocker = store::open(&database).unwrap();
+    let source = ScopeId::global();
+    let destination = scope_id('a');
+    remember_scoped(&migrating, &source, "source row", None, true, None).unwrap();
+    blocker.execute_batch("BEGIN IMMEDIATE").unwrap();
+    migrating.busy_timeout(Duration::ZERO).unwrap();
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let observed_events = Arc::clone(&events);
+    migrating.authorizer(Some(move |context: AuthContext<'_>| {
+        let event = match context.action {
+            AuthAction::Transaction {
+                operation: TransactionOperation::Begin,
+            } => Some("begin"),
+            AuthAction::Select => Some("select"),
+            AuthAction::Read {
+                table_name: "memories",
+                ..
+            } => Some("read"),
+            AuthAction::Update {
+                table_name: "memories",
+                ..
+            } => Some("update"),
+            _ => None,
+        };
+        if let Some(event) = event {
+            observed_events.lock().unwrap().push(event);
+        }
+        Authorization::Allow
+    }));
+
+    // When
+    let failure = store::migrate_scope(
+        &mut migrating,
+        &source,
+        &destination,
+        store::ScopeMigration::All,
+        false,
+    )
+    .unwrap_err();
+
+    // Then
+    assert!(matches!(
+        failure.downcast_ref::<rusqlite::Error>(),
+        Some(rusqlite::Error::SqliteFailure(error, _)) if error.code == ErrorCode::DatabaseBusy
+    ));
+    assert_eq!(*events.lock().unwrap(), ["begin"]);
 }
