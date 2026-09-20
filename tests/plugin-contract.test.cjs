@@ -53,19 +53,17 @@ const scopeGuidanceMatrix = [
   {
     name: "global scope is cross-repository only",
     accepts: [
-      "Use `--global` only for stable cross-repository user preferences and conventions.",
-      "Reserve global scope for conventions shared across projects.",
-      "Stable cross-repository preferences and conventions may use `--global`.",
+      "Use `--global` only for stable, repository-agnostic knowledge useful in unrelated repositories, such as Go debugging methods.",
+      "Reserve global scope for stable knowledge shared across projects.",
+      "Stable repository-agnostic knowledge useful in unrelated repositories may use `--global`.",
     ],
     rejects: [
-      "Use `--global` only for stable preferences and conventions bound to one repository.",
-      "Do not use `--global` for stable cross-repository preferences and conventions.",
-      "Stable cross-repository preferences and conventions must not use `--global`.",
+      "Use `--global` for repository-specific knowledge bound to one repository.",
+      "Use global scope for stable knowledge useful in only one repository.",
     ],
     positive: [
-      /(?:--global|global scope).*(?:cross-repository|across projects|shared).*(?:preference|convention)/i,
-      /(?:--global|global scope).*(?:preference|convention).*(?:cross-repository|across projects|shared)/i,
-      /(?:cross-repository|across projects|shared).*(?:preference|convention).*(?:--global|global scope)/i,
+      /(?:--global|global scope).*(?:unrelated repositories|across projects|shared)/i,
+      /(?:unrelated repositories|across projects|shared).*(?:--global|global scope)/i,
     ],
     negative: [/(?:bound to|one|single|per).*(?:repository|project)/i],
     forbiddenTermSets: [
@@ -120,6 +118,52 @@ const scopeGuidanceMatrix = [
     ],
     negative: [/(?:automatically|auto-migrate).*(?:scope migrate|migration|classify)/i],
   },
+  {
+    name: "scope is classified by usefulness before remembering",
+    accepts: ["Before `remember`, classify each memory's scope by usefulness, not simply its source."],
+    rejects: ["Before `remember`, classify each memory's scope solely by its source."],
+    positive: [/(?:before|prior to).*(?:remember|stor).*(?:classif).*(?:scope)/i],
+    required: [
+      /(?:usefulness|utility|useful).*(?:not|rather than|instead of).*(?:source|origin|learned)/i,
+    ],
+    negative: [],
+  },
+  {
+    name: "repository-specific facts retain dependency context",
+    accepts: ["Keep repository-specific decisions, working context, and consumer-specific dependency usage in the current repository; name the dependency or path in stored content."],
+    rejects: ["Store repository-specific decisions and consumer-specific dependency usage globally without naming the dependency or path."],
+    positive: [/repository(?:-| )specific.*(?:decision|working context|context).*(?:current repository|repository scope|keep|stay)/i],
+    required: [
+      /consumer(?:-| )specific.*dependenc(?:y|ies).*usage/i,
+      /(?:name|include).*(?:dependenc(?:y|ies)|path).*(?:stored|content)|(?:dependenc(?:y|ies)|path).*(?:name|include).*(?:stored|content)/i,
+    ],
+    negative: [],
+  },
+  {
+    name: "global scope is limited to stable repository-agnostic knowledge",
+    accepts: ["Use `--global` only for stable, repository-agnostic knowledge useful in unrelated repositories, such as Go debugging methods."],
+    rejects: ["Use `--global` for repository-specific knowledge that is not useful in unrelated repositories."],
+    positive: [/(?:--global|global scope).*(?:only|reserve).*(?:stable).*(?:repository-agnostic|repository independent|not repository-specific)/i],
+    required: [
+      /(?:useful|beneficial).*(?:unrelated|different).*(?:repositories|projects)|(?:unrelated|different).*(?:repositories|projects).*(?:useful|beneficial)/i,
+      /\bgo\b.*(?:debug|troubleshoot)/i,
+    ],
+    negative: [],
+  },
+  {
+    name: "source repository alone does not make a fact global",
+    accepts: ["A fact is not global merely because it was learned from another repository."],
+    rejects: ["A fact is global merely because it was learned from another repository."],
+    positive: [/(?:fact|knowledge).*(?:not|never).*(?:global).*(?:merely|solely|just).*(?:learned|source|origin).*(?:another|other).*(?:repository|project)/i],
+    negative: [],
+  },
+  {
+    name: "remember example makes global scope optional",
+    accepts: ["Remember: `memocap remember --type <type> [--global] \"content\"`"],
+    rejects: ["Remember: `memocap remember --type <type> --global \"content\"`"],
+    positive: [/\bremember\b.*\[--global\]/i],
+    negative: [],
+  },
 ];
 
 function includesAll(statement, patterns) {
@@ -128,6 +172,7 @@ function includesAll(statement, patterns) {
 
 function followsScopeRule(statement, rule) {
   return rule.positive.some((pattern) => pattern.test(statement)) &&
+    (rule.required ?? []).every((pattern) => pattern.test(statement)) &&
     !rule.negative.some((pattern) => pattern.test(statement)) &&
     !(rule.forbiddenTermSets ?? []).some((terms) => includesAll(statement, terms)) &&
     !(rule.forbiddenDirections ?? []).some(
@@ -161,7 +206,7 @@ test("generated rules extraction accepts CRLF source", (context) => {
       lfStatements: guidanceStatements(lfRules).length,
       usesCRLF: crlfRules.includes("\r\n"),
     },
-    { crlfStatements: 15, lfStatements: 15, usesCRLF: true },
+    { crlfStatements: 18, lfStatements: 18, usesCRLF: true },
   );
 });
 
@@ -191,5 +236,18 @@ test("generated, runtime, and static guidance preserve every memory scope rule",
         `${name} guidance includes ${rule.name}`,
       );
     }
+  }
+});
+
+test("generated, runtime, and static guidance omit the obsolete global restriction that excludes generic methods such as Go debugging", async () => {
+  const obsoleteRestriction = "Use `--global` only for stable cross-repository user preferences and conventions.";
+  const { RULES } = await import(`${pathToFileURL(pluginPath).href}?contract=obsolete-global-restriction`);
+
+  for (const [name, text] of [
+    ["generated", generatedRules()],
+    ["runtime", RULES],
+    ["static", fs.readFileSync(staticSkillPath, "utf8")],
+  ]) {
+    assert.ok(!text.includes(obsoleteRestriction), `${name} guidance omits obsolete global restriction`);
   }
 });
