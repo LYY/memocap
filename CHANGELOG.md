@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.5 (2026-09-20)
+
+Memory scope guidance now requires a manual pre-store classification by usefulness rather than source.
+
+- Repository-specific decisions, working context, and consumer-specific dependency usage remain local; stored memory names the relevant dependency or path.
+- `--global` is explicit and limited to stable, repository-agnostic knowledge useful across unrelated repositories, such as Go debugging methods; another repository is not sufficient by itself.
+
 ## 0.0.4 (2026-09-08)
 
 Scope hotfix：强化 native-path scope isolation 与 transactional scope migration，同时保持已发布的 `v0.0.3` 不变。

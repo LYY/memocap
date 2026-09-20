@@ -11,7 +11,7 @@ One SQLite. OpenCode is the only officially supported integration. Recall first 
 Install the global CLI first, then register the OpenCode plugin:
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.0.4
+pnpm add -g @lyy-gh/memocap@0.0.5
 opencode plugin @lyy-gh/memocap
 ```
 
