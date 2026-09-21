@@ -128,6 +128,11 @@ List 使用与 CLI 相同的 visible inventory，包含 placement 和 shadow ann
 不决定 authorization。
 不是 ACL、IAM、按用户授权或 tenant isolation。
 
+Bearer 鉴权不提供传输保密性或完整性。默认 Compose 部署只在宿主 loopback
+接口暴露明文 HTTP。远程客户端必须经过运维人员控制的 TLS 终结反向代理，或等效的
+可信加密网络边界；将 `MEMOCAP_ADDR` 设为其 `https://` endpoint。不要在所有宿主
+接口发布原始 HTTP 端口。
+
 远程 `scope show` 读取 `/v1/status`，显示远程 repository 的 attached domains
 和 visible-stack counts。route 列表、trust boundary、Compose 和 recovery
 流程见[DEPLOYMENT.md](docs/DEPLOYMENT.md)。远程请求携带有效 remote scope ID，且是有效 scope，

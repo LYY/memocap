@@ -203,6 +203,14 @@ fn both_readmes_document_strict_remote_selection_and_scope_transport() {
 }
 
 #[test]
+fn both_readmes_distinguish_authentication_from_transport_protection() {
+    assert!(ENGLISH.contains(
+        "Bearer authentication does not provide transport confidentiality or integrity."
+    ));
+    assert!(CHINESE.contains("Bearer 鉴权不提供传输保密性或完整性。"));
+}
+
+#[test]
 fn both_readmes_document_remote_scope_as_strictly_validated() {
     assert!(ENGLISH.contains("remote scope ID"));
     assert!(ENGLISH.contains("valid remote scope ID"));

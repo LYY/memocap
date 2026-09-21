@@ -139,6 +139,12 @@ The server accepts authenticated `POST` requests under `/v1` only. The
 shared bearer token. The remote trust boundary is not ACL, IAM, per-user authorization, or tenant isolation. Address and token are required together for remote mode. Placement selection and domain attachment determine namespace
 selection, not authorization.
 
+Bearer authentication does not provide transport confidentiality or integrity.
+The default Compose deployment exposes plaintext HTTP only on host loopback.
+Remote clients must use an operator-controlled TLS-terminating reverse proxy or
+an equivalent trusted encrypted network boundary; set `MEMOCAP_ADDR` to its
+`https://` endpoint. Do not publish the raw HTTP port on all host interfaces.
+
 Remote `scope show` reads `/v1/status` and displays the remote repository's
 attached domains and visible-stack counts. See [DEPLOYMENT.md](docs/DEPLOYMENT.md)
 for the route list, trust boundary, Compose setup, and recovery procedure.
