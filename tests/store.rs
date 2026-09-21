@@ -1,17 +1,8 @@
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
-
 use memocap::scope::ScopeId;
 use memocap::store;
-use rusqlite::{
-    hooks::{AuthAction, AuthContext, Authorization, TransactionOperation},
-    ErrorCode,
-};
 
 fn scope_id(seed: char) -> ScopeId {
-    format!("scope:v1:{}", seed.to_string().repeat(64))
+    format!("repository:{}", seed.to_string().repeat(64))
         .parse()
         .unwrap()
 }
@@ -40,6 +31,59 @@ fn remember_scoped(
 
 fn dir() -> tempfile::TempDir {
     tempfile::tempdir().unwrap()
+}
+
+fn schema_rows(connection: &rusqlite::Connection) -> Vec<(String, String, String, String)> {
+    connection
+        .prepare(
+            "SELECT type, name, tbl_name, COALESCE(sql, '')
+              FROM sqlite_schema
+              WHERE name NOT GLOB 'sqlite_*'
+              ORDER BY type, name",
+        )
+        .unwrap()
+        .query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        })
+        .unwrap()
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .unwrap()
+}
+
+fn create_exact_pre_versioned_schema(connection: &rusqlite::Connection) {
+    connection
+        .execute_batch(
+            "
+            CREATE TABLE memories (
+                id INTEGER PRIMARY KEY,
+                content TEXT NOT NULL,
+                kind TEXT NOT NULL DEFAULT 'context',
+                tags TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                scope TEXT NOT NULL DEFAULT 'global',
+                topic_key TEXT NOT NULL DEFAULT ''
+            );
+            CREATE VIRTUAL TABLE memories_fts USING fts5(
+                content, tags, content='memories', content_rowid='id'
+            );
+            CREATE TRIGGER memories_ai AFTER INSERT ON memories BEGIN
+                INSERT INTO memories_fts(rowid, content, tags) VALUES (new.id, new.content, new.tags);
+            END;
+            CREATE TRIGGER memories_ad AFTER DELETE ON memories BEGIN
+                INSERT INTO memories_fts(memories_fts, rowid, content, tags)
+                VALUES ('delete', old.id, old.content, old.tags);
+            END;
+            CREATE TRIGGER memories_au AFTER UPDATE ON memories BEGIN
+                INSERT INTO memories_fts(memories_fts, rowid, content, tags)
+                VALUES ('delete', old.id, old.content, old.tags);
+                INSERT INTO memories_fts(rowid, content, tags) VALUES (new.id, new.content, new.tags);
+            END;
+            INSERT INTO memories (id, content, kind, tags, created_at, updated_at, scope, topic_key)
+            VALUES (7, 'legacy searchable value', 'note', '', 'before', 'before', 'global', '');
+            ",
+        )
+        .unwrap();
 }
 
 #[test]
@@ -381,212 +425,303 @@ fn empty_topics_do_not_shadow_and_overwrite_preserves_or_clears_topic() {
 }
 
 #[test]
-fn open_migrates_legacy_topic_column_without_breaking_fts() {
+fn creates_and_reopens_exact_schema_1_0() {
+    // Given
+    let d = dir();
+    let database = d.path().join("db");
+
+    // When
+    let (created, created_lifecycle) = store::open_with_lifecycle(&database).unwrap();
+    drop(created);
+    let (reopened, reopened_lifecycle) = store::open_with_lifecycle(&database).unwrap();
+
+    // Then
+    assert_eq!(created_lifecycle, store::SchemaLifecycle::Created);
+    assert_eq!(reopened_lifecycle, store::SchemaLifecycle::Opened);
+    assert_eq!(
+        reopened
+            .query_row("SELECT major, minor FROM schema_metadata", [], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
+            })
+            .unwrap(),
+        (1, 0)
+    );
+    assert_eq!(
+        reopened
+            .query_row("SELECT COUNT(*) FROM schema_metadata", [], |row| row
+                .get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+}
+
+#[test]
+fn resets_exact_pre_versioned_schema_to_empty_1_0() {
     // Given
     let d = dir();
     let database = d.path().join("db");
     let legacy = rusqlite::Connection::open(&database).unwrap();
-    legacy
-        .execute_batch(
-            "
-            CREATE TABLE memories (
-                id INTEGER PRIMARY KEY,
-                content TEXT NOT NULL,
-                kind TEXT NOT NULL DEFAULT 'context',
-                tags TEXT NOT NULL DEFAULT '',
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                scope TEXT NOT NULL DEFAULT 'global'
-            );
-            CREATE VIRTUAL TABLE memories_fts USING fts5(
-                content, tags, content='memories', content_rowid='id'
-            );
-            CREATE TRIGGER memories_ai AFTER INSERT ON memories BEGIN
-                INSERT INTO memories_fts(rowid, content, tags) VALUES (new.id, new.content, new.tags);
-            END;
-            INSERT INTO memories (id, content, kind, tags, created_at, updated_at, scope)
-            VALUES (7, 'legacy searchable value', 'note', '', 'before', 'before', 'global');
-            ",
-        )
-        .unwrap();
+    create_exact_pre_versioned_schema(&legacy);
     drop(legacy);
 
     // When
-    let c = store::open(&database).unwrap();
-    let columns = c
-        .prepare("PRAGMA table_info(memories)")
-        .unwrap()
-        .query_map([], |row| {
-            Ok((
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, i64>(3)?,
-                row.get::<_, Option<String>>(4)?,
-            ))
-        })
-        .unwrap()
-        .collect::<rusqlite::Result<Vec<_>>>()
-        .unwrap();
-    let found = store::recall_scoped(&c, &ScopeId::global(), "searchable", 5, None, None).unwrap();
-    drop(c);
-    let reopened = store::open(&database).unwrap();
+    let (connection, lifecycle) = store::open_with_lifecycle(&database).unwrap();
 
     // Then
-    assert!(columns.iter().any(|column| column.0 == "topic_key"));
+    assert_eq!(lifecycle, store::SchemaLifecycle::ResetPreVersioned);
     assert_eq!(
-        columns
-            .iter()
-            .find(|column| column.0 == "topic_key")
+        connection
+            .query_row("SELECT COUNT(*) FROM memories", [], |row| row
+                .get::<_, i64>(0))
             .unwrap(),
-        &(
-            "topic_key".to_owned(),
-            "TEXT".to_owned(),
-            1,
-            Some("''".to_owned())
-        )
+        0
     );
-    assert_eq!(found[0].id, 7);
-    assert_eq!(found[0].topic_key, "");
     assert_eq!(
-        store::list_scoped(&reopened, &ScopeId::global(), 20).unwrap()[0].content,
+        connection
+            .query_row("SELECT major, minor FROM schema_metadata", [], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
+            })
+            .unwrap(),
+        (1, 0)
+    );
+    assert!(!database.with_extension("bak").exists());
+}
+
+#[test]
+fn refuses_unknown_schema_shape_without_mutation() {
+    // Given
+    let d = dir();
+    let database = d.path().join("db");
+    let legacy = rusqlite::Connection::open(&database).unwrap();
+    create_exact_pre_versioned_schema(&legacy);
+    legacy
+        .execute_batch("CREATE TABLE unknown_shape (id INTEGER PRIMARY KEY)")
+        .unwrap();
+    let before = schema_rows(&legacy);
+    drop(legacy);
+
+    // When
+    let failure = store::open_with_lifecycle(&database);
+
+    // Then
+    assert!(failure.is_err());
+    let unchanged = rusqlite::Connection::open(&database).unwrap();
+    assert_eq!(schema_rows(&unchanged), before);
+    assert_eq!(
+        unchanged
+            .query_row("SELECT content FROM memories WHERE id = 7", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .unwrap(),
         "legacy searchable value"
     );
 }
 
 #[test]
-fn scope_migration_counts_dry_runs_and_rolls_back_batch_failures() {
+fn refuses_pre_versioned_schema_with_sqlite_x_user_table_without_mutation() {
     // Given
     let d = dir();
-    let mut c = store::open(&d.path().join("db")).unwrap();
-    let global = ScopeId::global();
-    let alpha = scope_id('a');
-    let first = remember_scoped(&c, &global, "first", None, true, None).unwrap();
-    remember_scoped(&c, &global, "second", None, true, None).unwrap();
-    let before_failure = store::list_scoped(&c, &global, 20)
-        .unwrap()
-        .iter()
-        .map(|memory| {
-            (
-                memory.id,
-                memory.content.clone(),
-                memory.created_at.clone(),
-                memory.updated_at.clone(),
-                memory.scope.clone(),
-            )
-        })
-        .collect::<Vec<_>>();
-    c.execute(
-        "CREATE TRIGGER fail_second_move BEFORE UPDATE OF scope ON memories
-         WHEN old.content = 'second' BEGIN SELECT RAISE(ABORT, 'forced migration failure'); END",
-        [],
-    )
-    .unwrap();
+    let database = d.path().join("db");
+    let legacy = rusqlite::Connection::open(&database).unwrap();
+    create_exact_pre_versioned_schema(&legacy);
+    legacy
+        .execute_batch(
+            "
+            CREATE TABLE sqliteXunexpected (marker TEXT NOT NULL);
+            INSERT INTO sqliteXunexpected (marker) VALUES ('do not reset');
+            ",
+        )
+        .unwrap();
+    let before = schema_rows(&legacy);
+    drop(legacy);
 
     // When
-    let count = store::scope_migration_count(&c, &global, store::ScopeMigration::All).unwrap();
-    let dry_run = store::migrate_scope(
-        &mut c,
-        &global,
-        &alpha,
-        store::ScopeMigration::One(first),
-        true,
-    )
-    .unwrap();
-    let failed = store::migrate_scope(&mut c, &global, &alpha, store::ScopeMigration::All, false);
+    let failure = store::open_with_lifecycle(&database);
 
     // Then
-    assert_eq!(count, 2);
-    assert_eq!(dry_run, 1);
-    assert!(failed.is_err());
-    let after_failure = store::list_scoped(&c, &global, 20)
-        .unwrap()
-        .iter()
-        .map(|memory| {
-            (
-                memory.id,
-                memory.content.clone(),
-                memory.created_at.clone(),
-                memory.updated_at.clone(),
-                memory.scope.clone(),
-            )
-        })
-        .collect::<Vec<_>>();
-    assert_eq!(after_failure, before_failure);
-    c.execute("DROP TRIGGER fail_second_move", []).unwrap();
+    assert!(failure.is_err());
+    let unchanged = rusqlite::Connection::open(&database).unwrap();
+    assert_eq!(schema_rows(&unchanged), before);
     assert_eq!(
-        store::migrate_scope(
-            &mut c,
-            &global,
-            &alpha,
-            store::ScopeMigration::One(first),
-            false,
-        )
-        .unwrap(),
-        1
+        unchanged
+            .query_row("SELECT content FROM memories WHERE id = 7", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .unwrap(),
+        "legacy searchable value"
     );
     assert_eq!(
-        store::migrate_scope(&mut c, &global, &alpha, store::ScopeMigration::All, false).unwrap(),
-        1
-    );
-    assert!(store::list_scoped(&c, &alpha, 20)
-        .unwrap()
-        .iter()
-        .all(|memory| memory.scope == alpha.as_str()));
-    assert!(
-        store::migrate_scope(&mut c, &global, &global, store::ScopeMigration::All, true).is_err()
+        unchanged
+            .query_row("SELECT marker FROM sqliteXunexpected", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .unwrap(),
+        "do not reset"
     );
 }
 
 #[test]
-fn scope_migration_begins_immediate_before_reading_source_rows() {
+fn refuses_changed_current_schema_fingerprint_without_mutation() {
     // Given
     let d = dir();
     let database = d.path().join("db");
-    let mut migrating = store::open(&database).unwrap();
-    let blocker = store::open(&database).unwrap();
-    let source = ScopeId::global();
-    let destination = scope_id('a');
-    remember_scoped(&migrating, &source, "source row", None, true, None).unwrap();
-    blocker.execute_batch("BEGIN IMMEDIATE").unwrap();
-    migrating.busy_timeout(Duration::ZERO).unwrap();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let observed_events = Arc::clone(&events);
-    migrating.authorizer(Some(move |context: AuthContext<'_>| {
-        let event = match context.action {
-            AuthAction::Transaction {
-                operation: TransactionOperation::Begin,
-            } => Some("begin"),
-            AuthAction::Select => Some("select"),
-            AuthAction::Read {
-                table_name: "memories",
-                ..
-            } => Some("read"),
-            AuthAction::Update {
-                table_name: "memories",
-                ..
-            } => Some("update"),
-            _ => None,
-        };
-        if let Some(event) = event {
-            observed_events.lock().unwrap().push(event);
-        }
-        Authorization::Allow
-    }));
+    let (connection, _) = store::open_with_lifecycle(&database).unwrap();
+    let sentinel = store::remember(
+        &connection,
+        "current schema sentinel",
+        "note",
+        "",
+        "global",
+        true,
+        None,
+    )
+    .unwrap();
+    connection
+        .execute_batch(
+            "
+            DROP TABLE operation_ledger;
+            CREATE TABLE operation_ledger (operation_id TEXT PRIMARY KEY);
+            ",
+        )
+        .unwrap();
+    let before = schema_rows(&connection);
+    drop(connection);
 
     // When
-    let failure = store::migrate_scope(
-        &mut migrating,
-        &source,
-        &destination,
-        store::ScopeMigration::All,
-        false,
-    )
-    .unwrap_err();
+    let failure = store::open_with_lifecycle(&database);
 
     // Then
-    assert!(matches!(
-        failure.downcast_ref::<rusqlite::Error>(),
-        Some(rusqlite::Error::SqliteFailure(error, _)) if error.code == ErrorCode::DatabaseBusy
-    ));
-    assert_eq!(*events.lock().unwrap(), ["begin"]);
+    assert!(failure.is_err());
+    let unchanged = rusqlite::Connection::open(&database).unwrap();
+    assert_eq!(schema_rows(&unchanged), before);
+    assert_eq!(
+        unchanged
+            .query_row(
+                "SELECT content FROM memories WHERE id = ?1",
+                [sentinel],
+                |row| { row.get::<_, String>(0) }
+            )
+            .unwrap(),
+        "current schema sentinel"
+    );
+}
+
+#[test]
+fn refuses_future_schema_versions_without_mutation() {
+    // Given
+    let d = dir();
+    let database = d.path().join("db");
+    let (connection, _) = store::open_with_lifecycle(&database).unwrap();
+    let sentinel = store::remember(
+        &connection,
+        "future schema sentinel",
+        "note",
+        "",
+        "global",
+        true,
+        None,
+    )
+    .unwrap();
+    connection
+        .execute("UPDATE schema_metadata SET major = 1, minor = 1", [])
+        .unwrap();
+    let higher_minor = (
+        schema_rows(&connection),
+        (1, 1),
+        connection
+            .query_row(
+                "SELECT content FROM memories WHERE id = ?1",
+                [sentinel],
+                |row| row.get::<_, String>(0),
+            )
+            .unwrap(),
+    );
+    drop(connection);
+
+    // When
+    let higher_minor_failure = store::open_with_lifecycle(&database);
+    let unchanged = rusqlite::Connection::open(&database).unwrap();
+    let after_higher_minor = (
+        schema_rows(&unchanged),
+        unchanged
+            .query_row("SELECT major, minor FROM schema_metadata", [], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
+            })
+            .unwrap(),
+        unchanged
+            .query_row(
+                "SELECT content FROM memories WHERE id = ?1",
+                [sentinel],
+                |row| row.get::<_, String>(0),
+            )
+            .unwrap(),
+    );
+    unchanged
+        .execute("UPDATE schema_metadata SET major = 2, minor = 0", [])
+        .unwrap();
+    let unknown_major = (
+        schema_rows(&unchanged),
+        (2, 0),
+        unchanged
+            .query_row(
+                "SELECT content FROM memories WHERE id = ?1",
+                [sentinel],
+                |row| row.get::<_, String>(0),
+            )
+            .unwrap(),
+    );
+    drop(unchanged);
+    let unknown_major_failure = store::open_with_lifecycle(&database);
+
+    // Then
+    assert!(higher_minor_failure.is_err());
+    assert_eq!(after_higher_minor, higher_minor);
+    assert!(unknown_major_failure.is_err());
+    let unchanged = rusqlite::Connection::open(&database).unwrap();
+    assert_eq!(
+        (
+            schema_rows(&unchanged),
+            unchanged
+                .query_row("SELECT major, minor FROM schema_metadata", [], |row| {
+                    Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
+                })
+                .unwrap(),
+            unchanged
+                .query_row(
+                    "SELECT content FROM memories WHERE id = ?1",
+                    [sentinel],
+                    |row| { row.get::<_, String>(0) }
+                )
+                .unwrap(),
+        ),
+        unknown_major
+    );
+}
+
+#[test]
+fn refuses_malformed_schema_metadata_without_mutation() {
+    // Given
+    let d = dir();
+    let database = d.path().join("db");
+    let (connection, _) = store::open_with_lifecycle(&database).unwrap();
+    connection
+        .execute("DELETE FROM schema_metadata", [])
+        .unwrap();
+    let before = schema_rows(&connection);
+    drop(connection);
+
+    // When
+    let failure = store::open_with_lifecycle(&database);
+
+    // Then
+    assert!(failure.is_err());
+    let unchanged = rusqlite::Connection::open(&database).unwrap();
+    assert_eq!(schema_rows(&unchanged), before);
+    assert_eq!(
+        unchanged
+            .query_row("SELECT COUNT(*) FROM schema_metadata", [], |row| row
+                .get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
 }

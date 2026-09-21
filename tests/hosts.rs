@@ -10,16 +10,6 @@ fn official_hosts_only_include_scoped_opencode_plugin() {
 }
 
 #[test]
-fn official_hosts_keep_legacy_integrations_callable_but_unsupported() {
-    assert_eq!(hosts::CODEX_INSTALL, "memocap install");
-    assert_eq!(hosts::CLAUDE_INSTALL, "memocap install");
-    assert_eq!(hosts::PI_INSTALL, "pi install npm:@lyy-gh/memocap");
-
-    let skill = hosts::skill_markdown("memocap");
-    assert!(skill.contains("memocap recall"));
-}
-
-#[test]
 fn official_hosts_cli_help_is_opencode_only() {
     let output = std::process::Command::new(env!("CARGO_BIN_EXE_memocap"))
         .arg("--help")

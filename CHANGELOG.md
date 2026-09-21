@@ -1,27 +1,48 @@
 # Changelog
 
+## 0.0.6 (unreleased)
+
+This release changes the memory contract to domain-aware placements and a
+visible stack. It is a breaking release for scripts and operators.
+
+- `--global`, `memocap install`, `memocap uninstall`, old scope syntax, legacy host adapters, legacy TUI actions, and unversioned HTTP routes are removed, not deprecated.
+- The current repository, attached domains, and universal memory are distinct
+  placements. Domain registration and repository attachment are separate
+  lifecycle operations. Reads use repository, attached domains in persisted
+  order, then universal memory.
+- Topic shadowing is explicit and ordered. Repository records shadow lower
+  tiers, domains shadow universal records, and domains do not shadow one
+  another. List and TUI retain addressable shadowed records with provenance.
+- `scope copy` and `scope move --yes` use exact placements, immutable first-transfer provenance, and an operation ledger. Reusing an operation ID with a
+  changed request conflicts without mutation.
+- Remote mode uses authenticated `/v1` routes only. One shared bearer token gates the server; it is not ACL, IAM, per-user authorization, or tenant isolation. A configured remote address never silently falls back to local.
+- Response-loss recovery uses the issued strict handle with `operation status --recovery`. `not_found` alone does not prove manual replay is safe; an operation outcome may remain unknown.
+- TUI now exposes only Status, List visible memories, and Exit.
+
+The database schema remains `1.0`, independent of package release identity. An
+exact recognized pre-versioned database may be reset transactionally without
+confirmation. That reset deletes all old memory rows, creates schema `1.0`,
+makes no backup, and prints the required notice. Unknown or incompatible
+schemas refuse without mutation. See [SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md).
+
 ## 0.0.5 (2026-09-20)
 
 Memory scope guidance now requires a manual pre-store classification by usefulness rather than source.
 
+Schema lifecycle now has an explicit data loss warning: only an exact
+recognized pre-versioned database may be reset automatically, transactionally,
+without confirmation and with no backup. Unknown, future, malformed, and different
+major schemas refuse without mutation.
+
 - Repository-specific decisions, working context, and consumer-specific dependency usage remain local; stored memory names the relevant dependency or path.
 - `--global` is explicit and limited to stable, repository-agnostic knowledge useful across unrelated repositories, such as Go debugging methods; another repository is not sufficient by itself.
 
-## 0.0.4 (2026-09-08)
-
-Scope hotfix：强化 native-path scope isolation 与 transactional scope migration，同时保持已发布的 `v0.0.3` 不变。
-
-- Unix scope identity 直接哈希原生路径字节；有效 UTF-8 路径保持既有 identity，非 UTF-8 路径不再因有损转换发生碰撞。
-- 非 dry-run migration 在读取 source scope 前启动 immediate transaction，使选择、计数和更新共享同一事务边界；单条迁移返回实际更新数。
-- 回归测试覆盖非 UTF-8 路径隔离、事务获取顺序、竞争写入以及失败时完整回滚。
-
 ## 0.0.3 (2026-09-07)
 
-范围文档与当前 CLI 行为对齐，明确本机仓库 scope、global scope、topic shadow、迁移和严格远程 scope。
+范围文档与当前 CLI 行为对齐，明确本机仓库 scope、global scope、topic shadow 和严格远程 scope。
 
 - 默认 `remember`、`recall`、`list`、`forget` 使用当前仓库 scope；仓库中的 `recall` 和 `list` 可见当前仓库与 global memory，`--global` 显式限制为 global scope。
 - `--topic` 只建立显式替换关系：仓库中相同的非空 topic 会在 recall 时遮蔽 global memory，不会自动复制或删除。
-- `scope show` 展示当前不透明 scope ID；`scope migrate` 仅限本地，必须显式选择一个 ID 或全部记录，并用 dry-run 或 yes 确认全部迁移。不会自动分类或迁移，非 Git 目录移动也遵循此规则。
 - 设置 `MEMOCAP_ADDR` 后必须同时设置 `MEMOCAP_TOKEN`，不会回退到本地；远程请求携带并严格校验 scope ID。
 - 验证证据：文档 contract tests 与临时 Git 仓库 CLI transcript 均通过。
 

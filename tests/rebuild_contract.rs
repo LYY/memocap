@@ -1,6 +1,6 @@
 const REBUILD: &str = include_str!("../docs/REBUILD.md");
 const CHANGELOG: &str = include_str!("../CHANGELOG.md");
-const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.5";
+const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.6";
 const PLUGIN_INSTALL: &str = "opencode plugin @lyy-gh/memocap";
 
 const V002_CHANGELOG: &str = r#"## 0.0.2 (2026-09-04)
@@ -48,8 +48,7 @@ const V001_CHANGELOG: &str = r#"## 0.0.1 (2026-09-02)
 
 #[test]
 fn rebuild_spec_has_ordered_scoped_opencode_install() {
-    let official_section =
-        official_support_section(REBUILD).expect("REBUILD must contain the official section");
+    let official_section = current_install_section(REBUILD);
     let commands =
         install_commands(official_section).expect("REBUILD must contain a bash install block");
 
@@ -59,7 +58,8 @@ fn rebuild_spec_has_ordered_scoped_opencode_install() {
 #[test]
 fn rebuild_spec_declares_opencode_only_and_legacy_hosts_unsupported() {
     assert!(REBUILD.contains("OpenCode 是唯一官方支持的集成"));
-    assert!(REBUILD.contains("Codex、Claude Code、Pi 仅作历史兼容，不属于官方支持范围"));
+    assert!(REBUILD
+        .contains("Codex、Claude Code、Pi 的 host adapter、规则注入和 host path state 已移除"));
 }
 
 #[test]
@@ -78,23 +78,30 @@ fn rebuild_spec_has_no_stale_host_install_claims() {
 }
 
 #[test]
-fn changelog_starts_with_v005_release_contract() {
+fn changelog_starts_with_v006_breaking_release_contract() {
     let changelog = with_lf_line_endings(CHANGELOG);
     let top_section = changelog
-        .split_once("## 0.1.3")
+        .split_once("## 0.0.5")
         .map(|(section, _)| section)
         .expect("CHANGELOG must retain historical releases");
 
-    assert!(top_section.starts_with("# Changelog\n\n## 0.0.5 (2026-09-20)"));
-    assert!(top_section.contains("## 0.0.3 (2026-09-07)"));
-    assert!(top_section.contains("## 0.0.2 (2026-09-04)"));
-    assert!(top_section.contains("## 0.0.1 (2026-09-02)"));
-    assert!(top_section.contains("scope"));
-    assert!(top_section.contains("@lyy-gh/memocap"));
-    assert!(top_section.contains("https://github.com/LYY/memocap"));
-    assert!(top_section.contains("OpenCode"));
-    assert!(top_section.contains("tag"));
-    assert!(top_section.contains("provenance"));
+    assert!(top_section.starts_with("# Changelog\n\n## 0.0.6 (unreleased)"));
+    for claim in [
+        "breaking release",
+        "removed, not deprecated",
+        "attached domains",
+        "immutable first-transfer provenance",
+        "authenticated `/v1` routes only",
+        "not ACL, IAM",
+        "`not_found` alone does not prove manual replay is safe",
+        "TUI now exposes only Status, List visible memories, and Exit",
+        "exact recognized pre-versioned database",
+        "no backup",
+    ] {
+        assert!(top_section.contains(claim), "missing v0.0.6 claim: {claim}");
+    }
+    assert!(changelog.contains("## 0.0.5 (2026-09-20)"));
+    assert!(changelog.contains("## 0.0.3 (2026-09-07)"));
 }
 
 #[test]
@@ -140,16 +147,23 @@ fn real_rebuild_document_satisfies_strict_contract() {
     assert!(rebuild_contract_is_valid(&with_lf_line_endings(REBUILD)));
 }
 
-fn official_support_section(rebuild: &str) -> Option<&str> {
+#[test]
+fn rebuild_contract_accepts_windows_line_endings() {
+    let windows_rebuild = with_lf_line_endings(REBUILD).replace('\n', "\r\n");
+
+    assert!(rebuild_contract_is_valid(&windows_rebuild));
+}
+
+fn current_install_section(rebuild: &str) -> &str {
     rebuild
-        .split_once("## 官方 OpenCode 集成")
-        .and_then(|(_, rest)| rest.split_once("## 建议的数据模型"))
+        .split_once("## 当前安装和边界")
+        .and_then(|(_, rest)| rest.split_once("## 当前命令矩阵"))
         .map(|(section, _)| section)
+        .expect("REBUILD must contain the current install section")
 }
 
 fn install_commands(official_section: &str) -> Option<Vec<&str>> {
     let install_section = official_section;
-    let install_section = install_section.split_once("### 共享安装")?.1;
     let mut in_shell_block = false;
     let mut commands = Vec::new();
 
@@ -211,11 +225,11 @@ fn has_broad_multi_host_support_claim(rebuild: &str) -> bool {
 }
 
 fn rebuild_contract_is_valid(rebuild: &str) -> bool {
-    let has_exact_install = official_support_section(rebuild)
-        .and_then(install_commands)
+    let has_exact_install = install_commands(current_install_section(rebuild))
         .is_some_and(|commands| commands == vec![GLOBAL_INSTALL, PLUGIN_INSTALL]);
     let has_support_boundary = rebuild.contains("OpenCode 是唯一官方支持的集成")
-        && rebuild.contains("Codex、Claude Code、Pi 仅作历史兼容，不属于官方支持范围");
+        && rebuild
+            .contains("Codex、Claude Code、Pi 的 host adapter、规则注入和 host path state 已移除");
     let has_no_stale_claims = [
         "四端安装",
         "四个宿主的官方入口",
@@ -228,11 +242,54 @@ fn rebuild_contract_is_valid(rebuild: &str) -> bool {
     .iter()
     .all(|claim| !rebuild.contains(claim));
 
+    let matrix = command_matrix(rebuild);
+    let has_current_matrix = [
+        "memocap scope show",
+        "memocap scope domain create <DOMAIN>",
+        "memocap scope domain attach <DOMAIN> [--before <DOMAIN>]",
+        "memocap scope domain detach <DOMAIN>",
+        "memocap scope domain list [--all]",
+        "memocap scope domain delete <DOMAIN>",
+        "memocap scope copy",
+        "memocap scope move",
+        "memocap operation status --recovery <RECOVERY>",
+    ]
+    .iter()
+    .all(|command| matrix.contains(command));
+    let has_no_removed_matrix_entries = ["memocap install", "memocap uninstall", "--global"]
+        .iter()
+        .all(|command| !matrix.contains(command));
+    let has_current_scope_contract = [
+        "repository、按持久化顺序排列的 attached domains、universal",
+        "Skill policy、runtime validation、namespace selection、authorization",
+        "旧的无版本 HTTP route 已移除",
+        "not_found alone 不证明手工 replay 安全",
+    ]
+    .iter()
+    .all(|claim| rebuild.contains(claim));
     has_exact_install
         && has_support_boundary
         && has_no_stale_claims
+        && has_current_matrix
+        && has_no_removed_matrix_entries
+        && has_current_scope_contract
         && !has_contradictory_legacy_support_claim(rebuild)
         && !has_broad_multi_host_support_claim(rebuild)
+}
+
+fn command_matrix(rebuild: &str) -> String {
+    let normalized_rebuild = with_lf_line_endings(rebuild);
+    let section = normalized_rebuild
+        .split_once("## 当前命令矩阵")
+        .map(|(_, section)| section)
+        .expect("REBUILD must contain current command matrix");
+    let (_, block) = section
+        .split_once("```text\n")
+        .expect("REBUILD must contain command matrix block");
+    block
+        .split_once("\n```")
+        .map(|(matrix, _)| matrix.to_owned())
+        .expect("REBUILD command matrix must close")
 }
 
 #[test]
@@ -249,8 +306,8 @@ fn rebuild_contract_rejects_extra_install_command_mutation() {
 #[test]
 fn rebuild_contract_rejects_missing_opening_install_fence_mutation() {
     let mutated = with_lf_line_endings(REBUILD).replacen(
-        "```bash\npnpm add -g @lyy-gh/memocap@0.0.5",
-        "pnpm add -g @lyy-gh/memocap@0.0.5",
+        "```bash\npnpm add -g @lyy-gh/memocap@0.0.6",
+        "pnpm add -g @lyy-gh/memocap@0.0.6",
         1,
     );
 
@@ -289,7 +346,7 @@ fn rebuild_contract_rejects_contradictory_legacy_support_mutation() {
 #[test]
 fn rebuild_contract_rejects_current_four_host_support_mutation() {
     let mutated = REBUILD.replacen(
-        "OpenCode 通过官方插件接到同一条 CLI；",
+        "OpenCode 是唯一官方支持的集成。",
         "四个宿主通过官方插件接到同一条 CLI；",
         1,
     );
@@ -300,10 +357,28 @@ fn rebuild_contract_rejects_current_four_host_support_mutation() {
 #[test]
 fn rebuild_contract_rejects_broad_current_multi_host_mutation() {
     let mutated = REBUILD.replacen(
-        "OpenCode 唯一官方集成。",
+        "OpenCode 是唯一官方支持的集成。",
         "OpenCode 唯一官方集成。多个宿主均可通过官方入口接入。",
         1,
     );
 
+    assert!(!rebuild_contract_is_valid(&mutated));
+}
+
+#[test]
+fn rebuild_contract_rejects_inverted_stack_precedence() {
+    let mutated = REBUILD.replace(
+        "repository、按持久化顺序排列的 attached domains、universal",
+        "universal、按持久化顺序排列的 attached domains、repository",
+    );
+    assert!(!rebuild_contract_is_valid(&mutated));
+}
+
+#[test]
+fn rebuild_contract_rejects_unsafe_replay_claim() {
+    let mutated = REBUILD.replace(
+        "not_found alone 不证明手工 replay 安全",
+        "not_found permits manual replay",
+    );
     assert!(!rebuild_contract_is_valid(&mutated));
 }

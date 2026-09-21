@@ -1,10 +1,12 @@
 use anyhow::{bail, Result};
 
-use memocap::{
-    cli, config, config::Target, install, paths::Paths, remote, server, store::ScopeMigration, tui,
-};
+use memocap::{cli, config, config::Target, paths::Paths, remote as remote_api, server, tui};
 
-use crate::{Command, ScopeCommand};
+use crate::{Command, OperationCommand};
+
+mod domain;
+mod remote;
+mod scope;
 
 pub(crate) fn run(command: Command) -> Result<()> {
     match command {
@@ -14,15 +16,26 @@ pub(crate) fn run(command: Command) -> Result<()> {
             tags,
             force,
             id,
-            global,
+            domain,
+            universal,
             topic,
         } => {
             let id = match config::resolve_target()? {
-                Target::Local { database } => {
-                    let scope = cli::memory_scope(global)?;
-                    cli::remember_scoped(
-                        &database,
-                        &scope,
+                Target::Local { database } => cli::remember_placed(
+                    &database,
+                    cli::placement_selector(domain, universal)?,
+                    cli::ScopedRemember {
+                        content: &content,
+                        kind: &r#type,
+                        tags: &tags,
+                        topic: topic.as_deref(),
+                        force,
+                        overwrite_id: id,
+                    },
+                )?,
+                Target::Remote { address, token } => {
+                    remote::RemoteSession::current(&address, &token)?.remember(
+                        cli::placement_selector(domain, universal)?,
                         cli::ScopedRemember {
                             content: &content,
                             kind: &r#type,
@@ -33,19 +46,6 @@ pub(crate) fn run(command: Command) -> Result<()> {
                         },
                     )?
                 }
-                Target::Remote { address, token } => remote::remember(
-                    &address,
-                    &token,
-                    remote::RememberRequest {
-                        scope: &cli::memory_scope(global)?,
-                        content: &content,
-                        kind: &r#type,
-                        tags: &tags,
-                        topic_key: topic.as_deref(),
-                        force,
-                        overwrite_id: id,
-                    },
-                )?,
             };
             println!("saved #{id}");
         }
@@ -54,15 +54,24 @@ pub(crate) fn run(command: Command) -> Result<()> {
             limit,
             r#type,
             max_chars,
-            global,
+            domain,
+            universal,
         } => {
             let kind = r#type.as_deref();
             let memories = match config::resolve_target()? {
-                Target::Local { database } => {
-                    let scope = cli::memory_scope(global)?;
-                    cli::recall_scoped(
-                        &database,
-                        &scope,
+                Target::Local { database } => cli::recall_placed(
+                    &database,
+                    cli::placement_selector(domain, universal)?,
+                    cli::ScopedRecall {
+                        query: &query,
+                        limit,
+                        kind,
+                        max_chars,
+                    },
+                )?,
+                Target::Remote { address, token } => {
+                    remote::RemoteSession::current(&address, &token)?.recall(
+                        cli::placement_selector(domain, universal)?,
                         cli::ScopedRecall {
                             query: &query,
                             limit,
@@ -71,38 +80,39 @@ pub(crate) fn run(command: Command) -> Result<()> {
                         },
                     )?
                 }
-                Target::Remote { address, token } => remote::recall(
-                    &address,
-                    &token,
-                    remote::RecallRequest {
-                        scope: &cli::memory_scope(global)?,
-                        query: &query,
-                        limit,
-                        kind,
-                        max_chars,
-                    },
-                )?,
             };
             print!("{}", cli::format_memories(&memories));
         }
-        Command::List { limit, global } => {
+        Command::List {
+            limit,
+            domain,
+            universal,
+        } => {
             let memories = match config::resolve_target()? {
-                Target::Local { database } => {
-                    cli::list_scoped(&database, &cli::memory_scope(global)?, limit)?
-                }
+                Target::Local { database } => cli::list_placed(
+                    &database,
+                    cli::placement_selector(domain, universal)?,
+                    limit,
+                )?,
                 Target::Remote { address, token } => {
-                    remote::list(&address, &token, &cli::memory_scope(global)?, limit)?
+                    remote::RemoteSession::current(&address, &token)?
+                        .list(cli::placement_selector(domain, universal)?, limit)?
                 }
             };
             print!("{}", cli::format_memories(&memories));
         }
-        Command::Forget { id, global } => {
+        Command::Forget {
+            id,
+            domain,
+            universal,
+        } => {
             let deleted = match config::resolve_target()? {
                 Target::Local { database } => {
-                    cli::forget_scoped(&database, &cli::memory_scope(global)?, id)?
+                    cli::forget_placed(&database, cli::placement_selector(domain, universal)?, id)?
                 }
                 Target::Remote { address, token } => {
-                    remote::forget(&address, &token, &cli::memory_scope(global)?, id)?
+                    remote::RemoteSession::current(&address, &token)?
+                        .forget(cli::placement_selector(domain, universal)?, id)?
                 }
             };
             println!(
@@ -114,26 +124,9 @@ pub(crate) fn run(command: Command) -> Result<()> {
                 }
             );
         }
-        Command::Scope { command } => run_scope_command(command)?,
-        Command::Install { global } => {
-            let result = install::install(global)?;
-            println!("已配置：{}", result.agents_path.display());
-            println!("CLAUDE.md：{}", result.claude_path.display());
-            println!("skill：{}", result.skill_path.display());
-            println!("程序：{}", result.binary.display());
-            println!("数据库：{}", result.database.display());
-        }
-        Command::Uninstall { global } => {
-            println!(
-                "{}",
-                if install::uninstall(global)? {
-                    "removed memocap config"
-                } else {
-                    "no memocap config found"
-                }
-            );
-        }
-        Command::Status { global } => run_status(global)?,
+        Command::Scope { command } => scope::run(command)?,
+        Command::Operation { command } => run_operation(command)?,
+        Command::Status => run_status()?,
         Command::Serve { bind } => {
             let token = config::require_token()?;
             let paths = Paths::discover()?;
@@ -144,72 +137,36 @@ pub(crate) fn run(command: Command) -> Result<()> {
     Ok(())
 }
 
-fn run_scope_command(command: ScopeCommand) -> Result<()> {
-    let database = cli::local_database()?;
-    let active_scope = cli::current_scope()?;
+fn run_operation(command: OperationCommand) -> Result<()> {
+    let Target::Remote { address, token } = config::resolve_target()? else {
+        bail!("operation status requires a remote address")
+    };
     match command {
-        ScopeCommand::Show => print!("{}", cli::format_scope_show(&active_scope)),
-        ScopeCommand::Migrate {
-            from,
-            id,
-            all,
-            dry_run,
-            yes,
-        } => {
-            if yes && !all {
-                bail!("--yes requires --all");
-            }
-            if all && (dry_run == yes) {
-                bail!("--all requires exactly one of --dry-run or --yes");
-            }
-            let migration = match (id, all) {
-                (Some(id), false) => ScopeMigration::One(id),
-                (None, true) => ScopeMigration::All,
-                (Some(_), true) | (None, false) => bail!("select exactly one of --id or --all"),
-            };
-            let moved = cli::migrate_scope(
-                &database,
-                cli::ScopeMigrationRequest {
-                    source: &from,
-                    destination: active_scope.scope(),
-                    migration,
-                    dry_run,
-                },
-            )?;
-            println!(
-                "{} {moved} memories",
-                if dry_run { "would migrate" } else { "migrated" }
-            );
+        OperationCommand::Status { recovery } => {
+            remote::operation_status(&address, &token, &recovery)
         }
     }
-    Ok(())
 }
 
-fn run_status(global: bool) -> Result<()> {
-    let result = install::status(global)?;
+fn run_status() -> Result<()> {
     match config::resolve_target()? {
         Target::Local { database } => {
             let scope = cli::current_scope()?;
-            let counts = cli::scope_counts(&database, scope.scope())?;
-            print!(
-                "{}",
-                cli::format_status(
-                    &database,
-                    cli::LocalStatus {
-                        scope: scope.scope(),
-                        counts,
-                        agents_path: &result.agents_path,
-                        configured: result.configured,
-                    }
-                )
+            let status = cli::visible_status(&database, scope.repository())?;
+            println!(
+                "database: {}\nrepository_id: {}\n{}",
+                database.display(),
+                scope.repository(),
+                cli::format_visible_status(&status)
             );
         }
         Target::Remote { address, token } => {
             let scope = cli::current_scope()?;
-            let count = remote::count(&address, &token, scope.scope())?;
-            print!(
-                "{}",
-                cli::format_remote_status(&address, count, &result.agents_path, result.configured)
+            let status = remote_api::status(&address, &token, scope.repository())?;
+            println!(
+                "remote: {address}\nrepository_id: {}\n{}",
+                scope.repository(),
+                cli::format_visible_status(&status.status)
             );
         }
     }
