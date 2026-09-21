@@ -237,7 +237,15 @@ fn bilingual_scope_command_blocks_are_behaviorally_aligned() {
     }
 }
 
-fn command_matrix(readme: &str) -> &str {
+#[test]
+fn command_matrix_accepts_windows_line_endings() {
+    let windows_readme = ENGLISH.replace("\r\n", "\n").replace('\n', "\r\n");
+
+    assert_eq!(command_matrix(&windows_readme), command_matrix(ENGLISH));
+}
+
+fn command_matrix(readme: &str) -> String {
+    let readme = readme.replace("\r\n", "\n");
     let heading = if readme.contains("## Command matrix") {
         "## Command matrix"
     } else {
@@ -252,7 +260,7 @@ fn command_matrix(readme: &str) -> &str {
         .expect("README must contain command matrix block");
     block
         .split_once("\n```")
-        .map(|(matrix, _)| matrix)
+        .map(|(matrix, _)| matrix.to_owned())
         .expect("README command matrix must close")
 }
 
