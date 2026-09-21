@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
     process::{Command, Output},
     str::FromStr,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::{anyhow, bail, Result};
@@ -12,8 +13,201 @@ use url::Url;
 #[cfg(unix)]
 use std::os::unix::ffi::OsStrExt;
 
-const SCOPE_PREFIX: &str = "scope:v1:";
-const HASH_DOMAIN: &[u8] = b"memocap\0scope\0v1\0";
+const REPOSITORY_PREFIX: &str = "repository:";
+const REPOSITORY_HASH_DOMAIN: &[u8] = b"memocap\0repository\0v1\0";
+const LEGACY_SCOPE_PREFIX: &str = "scope:v1:";
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RepositoryId(String);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RepositoryIdParseError;
+
+impl fmt::Display for RepositoryIdParseError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("invalid repository ID")
+    }
+}
+
+impl std::error::Error for RepositoryIdParseError {}
+
+impl RepositoryId {
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for RepositoryId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+impl FromStr for RepositoryId {
+    type Err = RepositoryIdParseError;
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        let Some(hash) = value.strip_prefix(REPOSITORY_PREFIX) else {
+            return Err(RepositoryIdParseError);
+        };
+        if hash.len() != 64 || !hash.bytes().all(is_lowercase_hex) {
+            return Err(RepositoryIdParseError);
+        }
+        Ok(Self(value.to_owned()))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DomainId(String);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DomainIdParseError;
+
+impl fmt::Display for DomainIdParseError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("invalid domain ID")
+    }
+}
+
+impl std::error::Error for DomainIdParseError {}
+
+impl DomainId {
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for DomainId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+impl FromStr for DomainId {
+    type Err = DomainIdParseError;
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        if value.is_empty()
+            || matches!(value, "." | ".." | "global" | "universal" | "repository")
+            || value.starts_with(REPOSITORY_PREFIX)
+            || value.starts_with(LEGACY_SCOPE_PREFIX)
+            || value.split('/').any(|segment| !is_domain_segment(segment))
+        {
+            return Err(DomainIdParseError);
+        }
+        Ok(Self(value.to_owned()))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PlacementId {
+    Repository(RepositoryId),
+    Domain(DomainId),
+    Universal,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlacementIdParseError;
+
+impl fmt::Display for PlacementIdParseError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("invalid placement ID")
+    }
+}
+
+impl std::error::Error for PlacementIdParseError {}
+
+impl fmt::Display for PlacementId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Repository(repository) => repository.fmt(formatter),
+            Self::Domain(domain) => write!(formatter, "domain:{domain}"),
+            Self::Universal => formatter.write_str("universal"),
+        }
+    }
+}
+
+impl FromStr for PlacementId {
+    type Err = PlacementIdParseError;
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        if value == "universal" {
+            return Ok(Self::Universal);
+        }
+        if let Ok(repository) = value.parse::<RepositoryId>() {
+            return Ok(Self::Repository(repository));
+        }
+        let Some(domain) = value.strip_prefix("domain:") else {
+            return Err(PlacementIdParseError);
+        };
+        domain
+            .parse::<DomainId>()
+            .map(Self::Domain)
+            .map_err(|_| PlacementIdParseError)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct OperationId(String);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OperationIdParseError;
+
+impl fmt::Display for OperationIdParseError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("invalid operation ID")
+    }
+}
+
+impl std::error::Error for OperationIdParseError {}
+
+impl OperationId {
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    #[must_use]
+    pub fn from_request_fingerprint(fingerprint: &str) -> Self {
+        let elapsed = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |duration| duration.as_nanos());
+        let mut digest = Sha256::new();
+        digest.update(fingerprint);
+        digest.update(std::process::id().to_le_bytes());
+        digest.update(elapsed.to_le_bytes());
+        let digest = digest.finalize();
+        let first = u32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]]);
+        let second = u16::from_be_bytes([digest[4], digest[5]]);
+        let third = u16::from_be_bytes([digest[6], digest[7]]);
+        let fourth = u16::from_be_bytes([digest[8], digest[9]]);
+        let fifth = u64::from_be_bytes([
+            0, 0, digest[10], digest[11], digest[12], digest[13], digest[14], digest[15],
+        ]);
+        Self(format!(
+            "{first:08x}-{second:04x}-{third:04x}-{fourth:04x}-{fifth:012x}"
+        ))
+    }
+}
+
+impl fmt::Display for OperationId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+impl FromStr for OperationId {
+    type Err = OperationIdParseError;
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        if !is_canonical_uuid(value) {
+            return Err(OperationIdParseError);
+        }
+        Ok(Self(value.to_owned()))
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ScopeId(String);
@@ -44,6 +238,10 @@ impl ScopeId {
     pub fn is_global(&self) -> bool {
         self.0 == "global"
     }
+
+    fn from_repository(repository: RepositoryId) -> Self {
+        Self(repository.0)
+    }
 }
 
 impl fmt::Display for ScopeId {
@@ -59,13 +257,10 @@ impl FromStr for ScopeId {
         if value == "global" {
             return Ok(Self::global());
         }
-        let Some(hash) = value.strip_prefix(SCOPE_PREFIX) else {
-            return Err(ScopeIdParseError);
-        };
-        if hash.len() != 64 || !hash.bytes().all(is_lowercase_hex) {
-            return Err(ScopeIdParseError);
-        }
-        Ok(Self(value.to_owned()))
+        value
+            .parse::<RepositoryId>()
+            .map(Self::from_repository)
+            .map_err(|_| ScopeIdParseError)
     }
 }
 
@@ -92,6 +287,7 @@ impl ResolutionSource {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedScope {
     scope: ScopeId,
+    repository: RepositoryId,
     source: ResolutionSource,
 }
 
@@ -102,15 +298,22 @@ impl ResolvedScope {
     }
 
     #[must_use]
+    pub fn repository(&self) -> &RepositoryId {
+        &self.repository
+    }
+
+    #[must_use]
     pub const fn source(&self) -> ResolutionSource {
         self.source
     }
 }
 
-enum ConfigScope {
+enum ConfigRepository {
     GitUnavailable,
     Unset,
-    Value(ScopeId),
+    LegacyScope,
+    Value(RepositoryId),
+    ValueWithLegacyScope(RepositoryId),
 }
 
 pub fn resolve(cwd: &Path) -> Result<ResolvedScope> {
@@ -118,73 +321,131 @@ pub fn resolve(cwd: &Path) -> Result<ResolvedScope> {
     let Some(common_dir) = git_common_dir(&cwd)? else {
         return directory_scope(&cwd);
     };
-    match read_config_scope(&cwd)? {
-        ConfigScope::GitUnavailable => directory_scope(&cwd),
-        ConfigScope::Unset => derive_scope(&cwd, &common_dir),
-        ConfigScope::Value(scope) => Ok(ResolvedScope {
-            scope,
-            source: ResolutionSource::GitConfig,
-        }),
+    match read_config_repository(&cwd)? {
+        ConfigRepository::GitUnavailable => directory_scope(&cwd),
+        ConfigRepository::Unset => derive_scope(&cwd, &common_dir, false),
+        ConfigRepository::LegacyScope => derive_scope(&cwd, &common_dir, true),
+        ConfigRepository::Value(repository) => {
+            Ok(resolved_repository(repository, ResolutionSource::GitConfig))
+        }
+        ConfigRepository::ValueWithLegacyScope(repository) => {
+            remove_legacy_scope_config(&cwd)?;
+            Ok(resolved_repository(repository, ResolutionSource::GitConfig))
+        }
     }
 }
 
-fn derive_scope(cwd: &Path, common_dir: &Path) -> Result<ResolvedScope> {
-    let (scope, source) = match remote_identity(cwd)? {
+fn derive_scope(cwd: &Path, common_dir: &Path, remove_legacy_scope: bool) -> Result<ResolvedScope> {
+    let (repository, source) = match remote_identity(cwd)? {
         Some(identity) => (
-            scope_from_identity("remote", &identity),
+            repository_from_identity("remote", &identity),
             ResolutionSource::Remote,
         ),
         None => (
-            scope_from_path("git-common-dir", common_dir)?,
+            repository_from_path("git-common-dir", common_dir)?,
             ResolutionSource::GitCommonDir,
         ),
     };
-    persist_scope(cwd, &scope)?;
-    Ok(ResolvedScope { scope, source })
+    persist_repository(cwd, &repository)?;
+    if remove_legacy_scope {
+        remove_legacy_scope_config(cwd)?;
+    }
+    Ok(resolved_repository(repository, source))
 }
 
 fn directory_scope(cwd: &Path) -> Result<ResolvedScope> {
-    Ok(ResolvedScope {
-        scope: scope_from_path("directory", cwd)?,
-        source: ResolutionSource::Directory,
-    })
+    Ok(resolved_repository(
+        repository_from_path("directory", cwd)?,
+        ResolutionSource::Directory,
+    ))
 }
 
-fn read_config_scope(cwd: &Path) -> Result<ConfigScope> {
-    let Some(output) = git(cwd, &["config", "--local", "--get", "memocap.scope-id"])? else {
-        return Ok(ConfigScope::GitUnavailable);
+fn resolved_repository(repository: RepositoryId, source: ResolutionSource) -> ResolvedScope {
+    ResolvedScope {
+        scope: ScopeId::from_repository(repository.clone()),
+        repository,
+        source,
+    }
+}
+
+fn read_config_repository(cwd: &Path) -> Result<ConfigRepository> {
+    let repository = match read_local_config(cwd, "memocap.repository-id")? {
+        ConfigValue::GitUnavailable => return Ok(ConfigRepository::GitUnavailable),
+        ConfigValue::Value(value) => Some(
+            value
+                .parse::<RepositoryId>()
+                .map_err(|_| anyhow!("local repository ID configuration is invalid"))?,
+        ),
+        ConfigValue::Unset => None,
+    };
+    match read_local_config(cwd, "memocap.scope-id")? {
+        ConfigValue::GitUnavailable => Ok(ConfigRepository::GitUnavailable),
+        ConfigValue::Value(value) if is_legacy_scope_id(&value) => match repository {
+            Some(repository) => Ok(ConfigRepository::ValueWithLegacyScope(repository)),
+            None => Ok(ConfigRepository::LegacyScope),
+        },
+        ConfigValue::Unset | ConfigValue::Value(_) => match repository {
+            Some(repository) => Ok(ConfigRepository::Value(repository)),
+            None => Ok(ConfigRepository::Unset),
+        },
+    }
+}
+
+enum ConfigValue {
+    GitUnavailable,
+    Unset,
+    Value(String),
+}
+
+fn read_local_config(cwd: &Path, key: &str) -> Result<ConfigValue> {
+    let Some(output) = git(cwd, &["config", "--local", "--get", key])? else {
+        return Ok(ConfigValue::GitUnavailable);
     };
     match output.status.code() {
-        Some(0) => {
-            let scope = ScopeId::from_str(remove_terminal_newline(&output_text(output)?))
-                .map_err(|_| anyhow!("local repository scope configuration is invalid"))?;
-            if scope.is_global() {
-                bail!("local repository scope configuration is invalid");
-            }
-            Ok(ConfigScope::Value(scope))
-        }
-        Some(1) => Ok(ConfigScope::Unset),
-        _ => bail!("local repository scope configuration could not be read"),
+        Some(0) => Ok(ConfigValue::Value(
+            remove_terminal_newline(&output_text(output)?).to_owned(),
+        )),
+        Some(1) => Ok(ConfigValue::Unset),
+        _ => bail!("local repository configuration could not be read"),
     }
 }
 
-fn persist_scope(cwd: &Path, scope: &ScopeId) -> Result<()> {
+fn persist_repository(cwd: &Path, repository: &RepositoryId) -> Result<()> {
     let Some(output) = git(
         cwd,
-        &["config", "--local", "memocap.scope-id", scope.as_str()],
+        &[
+            "config",
+            "--local",
+            "memocap.repository-id",
+            repository.as_str(),
+        ],
     )?
     else {
-        bail!("local repository scope configuration could not be written");
+        bail!("local repository ID configuration could not be written");
     };
     if !output.status.success() {
-        bail!("local repository scope configuration could not be written");
+        bail!("local repository ID configuration could not be written");
     }
-    match read_config_scope(cwd)? {
-        ConfigScope::Value(stored) if stored.as_str() == scope.as_str() => Ok(()),
-        ConfigScope::GitUnavailable | ConfigScope::Unset | ConfigScope::Value(_) => {
-            bail!("local repository scope configuration read-back failed")
+    match read_local_config(cwd, "memocap.repository-id")? {
+        ConfigValue::Value(stored) if stored == repository.as_str() => Ok(()),
+        ConfigValue::GitUnavailable | ConfigValue::Unset | ConfigValue::Value(_) => {
+            bail!("local repository ID configuration read-back failed")
         }
     }
+}
+
+fn remove_legacy_scope_config(cwd: &Path) -> Result<()> {
+    let Some(output) = git(
+        cwd,
+        &["config", "--local", "--unset-all", "memocap.scope-id"],
+    )?
+    else {
+        bail!("local legacy scope configuration could not be removed");
+    };
+    if !output.status.success() {
+        bail!("local legacy scope configuration could not be removed");
+    }
+    Ok(())
 }
 
 fn git_common_dir(cwd: &Path) -> Result<Option<PathBuf>> {
@@ -280,29 +541,29 @@ fn canonicalize_remote_parts(host: &str, path: &str, port: Option<u16>) -> Optio
 }
 
 #[cfg(unix)]
-fn scope_from_path(kind: &str, path: &Path) -> Result<ScopeId> {
-    Ok(scope_from_bytes(kind, path.as_os_str().as_bytes()))
+fn repository_from_path(kind: &str, path: &Path) -> Result<RepositoryId> {
+    Ok(repository_from_bytes(kind, path.as_os_str().as_bytes()))
 }
 
 #[cfg(not(unix))]
-fn scope_from_path(kind: &str, path: &Path) -> Result<ScopeId> {
+fn repository_from_path(kind: &str, path: &Path) -> Result<RepositoryId> {
     let identity = path
         .to_str()
-        .ok_or_else(|| anyhow!("scope path is not valid UTF-8"))?;
-    Ok(scope_from_identity(kind, identity))
+        .ok_or_else(|| anyhow!("repository path is not valid UTF-8"))?;
+    Ok(repository_from_identity(kind, identity))
 }
 
-fn scope_from_identity(kind: &str, identity: &str) -> ScopeId {
-    scope_from_bytes(kind, identity.as_bytes())
+fn repository_from_identity(kind: &str, identity: &str) -> RepositoryId {
+    repository_from_bytes(kind, identity.as_bytes())
 }
 
-fn scope_from_bytes(kind: &str, identity: &[u8]) -> ScopeId {
+fn repository_from_bytes(kind: &str, identity: &[u8]) -> RepositoryId {
     let mut digest = Sha256::new();
-    digest.update(HASH_DOMAIN);
+    digest.update(REPOSITORY_HASH_DOMAIN);
     digest.update(kind);
     digest.update(b"\0");
     digest.update(identity);
-    ScopeId(format!("{SCOPE_PREFIX}{:x}", digest.finalize()))
+    RepositoryId(format!("{REPOSITORY_PREFIX}{:x}", digest.finalize()))
 }
 
 fn git(cwd: &Path, arguments: &[&str]) -> Result<Option<Output>> {
@@ -340,11 +601,38 @@ const fn is_lowercase_hex(byte: u8) -> bool {
     matches!(byte, b'0'..=b'9' | b'a'..=b'f')
 }
 
+fn is_domain_segment(segment: &str) -> bool {
+    let mut bytes = segment.bytes();
+    let Some(first) = bytes.next() else {
+        return false;
+    };
+    is_lowercase_alphanumeric(first)
+        && bytes.all(|byte| is_lowercase_alphanumeric(byte) || matches!(byte, b'.' | b'_' | b'-'))
+}
+
+const fn is_lowercase_alphanumeric(byte: u8) -> bool {
+    matches!(byte, b'0'..=b'9' | b'a'..=b'z')
+}
+
+fn is_legacy_scope_id(value: &str) -> bool {
+    value
+        .strip_prefix(LEGACY_SCOPE_PREFIX)
+        .is_some_and(|hash| hash.len() == 64 && hash.bytes().all(is_lowercase_hex))
+}
+
+fn is_canonical_uuid(value: &str) -> bool {
+    value.len() == 36
+        && value.bytes().enumerate().all(|(index, byte)| {
+            matches!(index, 8 | 13 | 18 | 23) && byte == b'-'
+                || !matches!(index, 8 | 13 | 18 | 23) && is_lowercase_hex(byte)
+        })
+}
+
 #[cfg(all(test, unix))]
 mod tests {
     use std::{ffi::OsStr, os::unix::ffi::OsStrExt, path::Path};
 
-    use super::scope_from_path;
+    use super::repository_from_path;
 
     #[test]
     fn distinguishes_non_utf8_paths_with_same_lossy_form() {
@@ -355,8 +643,8 @@ mod tests {
         assert_eq!(left.to_string_lossy(), right.to_string_lossy());
 
         // When
-        let left_scope = scope_from_path("directory", left).unwrap();
-        let right_scope = scope_from_path("directory", right).unwrap();
+        let left_scope = repository_from_path("directory", left).unwrap();
+        let right_scope = repository_from_path("directory", right).unwrap();
 
         // Then
         assert_ne!(left_scope, right_scope);

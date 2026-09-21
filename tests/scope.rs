@@ -6,7 +6,7 @@ use std::{
     sync::{Mutex, MutexGuard},
 };
 
-use memocap::scope::{self, ResolutionSource, ScopeId};
+use memocap::scope::{self, DomainId, OperationId, PlacementId, RepositoryId, ResolutionSource};
 use sha2::{Digest, Sha256};
 
 static GIT_ENVIRONMENT: Mutex<()> = Mutex::new(());
@@ -115,69 +115,186 @@ fn failed<T>(result: anyhow::Result<T>) -> anyhow::Error {
     }
 }
 
-fn expected_scope(kind: &str, identity: &str) -> String {
+fn expected_repository(kind: &str, identity: &str) -> String {
     let digest = Sha256::digest(
         [
-            b"memocap\0scope\0v1\0".as_slice(),
+            b"memocap\0repository\0v1\0".as_slice(),
             kind.as_bytes(),
             b"\0",
             identity.as_bytes(),
         ]
         .concat(),
     );
-    format!("scope:v1:{digest:x}")
+    format!("repository:{digest:x}")
 }
 
-fn configured_scope(repository: &Repository) -> String {
+fn configured_repository(repository: &Repository) -> String {
     git(
         &repository.path,
-        &["config", "--local", "--get", "memocap.scope-id"],
+        &["config", "--local", "--get", "memocap.repository-id"],
     )
 }
 
 #[test]
-fn parses_global_and_lowercase_versioned_scope_ids() {
+fn parses_distinct_repository_domain_placement_and_operation_ids() {
     // Given
-    let versioned = format!("scope:v1:{}", "a".repeat(64));
+    let repository = format!("repository:{}", "a".repeat(64));
+    let domain = "platform/rust";
+    let operation = "7f82d305-4d55-4f91-8b9d-2b5e1783186c";
 
     // When
-    let global = successful("global".parse::<ScopeId>().map_err(anyhow::Error::from));
-    let parsed = successful(versioned.parse::<ScopeId>().map_err(anyhow::Error::from));
+    let repository = successful(
+        repository
+            .parse::<RepositoryId>()
+            .map_err(anyhow::Error::from),
+    );
+    let domain = successful(domain.parse::<DomainId>().map_err(anyhow::Error::from));
+    let repository_placement = successful(
+        repository
+            .to_string()
+            .parse::<PlacementId>()
+            .map_err(anyhow::Error::from),
+    );
+    let domain_placement = successful(
+        "domain:platform/rust"
+            .parse::<PlacementId>()
+            .map_err(anyhow::Error::from),
+    );
+    let universal = successful(
+        "universal"
+            .parse::<PlacementId>()
+            .map_err(anyhow::Error::from),
+    );
+    let operation = successful(
+        operation
+            .parse::<OperationId>()
+            .map_err(anyhow::Error::from),
+    );
 
     // Then
-    assert!(global.is_global());
-    assert_eq!(global.to_string(), "global");
-    assert!(!parsed.is_global());
-    assert_eq!(parsed.as_str(), versioned);
+    assert_eq!(
+        repository.to_string(),
+        format!("repository:{}", "a".repeat(64))
+    );
+    assert_eq!(domain.to_string(), "platform/rust");
+    assert_eq!(repository_placement.to_string(), repository.to_string());
+    assert_eq!(domain_placement.to_string(), "domain:platform/rust");
+    assert_eq!(universal.to_string(), "universal");
+    assert_eq!(
+        operation.to_string(),
+        "7f82d305-4d55-4f91-8b9d-2b5e1783186c"
+    );
 }
 
 #[test]
-fn rejects_noncanonical_scope_ids() {
+fn rejects_malformed_or_reserved_identity_values() {
     // Given
-    let uppercase = format!("scope:v1:{}", "A".repeat(64));
-    let short = format!("scope:v1:{}", "a".repeat(63));
-    let long = format!("scope:v1:{}", "a".repeat(65));
+    let uppercase = format!("repository:{}", "A".repeat(64));
+    let short = format!("repository:{}", "a".repeat(63));
+    let long = format!("repository:{}", "a".repeat(65));
 
     // When
-    let invalid = [
+    let invalid_repositories = [
         "",
-        " global",
-        "GLOBAL",
-        "scope:v0:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "scope:v1:",
+        "repository:",
         &uppercase,
         &short,
         &long,
-        "scope:v1:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
+        "scope:v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "repository:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
+    ];
+    let invalid_domains = [
+        "",
+        "/platform",
+        "platform/",
+        "platform//rust",
+        ".",
+        "..",
+        "global",
+        "universal",
+        "repository",
+        "repository:abc",
+        "scope:v1:abc",
+        "Platform/rust",
     ];
 
     // Then
-    for value in invalid {
+    for value in invalid_repositories {
         assert!(
-            value.parse::<ScopeId>().is_err(),
-            "accepted invalid scope ID"
+            value.parse::<RepositoryId>().is_err(),
+            "accepted invalid repository ID"
         );
     }
+    for value in invalid_domains {
+        assert!(
+            value.parse::<DomainId>().is_err(),
+            "accepted invalid domain ID"
+        );
+    }
+}
+
+#[test]
+fn rejects_malformed_placement_and_operation_ids() {
+    // Given
+    let invalid_placements = [
+        "global",
+        "domain:",
+        "domain:universal",
+        "domain:/platform",
+        "Domain:platform",
+        "scope:v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    ];
+    let invalid_operations = [
+        "7F82D305-4D55-4F91-8B9D-2B5E1783186C",
+        "7f82d3054d554f918b9d2b5e1783186c",
+        "7f82d305-4d55-4f91-8b9d-2b5e1783186",
+        "7f82d305-4d55-4f91-8b9d-2b5e1783186g",
+    ];
+
+    // When
+    let placements_rejected = invalid_placements
+        .into_iter()
+        .all(|value| value.parse::<PlacementId>().is_err());
+    let operations_rejected = invalid_operations
+        .into_iter()
+        .all(|value| value.parse::<OperationId>().is_err());
+
+    // Then
+    assert!(placements_rejected);
+    assert!(operations_rejected);
+}
+
+#[cfg(unix)]
+fn scope_with_injected_legacy_cleanup_failure(cwd: &Path) -> anyhow::Result<scope::ResolvedScope> {
+    use std::os::unix::fs::{symlink, PermissionsExt};
+
+    let _guard = git_lock();
+    let original_path = std::env::var_os("PATH").ok_or_else(|| anyhow::anyhow!("PATH is unset"))?;
+    let real_git = std::env::split_paths(&original_path)
+        .map(|directory| directory.join("git"))
+        .find(|candidate| candidate.is_file())
+        .ok_or_else(|| anyhow::anyhow!("git executable is unavailable"))?;
+    let shim_directory = test_directory();
+    let shim = shim_directory.path().join("git");
+    symlink(real_git, shim_directory.path().join("real-git"))?;
+    fs::write(
+        &shim,
+        "#!/bin/sh\n\
+         if [ \"$1\" = \"config\" ] && [ \"$2\" = \"--local\" ] && [ \"$3\" = \"--unset-all\" ] && [ \"$4\" = \"memocap.scope-id\" ]; then\n\
+             exit 1\n\
+         fi\n\
+         exec \"$(dirname \"$0\")/real-git\" \"$@\"\n",
+    )?;
+    let mut permissions = fs::metadata(&shim)?.permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&shim, permissions)?;
+    let path = std::env::join_paths(
+        std::iter::once(shim_directory.path().to_path_buf())
+            .chain(std::env::split_paths(&original_path)),
+    )?;
+    std::env::set_var("PATH", path);
+    let _restore = PathRestore(Some(original_path));
+    scope::resolve(cwd)
 }
 
 #[test]
@@ -194,10 +311,12 @@ fn resolves_one_canonical_remote_and_persists_opaque_scope() {
     assert_eq!(resolved.source(), ResolutionSource::Remote);
     assert_eq!(
         resolved.scope().as_str(),
-        expected_scope("remote", "github.com/LYY/memocap")
+        expected_repository("remote", "github.com/LYY/memocap")
     );
-    assert_eq!(configured_scope(&repository), resolved.scope().as_str());
-    assert!(!resolved.scope().is_global());
+    assert_eq!(
+        configured_repository(&repository),
+        resolved.scope().as_str()
+    );
     let visible = format!("{resolved:?}");
     assert!(!visible.contains("user:token"));
     assert!(!visible.contains(remote));
@@ -372,14 +491,14 @@ fn persists_no_remote_repository_scope_and_reads_it_back() {
     assert_eq!(first.source(), ResolutionSource::GitCommonDir);
     assert_eq!(second.source(), ResolutionSource::GitConfig);
     assert_eq!(first.scope(), second.scope());
-    assert_eq!(configured_scope(&repository), first.scope().as_str());
+    assert_eq!(configured_repository(&repository), first.scope().as_str());
 }
 
 #[test]
-fn rejects_global_or_malformed_repository_configuration_without_repairing_it() {
+fn migrates_exact_old_repository_key_to_verified_new_key() {
     // Given
     let repository = repository();
-    let malformed = format!("scope:v1:{}", "A".repeat(64));
+    let old = format!("scope:v1:{}", "a".repeat(64));
     git(
         &repository.path,
         &[
@@ -389,28 +508,90 @@ fn rejects_global_or_malformed_repository_configuration_without_repairing_it() {
             "https://user:token@github.com/LYY/memocap.git",
         ],
     );
+    git(
+        &repository.path,
+        &["config", "--local", "memocap.scope-id", &old],
+    );
 
     // When
-    git(
+    let resolved = successful(scope(&repository.path));
+    let old_key = git_output(
         &repository.path,
-        &["config", "--local", "memocap.scope-id", "global"],
+        &["config", "--local", "--get", "memocap.scope-id"],
     );
-    let global_error = failed(scope(&repository.path));
-    assert_eq!(configured_scope(&repository), "global");
-    git(
-        &repository.path,
-        &["config", "--local", "memocap.scope-id", &malformed],
-    );
-    let malformed_error = failed(scope(&repository.path));
 
     // Then
-    assert_eq!(configured_scope(&repository), malformed);
-    for output in [global_error.to_string(), malformed_error.to_string()] {
-        assert!(!output.contains("global"));
-        assert!(!output.contains("user:token"));
-        assert!(!output.contains("github.com/LYY/memocap"));
-        assert!(!output.contains(repository.path.to_string_lossy().as_ref()));
-    }
+    assert_eq!(resolved.source(), ResolutionSource::Remote);
+    assert_eq!(
+        configured_repository(&repository),
+        resolved.scope().as_str()
+    );
+    assert_eq!(old_key.status.code(), Some(1));
+}
+
+#[cfg(unix)]
+#[test]
+fn retry_removes_legacy_key_after_injected_cleanup_failure() {
+    // Given
+    let repository = repository();
+    let old = format!("scope:v1:{}", "a".repeat(64));
+    git(
+        &repository.path,
+        &[
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/LYY/memocap.git",
+        ],
+    );
+    git(
+        &repository.path,
+        &["config", "--local", "memocap.scope-id", &old],
+    );
+
+    // When
+    let failed_migration = scope_with_injected_legacy_cleanup_failure(&repository.path);
+    let retried = successful(scope(&repository.path));
+    let old_key = git_output(
+        &repository.path,
+        &["config", "--local", "--get", "memocap.scope-id"],
+    );
+
+    // Then
+    assert!(failed_migration.is_err());
+    assert_eq!(retried.source(), ResolutionSource::GitConfig);
+    assert_eq!(configured_repository(&repository), retried.scope().as_str());
+    assert_eq!(old_key.status.code(), Some(1));
+}
+
+#[test]
+fn refuses_malformed_new_repository_key_without_overwrite() {
+    // Given
+    let repository = repository();
+    let malformed = format!("repository:{}", "A".repeat(64));
+    git(
+        &repository.path,
+        &[
+            "remote",
+            "add",
+            "origin",
+            "https://user:token@github.com/LYY/memocap.git",
+        ],
+    );
+    git(
+        &repository.path,
+        &["config", "--local", "memocap.repository-id", &malformed],
+    );
+
+    // When
+    let error = failed(scope(&repository.path));
+
+    // Then
+    assert_eq!(configured_repository(&repository), malformed);
+    assert!(!error.to_string().contains("user:token"));
+    assert!(!error
+        .to_string()
+        .contains(repository.path.to_string_lossy().as_ref()));
 }
 
 #[test]
