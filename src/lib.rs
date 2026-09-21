@@ -58,7 +58,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn generated_skill_matches_shipped_static_skill() {
-        assert_eq!(skill_markdown(), include_str!("../skills/memocap/SKILL.md"));
+    fn generated_skill_matches_shipped_static_skill_regardless_of_line_endings() {
+        assert_eq!(
+            skill_markdown(),
+            include_str!("../skills/memocap/SKILL.md").replace("\r\n", "\n")
+        );
     }
 }
