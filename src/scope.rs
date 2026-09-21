@@ -3,7 +3,6 @@ use std::{
     path::{Path, PathBuf},
     process::{Command, Output},
     str::FromStr,
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::{anyhow, bail, Result};
@@ -171,14 +170,7 @@ impl OperationId {
 
     #[must_use]
     pub fn from_request_fingerprint(fingerprint: &str) -> Self {
-        let elapsed = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_or(0, |duration| duration.as_nanos());
-        let mut digest = Sha256::new();
-        digest.update(fingerprint);
-        digest.update(std::process::id().to_le_bytes());
-        digest.update(elapsed.to_le_bytes());
-        let digest = digest.finalize();
+        let digest = Sha256::digest(fingerprint);
         let first = u32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]]);
         let second = u16::from_be_bytes([digest[4], digest[5]]);
         let third = u16::from_be_bytes([digest[6], digest[7]]);
