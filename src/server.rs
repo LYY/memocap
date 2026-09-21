@@ -2,20 +2,15 @@ use std::io::Read as IoRead;
 use std::path::Path;
 
 use anyhow::Result;
-use rusqlite::Connection;
-use serde::Deserialize;
 use tiny_http::{Header, Method, Response, Server, StatusCode};
 
-use crate::{
-    scope::ScopeId,
-    store::{self, RememberOptions},
-};
+mod request;
+mod routes;
 
 #[derive(Debug)]
 pub struct Incoming {
     pub method: String,
     pub path: String,
-    pub query: String,
     pub token: Option<String>,
     pub body: String,
 }
@@ -24,32 +19,6 @@ pub struct Incoming {
 pub struct Outgoing {
     pub status: u16,
     pub body: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct RememberIn {
-    scope: String,
-    content: String,
-    #[serde(default = "default_kind")]
-    r#type: String,
-    #[serde(default)]
-    tags: String,
-    #[serde(default)]
-    force: bool,
-    #[serde(default)]
-    id: Option<i64>,
-    #[serde(default)]
-    topic_key: Option<String>,
-}
-
-fn default_kind() -> String {
-    "context".to_owned()
-}
-
-#[derive(Debug, Deserialize)]
-struct ForgetIn {
-    scope: String,
-    id: i64,
 }
 
 #[must_use]
@@ -62,194 +31,24 @@ pub fn token_ok(expected: &str, provided: Option<&str>) -> bool {
     }
     got.bytes()
         .zip(expected.bytes())
-        .fold(0u8, |acc, (a, b)| acc | (a ^ b))
+        .fold(0u8, |acc, (left, right)| acc | (left ^ right))
         == 0
 }
 
-fn query_param(query: &str, key: &str) -> Option<String> {
-    for part in query.split('&') {
-        let Some((k, v)) = part.split_once('=') else {
-            continue;
-        };
-        if k == key {
-            return Some(url_decode(v));
-        }
+pub fn handle(database: &Path, expected_token: &str, incoming: &Incoming) -> Outgoing {
+    if !token_ok(expected_token, incoming.token.as_deref()) {
+        return error(401, "unauthorized");
     }
-    None
-}
-
-fn url_decode(value: &str) -> String {
-    let bytes = value.as_bytes();
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'%' && i + 2 < bytes.len() {
-            let hex = &value[i + 1..i + 3];
-            if let Ok(byte) = u8::from_str_radix(hex, 16) {
-                out.push(byte);
-                i += 3;
-                continue;
-            }
-        }
-        if bytes[i] == b'+' {
-            out.push(b' ');
-        } else {
-            out.push(bytes[i]);
-        }
-        i += 1;
-    }
-    String::from_utf8_lossy(&out).into_owned()
-}
-
-fn json(status: u16, body: impl serde::Serialize) -> Outgoing {
-    Outgoing {
-        status,
-        body: serde_json::to_string(&body).unwrap_or_else(|_| "{\"error\":\"encode\"}".to_owned()),
-    }
-}
-
-fn invalid_scope() -> Outgoing {
-    json(400, serde_json::json!({"error": "invalid memory scope"}))
-}
-
-fn parse_scope(value: &str) -> std::result::Result<ScopeId, Outgoing> {
-    value.parse().map_err(|_| invalid_scope())
-}
-
-fn query_scope(query: &str) -> std::result::Result<ScopeId, Outgoing> {
-    query_param(query, "scope")
-        .ok_or_else(invalid_scope)
-        .and_then(|value| parse_scope(&value))
-}
-
-pub fn handle(connection: &Connection, expected_token: &str, req: &Incoming) -> Outgoing {
-    if !token_ok(expected_token, req.token.as_deref()) {
-        return json(401, serde_json::json!({"error": "unauthorized"}));
-    }
-    match (req.method.as_str(), req.path.as_str()) {
-        ("POST", "/remember") => remember(connection, &req.body),
-        ("GET", "/recall") => {
-            let scope = match query_scope(&req.query) {
-                Ok(scope) => scope,
-                Err(response) => return response,
-            };
-            let query = query_param(&req.query, "q").unwrap_or_default();
-            let limit = query_param(&req.query, "limit")
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(store::DEFAULT_RECALL_LIMIT);
-            let kind = query_param(&req.query, "type");
-            let max_chars = query_param(&req.query, "max_chars").and_then(|v| v.parse().ok());
-            match store::recall_scoped(
-                connection,
-                &scope,
-                &query,
-                limit,
-                kind.as_deref(),
-                max_chars,
-            ) {
-                Ok(memories) => json(200, serde_json::json!({"memories": memories})),
-                Err(error) => json(500, serde_json::json!({"error": error.to_string()})),
-            }
-        }
-        ("GET", "/list") => {
-            let scope = match query_scope(&req.query) {
-                Ok(scope) => scope,
-                Err(response) => return response,
-            };
-            let limit = query_param(&req.query, "limit")
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(20);
-            match store::list_scoped(connection, &scope, limit) {
-                Ok(memories) => json(200, serde_json::json!({"memories": memories})),
-                Err(error) => json(500, serde_json::json!({"error": error.to_string()})),
-            }
-        }
-        ("POST", "/forget") => forget(connection, &req.body),
-        ("GET", "/count") => {
-            let scope = match query_scope(&req.query) {
-                Ok(scope) => scope,
-                Err(response) => return response,
-            };
-            match store::count_scoped(connection, &scope) {
-                Ok(count) => json(200, serde_json::json!({"count": count})),
-                Err(error) => json(500, serde_json::json!({"error": error.to_string()})),
-            }
-        }
-        _ => json(404, serde_json::json!({"error": "not found"})),
-    }
-}
-
-fn remember(connection: &Connection, body: &str) -> Outgoing {
-    let parsed: RememberIn = match serde_json::from_str(body) {
-        Ok(value) => value,
-        Err(error) => return json(400, serde_json::json!({"error": error.to_string()})),
+    let request = match request::parse(incoming) {
+        Ok(request) => request,
+        Err(request::ParseError::NotFound) => return error(404, "not_found"),
+        Err(request::ParseError::Invalid) => return error(400, "invalid_request"),
     };
-    let scope = match parse_scope(&parsed.scope) {
-        Ok(scope) => scope,
-        Err(response) => return response,
+    let mut connection = match crate::store::open(database) {
+        Ok(connection) => connection,
+        Err(_) => return error(500, "internal"),
     };
-    match store::remember_scoped(
-        connection,
-        &scope,
-        &parsed.content,
-        &parsed.r#type,
-        &parsed.tags,
-        RememberOptions {
-            topic_key: parsed.topic_key.as_deref(),
-            force: parsed.force,
-            overwrite_id: parsed.id,
-        },
-    ) {
-        Ok(id) => json(200, serde_json::json!({"id": id})),
-        Err(error) => {
-            if let Some(similar) = error.downcast_ref::<store::SimilarMemories>() {
-                json(
-                    409,
-                    serde_json::json!({
-                        "error": "similar memories found; pass force to insert anyway",
-                        "candidates": similar.candidates
-                    }),
-                )
-            } else {
-                json(400, serde_json::json!({"error": error.to_string()}))
-            }
-        }
-    }
-}
-
-fn forget(connection: &Connection, body: &str) -> Outgoing {
-    let parsed: ForgetIn = match serde_json::from_str(body) {
-        Ok(value) => value,
-        Err(error) => return json(400, serde_json::json!({"error": error.to_string()})),
-    };
-    let scope = match parse_scope(&parsed.scope) {
-        Ok(scope) => scope,
-        Err(response) => return response,
-    };
-    match store::forget_scoped(connection, &scope, parsed.id) {
-        Ok(deleted) => json(200, serde_json::json!({"deleted": deleted})),
-        Err(error) => json(500, serde_json::json!({"error": error.to_string()})),
-    }
-}
-
-fn extract_token(headers: &[Header]) -> Option<String> {
-    for header in headers {
-        let name = header.field.as_str().as_str();
-        if name.eq_ignore_ascii_case("authorization") {
-            let value = header.value.as_str();
-            return Some(
-                value
-                    .strip_prefix("Bearer ")
-                    .unwrap_or(value)
-                    .trim()
-                    .to_owned(),
-            );
-        }
-        if name.eq_ignore_ascii_case("x-memocap-token") {
-            return Some(header.value.as_str().trim().to_owned());
-        }
-    }
-    None
+    routes::execute(&mut connection, request)
 }
 
 pub fn dispatch(
@@ -259,16 +58,13 @@ pub fn dispatch(
     body: &str,
     database: &Path,
 ) -> (u16, String) {
-    let connection = store::open(database).expect("open store");
-    let (path, query) = path.split_once('?').unwrap_or((path, ""));
     let incoming = Incoming {
         method: method.to_owned(),
         path: path.to_owned(),
-        query: query.to_owned(),
         token: authorized.then(|| "secret".to_owned()),
         body: body.to_owned(),
     };
-    let outgoing = handle(&connection, "secret", &incoming);
+    let outgoing = handle(database, "secret", &incoming);
     (outgoing.status, outgoing.body)
 }
 
@@ -276,32 +72,44 @@ pub fn serve(bind: &str, token: &str, database: &Path) -> Result<()> {
     if token.trim().is_empty() {
         anyhow::bail!("MEMOCAP_TOKEN is required to serve");
     }
-    let connection = store::open(database)?;
     let server = Server::http(bind).map_err(|error| anyhow::anyhow!(error.to_string()))?;
+    let json_header = Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
+        .map_err(|_| anyhow::anyhow!("static JSON header is invalid"))?;
     for mut request in server.incoming_requests() {
-        let url = request.url().to_string();
-        let (path, query) = url.split_once('?').unwrap_or((url.as_str(), ""));
         let incoming = Incoming {
             method: method_name(request.method()),
-            path: path.to_owned(),
-            query: query.to_owned(),
+            path: request.url().to_owned(),
             token: extract_token(request.headers()),
-            body: {
-                let mut body = String::new();
-                IoRead::read_to_string(&mut request.as_reader(), &mut body).ok();
-                body
-            },
+            body: read_body(&mut request),
         };
-        let outgoing = handle(&connection, token, &incoming);
+        let outgoing = handle(database, token, &incoming);
         let response = Response::from_string(outgoing.body)
             .with_status_code(StatusCode(outgoing.status))
-            .with_header(
-                Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
-                    .expect("static header"),
-            );
+            .with_header(json_header.clone());
         request.respond(response).ok();
     }
     Ok(())
+}
+
+fn read_body(request: &mut tiny_http::Request) -> String {
+    let mut body = String::new();
+    IoRead::read_to_string(&mut request.as_reader(), &mut body).ok();
+    body
+}
+
+fn extract_token(headers: &[Header]) -> Option<String> {
+    headers
+        .iter()
+        .find(|header| {
+            header
+                .field
+                .as_str()
+                .as_str()
+                .eq_ignore_ascii_case("authorization")
+        })
+        .and_then(|header| header.value.as_str().strip_prefix("Bearer "))
+        .filter(|token| !token.is_empty())
+        .map(ToOwned::to_owned)
 }
 
 fn method_name(method: &Method) -> String {
@@ -312,127 +120,12 @@ fn method_name(method: &Method) -> String {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub(super) fn error(status: u16, code: &'static str) -> Outgoing {
+    json(status, serde_json::json!({"error": code}))
+}
 
-    fn req(token: Option<&str>) -> Incoming {
-        Incoming {
-            method: "POST".to_owned(),
-            path: "/remember".to_owned(),
-            query: String::new(),
-            token: token.map(ToOwned::to_owned),
-            body: "{\"scope\":\"global\",\"content\":\"alpha\",\"type\":\"note\",\"tags\":\"\"}"
-                .to_owned(),
-        }
-    }
-
-    #[test]
-    fn token_reject_missing() {
-        let dir = tempfile::tempdir().unwrap();
-        let connection = store::open(&dir.path().join("db")).unwrap();
-        let response = handle(&connection, "secret", &req(None));
-        assert_eq!(response.status, 401);
-        assert!(response.body.contains("unauthorized"));
-        assert_eq!(store::count(&connection).unwrap(), 0);
-    }
-
-    #[test]
-    fn token_reject_wrong() {
-        let dir = tempfile::tempdir().unwrap();
-        let connection = store::open(&dir.path().join("db")).unwrap();
-        let response = handle(&connection, "secret", &req(Some("nope")));
-        assert_eq!(response.status, 401);
-        assert_eq!(store::count(&connection).unwrap(), 0);
-    }
-
-    #[test]
-    fn token_ok_writes_same_store() {
-        let dir = tempfile::tempdir().unwrap();
-        let connection = store::open(&dir.path().join("db")).unwrap();
-        let response = handle(&connection, "secret", &req(Some("secret")));
-        assert_eq!(response.status, 200);
-        assert_eq!(store::count(&connection).unwrap(), 1);
-        let found = store::recall(&connection, "alpha", 5, None, None).unwrap();
-        assert_eq!(found.len(), 1);
-    }
-
-    #[test]
-    fn remember_similar_requires_force() {
-        let dir = tempfile::tempdir().unwrap();
-        let connection = store::open(&dir.path().join("db")).unwrap();
-        let first = handle(&connection, "secret", &req(Some("secret")));
-        assert_eq!(first.status, 200);
-        assert_eq!(store::count(&connection).unwrap(), 1);
-        let again = handle(&connection, "secret", &req(Some("secret")));
-        assert_eq!(again.status, 409);
-        assert!(again.body.contains("similar memories found"));
-        assert!(again.body.contains("alpha"));
-        assert_eq!(store::count(&connection).unwrap(), 1);
-        let mut forced = req(Some("secret"));
-        forced.body =
-            r#"{"scope":"global","content":"alpha","type":"note","tags":"","force":true}"#
-                .to_owned();
-        let forced = handle(&connection, "secret", &forced);
-        assert_eq!(forced.status, 200);
-        assert_eq!(store::count(&connection).unwrap(), 2);
-    }
-
-    #[test]
-    fn recall_default_limit_and_type_filter() {
-        let dir = tempfile::tempdir().unwrap();
-        let connection = store::open(&dir.path().join("db")).unwrap();
-        for _ in 0..5 {
-            store::remember(
-                &connection,
-                "shared token",
-                "note",
-                "",
-                "global",
-                true,
-                None,
-            )
-            .unwrap();
-        }
-        store::remember(
-            &connection,
-            "shared token",
-            "preference",
-            "",
-            "global",
-            true,
-            None,
-        )
-        .unwrap();
-        let response = handle(
-            &connection,
-            "secret",
-            &Incoming {
-                method: "GET".to_owned(),
-                path: "/recall".to_owned(),
-                query: "scope=global&q=shared+token".to_owned(),
-                token: Some("secret".to_owned()),
-                body: String::new(),
-            },
-        );
-        assert_eq!(response.status, 200);
-        let value: serde_json::Value = serde_json::from_str(&response.body).unwrap();
-        assert_eq!(value["memories"].as_array().unwrap().len(), 3);
-        let response = handle(
-            &connection,
-            "secret",
-            &Incoming {
-                method: "GET".to_owned(),
-                path: "/recall".to_owned(),
-                query: "scope=global&q=shared+token&type=preference&limit=10".to_owned(),
-                token: Some("secret".to_owned()),
-                body: String::new(),
-            },
-        );
-        assert_eq!(response.status, 200);
-        let value: serde_json::Value = serde_json::from_str(&response.body).unwrap();
-        let memories = value["memories"].as_array().unwrap();
-        assert_eq!(memories.len(), 1);
-        assert_eq!(memories[0]["kind"], "preference");
-    }
+pub(super) fn json(status: u16, body: impl serde::Serialize) -> Outgoing {
+    let body =
+        serde_json::to_string(&body).unwrap_or_else(|_| "{\"error\":\"internal\"}".to_owned());
+    Outgoing { status, body }
 }
