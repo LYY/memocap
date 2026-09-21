@@ -2,7 +2,7 @@ services:
   memocap:
     build: .
     ports:
-      - "8787:8787"
+      - "127.0.0.1:8787:8787"
     environment:
       MEMOCAP_TOKEN: ${MEMOCAP_TOKEN:?set MEMOCAP_TOKEN}
       MEMOCAP_DATA_DIR: /data

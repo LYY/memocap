@@ -19,6 +19,10 @@ runtime validation. Run the service on a private network or put it behind a
 network policy when a shared token is not enough for your trust boundary.
 The remote trust boundary is not ACL, IAM, per-user authorization, or tenant isolation.
 
+Bearer authentication does not provide transport confidentiality or integrity.
+The server accepts HTTP and does not terminate TLS, so an untrusted network
+path could disclose the token and memory content or alter requests in transit.
+
 The server does not scan memory content for secrets and does not auto-classify
 memory placement. The OpenCode skill policy is model guidance only. Runtime
 validation, namespace selection, and authorization are separate:
@@ -32,8 +36,11 @@ validation, namespace selection, and authorization are separate:
 
 ## Compose deployment
 
-`compose.yaml` builds the image, publishes port `8787`, stores data in the
-`memocap-data` volume, and starts `serve --bind 0.0.0.0:8787`.
+`compose.yaml` builds the image, publishes `127.0.0.1:8787:8787` only on the
+host loopback interface, stores data in the `memocap-data` volume, and starts
+`serve --bind 0.0.0.0:8787` inside the container. The loopback host publish is
+the safe default for local plaintext HTTP clients; the container bind still
+allows a private Compose-network proxy to reach `memocap:8787`.
 
 ```sh
 export MEMOCAP_TOKEN='replace-with-a-long-random-token'
@@ -60,6 +67,23 @@ memocap status
 When `MEMOCAP_ADDR` is set, the CLI is remote only. A missing token fails the
 command. It never silently falls back to a local database. With no address, the
 CLI remains local and does not use the network.
+
+## Remote deployment
+
+The loopback default prevents public plaintext host publication. It does not
+make a deliberately remote deployment secure without transport protection.
+Do not replace the default with `8787:8787` or `0.0.0.0:8787:8787`.
+
+For remote clients, the operator must make a TLS-terminating reverse proxy the
+only public listener and keep the raw memocap HTTP port on a trusted private
+network. The proxy can reach `http://memocap:8787` on its private Compose
+network, or `http://127.0.0.1:8787` when it runs on the host. Configure the
+proxy with a valid HTTPS certificate, then set `MEMOCAP_ADDR` to the proxy's
+`https://` endpoint and provide the shared `MEMOCAP_TOKEN` to each client.
+
+This deployment guidance is not an implementation of TLS, ACL, IAM, per-user
+authorization, or tenant isolation. The one bearer token remains a shared
+service credential after TLS termination.
 
 ## Domain lifecycle
 

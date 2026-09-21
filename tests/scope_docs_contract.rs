@@ -1,5 +1,6 @@
 const REBUILD: &str = include_str!("../docs/REBUILD.md");
 const DEPLOYMENT: &str = include_str!("../docs/DEPLOYMENT.md");
+const COMPOSE: &str = include_str!("../compose.yaml");
 
 fn scope_contract_is_valid(document: &str) -> bool {
     let required = [
@@ -49,14 +50,26 @@ fn deployment_contract_is_valid(document: &str) -> bool {
         "operation status request can itself become unknown",
         "There is no route fallback and no remote-to-local fallback",
         "Write, delete, and legacy host actions are removed from the TUI, not deprecated",
+        "Bearer authentication does not provide transport confidentiality or integrity.",
+        "127.0.0.1:8787:8787",
+        "TLS-terminating reverse proxy",
+        "not an implementation of TLS, ACL, IAM",
     ];
     let forbidden = [
         "is ACL/IAM authorization with tenant isolation",
         "not_found proves manual replay is safe",
         "automatic classification guarantees compliance",
+        "Bearer authentication alone protects transport",
     ];
     required.iter().all(|claim| document.contains(claim))
         && forbidden.iter().all(|claim| !document.contains(claim))
+}
+
+fn compose_contract_is_valid(compose: &str) -> bool {
+    compose
+        .split_once("    ports:\n")
+        .and_then(|(_, remainder)| remainder.split_once("\n    environment:"))
+        .is_some_and(|(ports, _)| ports.trim() == "- \"127.0.0.1:8787:8787\"")
 }
 
 #[test]
@@ -102,6 +115,19 @@ fn deployment_documents_operator_surface_and_trust_boundary() {
 }
 
 #[test]
+fn compose_defaults_to_loopback_only_plaintext_access() {
+    assert!(compose_contract_is_valid(COMPOSE));
+}
+
+#[test]
+fn compose_contract_rejects_all_interface_plaintext_publish() {
+    for all_interface_publish in ["8787:8787", "0.0.0.0:8787:8787"] {
+        let mutated = COMPOSE.replace("127.0.0.1:8787:8787", all_interface_publish);
+        assert!(!compose_contract_is_valid(&mutated));
+    }
+}
+
+#[test]
 fn rebuild_contract_rejects_inverted_stack_precedence() {
     let mutated = REBUILD.replace(
         "repository、按持久化顺序排列的 attached domains、universal",
@@ -130,6 +156,15 @@ fn deployment_contract_rejects_unsafe_replay_claim() {
     let mutated = DEPLOYMENT.replace(
         "not_found alone does not prove manual replay is safe",
         "not_found proves manual replay is safe",
+    );
+    assert!(!deployment_contract_is_valid(&mutated));
+}
+
+#[test]
+fn deployment_contract_rejects_bearer_as_transport_protection() {
+    let mutated = DEPLOYMENT.replace(
+        "Bearer authentication does not provide transport confidentiality or integrity.",
+        "Bearer authentication alone protects transport confidentiality and integrity.",
     );
     assert!(!deployment_contract_is_valid(&mutated));
 }
