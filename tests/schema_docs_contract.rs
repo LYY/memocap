@@ -56,7 +56,8 @@ fn read_repo_file(path: &str) -> String {
 }
 
 fn policy_json(markdown: &str) -> Option<Value> {
-    let (_, fenced) = markdown.split_once(SCHEMA_DOC)?;
+    let normalized_markdown = markdown.replace("\r\n", "\n");
+    let (_, fenced) = normalized_markdown.split_once(SCHEMA_DOC)?;
     let json_block = fenced.split_once("\n```")?.0;
     serde_json::from_str(json_block).ok()
 }
@@ -218,6 +219,15 @@ fn schema_contract_has_machine_parseable_policy_and_required_links() {
     let changelog = read_repo_file("CHANGELOG.md");
     assert!(changelog.contains("data loss"));
     assert!(changelog.contains("no backup"));
+}
+
+#[test]
+fn schema_contract_accepts_windows_line_endings() {
+    let windows_schema_doc = read_repo_file(SCHEMA_DOC_PATH)
+        .replace("\r\n", "\n")
+        .replace('\n', "\r\n");
+
+    assert!(contract_is_valid(&windows_schema_doc));
 }
 
 #[test]
