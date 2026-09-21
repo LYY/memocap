@@ -99,6 +99,67 @@ fn copied_id(output: &Output) -> String {
 }
 
 #[test]
+fn omitted_copy_operation_id_replays_across_fresh_processes_without_duplicate_rows() {
+    // Given
+    let fixture = Fixture::new();
+    let source = fixture.run(&["remember", "default operation source", "--force"]);
+    assert_success(&source);
+    let source_id = saved_id(&source);
+    let repository = fixture.repository_id();
+
+    // When
+    let copied = fixture.run(&[
+        "scope",
+        "copy",
+        "--id",
+        &source_id,
+        "--from",
+        &repository,
+        "--to",
+        "universal",
+    ]);
+    let replayed = fixture.run(&[
+        "scope",
+        "copy",
+        "--id",
+        &source_id,
+        "--from",
+        &repository,
+        "--to",
+        "universal",
+    ]);
+
+    // Then
+    assert_success(&copied);
+    assert_success(&replayed);
+    assert_eq!(copied.stdout, replayed.stdout);
+    let database = rusqlite::Connection::open(fixture.database()).unwrap();
+    assert_eq!(
+        database
+            .query_row("SELECT COUNT(*) FROM memories", [], |row| row
+                .get::<_, i64>(0))
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        database
+            .query_row("SELECT COUNT(*) FROM memory_provenance", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        database
+            .query_row("SELECT COUNT(*) FROM operation_ledger", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        1
+    );
+}
+
+#[test]
 fn copy_replays_once_then_move_retains_id_and_provenance() {
     // Given
     let fixture = Fixture::new();
