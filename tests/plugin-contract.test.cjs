@@ -130,7 +130,11 @@ function replaceLine(text, pattern, replacement) {
 
 test("generated guidance extraction accepts CRLF source", () => {
   const source = fs.readFileSync(generatedRulesPath, "utf8");
-  assert.equal(generatedRules(source.replaceAll("\n", "\r\n")), generatedRules(source));
+  const normalizedSource = source.replaceAll("\r\n", "\n");
+  assert.equal(
+    generatedRules(normalizedSource.replaceAll("\n", "\r\n")),
+    generatedRules(normalizedSource),
+  );
 });
 
 test("generated, runtime, and static guidance share one least-sharing policy", async () => {
