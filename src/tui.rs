@@ -24,7 +24,6 @@ use crate::{
 };
 
 const ACTIONS: [&str; 3] = ["Status", "List visible memories", "Exit"];
-const REMOTE_INVENTORY_LIMIT: usize = 100;
 mod paging;
 use paging::{handle_key, InventoryPage, UiCommand, UiState, UiView};
 
@@ -146,7 +145,14 @@ fn remote_inventory_at(
     token: &str,
     repository: &RepositoryId,
 ) -> Result<Vec<InventoryMemory>> {
-    remote::list(address, token, repository, None, REMOTE_INVENTORY_LIMIT)
+    let status = remote::status(address, token, repository)?;
+    let limit = usize::try_from(status.status.addressable_total)
+        .context("远程 addressable inventory count 超出本地范围")?;
+    let inventory = remote::list(address, token, repository, None, limit)?;
+    if inventory.len() != limit {
+        anyhow::bail!("remote inventory response count does not match status");
+    }
+    Ok(inventory)
 }
 
 fn render(frame: &mut ratatui::Frame, state: &UiState) {
@@ -219,5 +225,9 @@ impl Drop for RestoreTerminal {
 
 #[cfg(test)]
 mod paging_tests;
+#[cfg(test)]
+mod remote_test_support;
+#[cfg(test)]
+mod remote_tests;
 #[cfg(test)]
 mod tests;

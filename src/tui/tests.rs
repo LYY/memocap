@@ -1,62 +1,5 @@
 use super::*;
 use ratatui::{backend::TestBackend, Terminal};
-use std::{
-    path::PathBuf,
-    sync::mpsc::{self, Receiver},
-    thread::{self, JoinHandle},
-    time::{Duration, Instant},
-};
-use tiny_http::{Header, Response, Server, StatusCode};
-
-const REMOTE_TOKEN: &str = "tui-remote-token";
-
-fn remote_server(database: PathBuf) -> (String, Receiver<String>, JoinHandle<()>) {
-    let server = Server::http("127.0.0.1:0").unwrap();
-    let address = format!("http://{}", server.server_addr());
-    let (sender, receiver) = mpsc::channel();
-    let handle = thread::spawn(move || {
-        let deadline = Instant::now() + Duration::from_secs(2);
-        while Instant::now() < deadline {
-            let Some(mut request) = server.recv_timeout(Duration::from_millis(50)).unwrap() else {
-                continue;
-            };
-            let token = request
-                .headers()
-                .iter()
-                .find(|header| {
-                    header
-                        .field
-                        .as_str()
-                        .as_str()
-                        .eq_ignore_ascii_case("authorization")
-                })
-                .and_then(|header| header.value.as_str().strip_prefix("Bearer "))
-                .map(ToOwned::to_owned);
-            let mut body = String::new();
-            std::io::Read::read_to_string(&mut request.as_reader(), &mut body).unwrap();
-            let incoming = crate::server::Incoming {
-                method: request.method().to_string().to_ascii_uppercase(),
-                path: request.url().to_owned(),
-                token,
-                body,
-            };
-            let outgoing = crate::server::handle(&database, REMOTE_TOKEN, &incoming);
-            request
-                .respond(
-                    Response::from_string(outgoing.body)
-                        .with_status_code(StatusCode(outgoing.status))
-                        .with_header(
-                            Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
-                                .unwrap(),
-                        ),
-                )
-                .unwrap();
-            sender.send(incoming.path).unwrap();
-            return;
-        }
-    });
-    (address, receiver, handle)
-}
 
 pub(super) fn repository() -> RepositoryId {
     "repository:0000000000000000000000000000000000000000000000000000000000000000"
@@ -246,29 +189,4 @@ fn visible_memories_action_renders_the_annotated_inventory() {
     assert!(message.contains("source_order: 2"));
     assert!(message.contains("visibility: shadowed"));
     assert!(message.contains("shadowed_by: source 0"));
-}
-
-#[test]
-fn remote_inventory_reads_visible_stack_via_v1() {
-    let directory = tempfile::tempdir().unwrap();
-    let database = directory.path().join("remote.db");
-    let repository = repository();
-    let connection = crate::store::open(&database).unwrap();
-    save(
-        &connection,
-        &crate::scope::PlacementId::Universal,
-        "remote universal fixture",
-        "topic",
-    );
-    let (address, requests, server) = remote_server(database);
-
-    let memories = remote_inventory_at(&address, REMOTE_TOKEN, &repository).unwrap();
-
-    server.join().unwrap();
-    assert_eq!(
-        requests.iter().collect::<Vec<_>>(),
-        vec!["/v1/memories/list"]
-    );
-    assert_eq!(memories.len(), 1);
-    assert_eq!(memories[0].memory.content, "remote universal fixture");
 }
