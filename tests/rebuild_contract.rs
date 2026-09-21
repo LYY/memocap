@@ -147,6 +147,13 @@ fn real_rebuild_document_satisfies_strict_contract() {
     assert!(rebuild_contract_is_valid(&with_lf_line_endings(REBUILD)));
 }
 
+#[test]
+fn rebuild_contract_accepts_windows_line_endings() {
+    let windows_rebuild = with_lf_line_endings(REBUILD).replace('\n', "\r\n");
+
+    assert!(rebuild_contract_is_valid(&windows_rebuild));
+}
+
 fn current_install_section(rebuild: &str) -> &str {
     rebuild
         .split_once("## 当前安装和边界")
@@ -270,8 +277,9 @@ fn rebuild_contract_is_valid(rebuild: &str) -> bool {
         && !has_broad_multi_host_support_claim(rebuild)
 }
 
-fn command_matrix(rebuild: &str) -> &str {
-    let section = rebuild
+fn command_matrix(rebuild: &str) -> String {
+    let normalized_rebuild = with_lf_line_endings(rebuild);
+    let section = normalized_rebuild
         .split_once("## 当前命令矩阵")
         .map(|(_, section)| section)
         .expect("REBUILD must contain current command matrix");
@@ -280,7 +288,7 @@ fn command_matrix(rebuild: &str) -> &str {
         .expect("REBUILD must contain command matrix block");
     block
         .split_once("\n```")
-        .map(|(matrix, _)| matrix)
+        .map(|(matrix, _)| matrix.to_owned())
         .expect("REBUILD command matrix must close")
 }
 
