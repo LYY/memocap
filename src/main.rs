@@ -1,7 +1,7 @@
 use anyhow::Result;
-use clap::{ArgGroup, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 
-use memocap::scope;
+use memocap::{remote, scope};
 
 mod commands;
 
@@ -31,10 +31,13 @@ pub(crate) enum Command {
         /// Overwrite an existing memory by id.
         #[arg(long)]
         id: Option<i64>,
-        /// Store in the global memory scope.
+        /// Store in an attached domain.
+        #[arg(long, conflicts_with = "universal")]
+        domain: Option<scope::DomainId>,
+        /// Store in universal memory.
         #[arg(long)]
-        global: bool,
-        /// Topic used to replace a global memory during repository recall.
+        universal: bool,
+        /// Label memory with a topic.
         #[arg(long)]
         topic: Option<String>,
     },
@@ -47,72 +50,123 @@ pub(crate) enum Command {
         r#type: Option<String>,
         #[arg(long)]
         max_chars: Option<usize>,
-        /// Search only global memories.
+        /// Search only an attached domain.
+        #[arg(long, conflicts_with = "universal")]
+        domain: Option<scope::DomainId>,
+        /// Search only universal memory.
         #[arg(long)]
-        global: bool,
+        universal: bool,
     },
     /// Show newest memories.
     List {
         #[arg(long, default_value_t = 20)]
         limit: usize,
-        /// Show only global memories.
+        /// Show only an attached domain.
+        #[arg(long, conflicts_with = "universal")]
+        domain: Option<scope::DomainId>,
+        /// Show only universal memory.
         #[arg(long)]
-        global: bool,
+        universal: bool,
     },
     /// Delete one memory by ID.
     Forget {
         id: i64,
-        /// Delete only from the global memory scope.
+        /// Delete only from an attached domain.
+        #[arg(long, conflicts_with = "universal")]
+        domain: Option<scope::DomainId>,
+        /// Delete only from universal memory.
         #[arg(long)]
-        global: bool,
+        universal: bool,
     },
-    /// Inspect or migrate local memory scopes.
+    /// Inspect local memory placement and domains.
     Scope {
         #[command(subcommand)]
         command: ScopeCommand,
     },
-    /// Configure legacy compatibility files (unsupported).
-    Install {
-        /// Write legacy compatibility files under the user home (unsupported).
-        #[arg(long)]
-        global: bool,
+    /// Inspect a remote copy/move operation without replaying it.
+    Operation {
+        #[command(subcommand)]
+        command: OperationCommand,
     },
-    /// Remove only memocap's legacy compatibility blocks (unsupported).
-    Uninstall {
-        #[arg(long)]
-        global: bool,
-    },
-    /// Print legacy compatibility install and database status.
-    Status {
-        #[arg(long)]
-        global: bool,
-    },
+    /// Print database and placement status.
+    Status,
     /// Serve the same SQLite over HTTP. Token required.
     Serve {
         #[arg(long, default_value = "127.0.0.1:8787")]
         bind: String,
     },
-    /// Open the interactive installer.
+    /// Open the interactive menu.
     Ui,
 }
 
 #[derive(Subcommand)]
 pub(crate) enum ScopeCommand {
-    /// Show the current opaque repository scope.
+    /// Show the current repository and its attached domains.
     Show,
-    /// Move global or historical memories into the current repository scope.
-    #[command(group = ArgGroup::new("migration_selector").required(true))]
-    Migrate {
+    /// Copy one memory between exact local placements.
+    Copy {
         #[arg(long)]
-        from: scope::ScopeId,
-        #[arg(long, group = "migration_selector")]
-        id: Option<i64>,
-        #[arg(long, group = "migration_selector")]
-        all: bool,
-        #[arg(long, conflicts_with = "yes")]
-        dry_run: bool,
-        #[arg(long, requires = "all", conflicts_with = "dry_run")]
+        id: i64,
+        #[arg(long)]
+        from: scope::PlacementId,
+        #[arg(long)]
+        to: scope::PlacementId,
+        #[arg(long)]
+        operation_id: Option<scope::OperationId>,
+        #[arg(long)]
+        note: Option<String>,
+    },
+    /// Move one memory between exact local placements.
+    Move {
+        #[arg(long)]
+        id: i64,
+        #[arg(long)]
+        from: scope::PlacementId,
+        #[arg(long)]
+        to: scope::PlacementId,
+        #[arg(long)]
         yes: bool,
+        #[arg(long)]
+        operation_id: Option<scope::OperationId>,
+        #[arg(long)]
+        note: Option<String>,
+    },
+    /// Manage the reusable domain registry and this repository's attachments.
+    Domain {
+        #[command(subcommand)]
+        command: DomainCommand,
+    },
+}
+
+#[derive(Subcommand)]
+pub(crate) enum DomainCommand {
+    /// Register a reusable domain ID.
+    Create { domain: scope::DomainId },
+    /// Attach a registered domain to the current repository.
+    Attach {
+        domain: scope::DomainId,
+        /// Insert before an already attached domain.
+        #[arg(long)]
+        before: Option<scope::DomainId>,
+    },
+    /// Detach a domain from the current repository.
+    Detach { domain: scope::DomainId },
+    /// List current repository attachments, or every registered domain.
+    List {
+        /// List every registered domain instead of current repository attachments.
+        #[arg(long)]
+        all: bool,
+    },
+    /// Delete an unused domain from the registry.
+    Delete { domain: scope::DomainId },
+}
+
+#[derive(Subcommand)]
+pub(crate) enum OperationCommand {
+    /// Read one remote operation outcome from its recovery handle.
+    Status {
+        #[arg(long)]
+        recovery: remote::RecoveryHandle,
     },
 }
 

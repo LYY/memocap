@@ -3,13 +3,20 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 
 use crate::{
     config,
     config::Target,
-    scope::{ResolvedScope, ScopeId},
-    store::{self, Memory, RememberOptions, ScopeMigration},
+    scope::{DomainId, PlacementId, RepositoryId, ResolvedScope},
+    store::{self, InventoryMemory, RememberOptions, VisibleStackStatus},
+};
+
+mod domains;
+
+pub use domains::{
+    attach_domain, attached_domains, create_domain, delete_domain, detach_domain, domains,
+    format_domains, format_scope_show,
 };
 
 pub struct ScopedRemember<'a> {
@@ -28,25 +35,10 @@ pub struct ScopedRecall<'a> {
     pub max_chars: Option<usize>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ScopeCounts {
-    pub repository: i64,
-    pub global: i64,
-    pub visible: i64,
-}
-
-pub struct ScopeMigrationRequest<'a> {
-    pub source: &'a ScopeId,
-    pub destination: &'a ScopeId,
-    pub migration: ScopeMigration,
-    pub dry_run: bool,
-}
-
-pub struct LocalStatus<'a> {
-    pub scope: &'a ScopeId,
-    pub counts: ScopeCounts,
-    pub agents_path: &'a Path,
-    pub configured: bool,
+#[derive(Debug, Clone)]
+pub enum PlacementSelector {
+    Domain(DomainId),
+    Universal,
 }
 
 pub fn current_scope() -> Result<ResolvedScope> {
@@ -63,41 +55,29 @@ pub fn local_database() -> Result<PathBuf> {
     }
 }
 
-pub fn memory_scope(global: bool) -> Result<ScopeId> {
-    if global {
-        Ok(ScopeId::global())
-    } else {
-        Ok(current_scope()?.scope().clone())
+pub fn placement_selector(
+    domain: Option<DomainId>,
+    universal: bool,
+) -> Result<Option<PlacementSelector>> {
+    match (domain, universal) {
+        (Some(domain), false) => Ok(Some(PlacementSelector::Domain(domain))),
+        (None, true) => Ok(Some(PlacementSelector::Universal)),
+        (None, false) => Ok(None),
+        (Some(_), true) => bail!("--domain conflicts with --universal"),
     }
 }
 
-pub fn remember(
+pub fn remember_placed(
     database: &Path,
-    content: &str,
-    kind: &str,
-    tags: &str,
-    force: bool,
-    overwrite_id: Option<i64>,
-) -> Result<i64> {
-    store::remember(
-        &store::open(database)?,
-        content,
-        kind,
-        tags,
-        "global",
-        force,
-        overwrite_id,
-    )
-}
-
-pub fn remember_scoped(
-    database: &Path,
-    scope: &ScopeId,
+    selector: Option<PlacementSelector>,
     memory: ScopedRemember<'_>,
 ) -> Result<i64> {
-    store::remember_scoped(
-        &store::open(database)?,
-        scope,
+    let repository = repository_for_selector(selector.as_ref())?;
+    let connection = store::open(database)?;
+    let placement = exact_placement(&connection, selector.as_ref(), repository.as_ref())?;
+    store::remember_at(
+        &connection,
+        &placement,
         memory.content,
         memory.kind,
         memory.tags,
@@ -109,24 +89,17 @@ pub fn remember_scoped(
     )
 }
 
-pub fn recall(
+pub fn recall_placed(
     database: &Path,
-    query: &str,
-    limit: usize,
-    kind: Option<&str>,
-    max_chars: Option<usize>,
-) -> Result<Vec<Memory>> {
-    store::recall(&store::open(database)?, query, limit, kind, max_chars)
-}
-
-pub fn recall_scoped(
-    database: &Path,
-    scope: &ScopeId,
+    selector: Option<PlacementSelector>,
     query: ScopedRecall<'_>,
-) -> Result<Vec<Memory>> {
-    store::recall_scoped(
-        &store::open(database)?,
-        scope,
+) -> Result<Vec<InventoryMemory>> {
+    let repository = repository_for_selector(selector.as_ref())?;
+    let connection = store::open(database)?;
+    let sources = read_sources(&connection, selector.as_ref(), repository.as_ref())?;
+    store::recall_visible(
+        &connection,
+        &sources,
         query.query,
         query.limit,
         query.kind,
@@ -134,56 +107,72 @@ pub fn recall_scoped(
     )
 }
 
-pub fn list(database: &Path, limit: usize) -> Result<Vec<Memory>> {
-    store::list(&store::open(database)?, limit)
+pub fn list_placed(
+    database: &Path,
+    selector: Option<PlacementSelector>,
+    limit: usize,
+) -> Result<Vec<InventoryMemory>> {
+    let repository = repository_for_selector(selector.as_ref())?;
+    list_placed_for(database, selector.as_ref(), repository.as_ref(), limit)
 }
 
-pub fn list_scoped(database: &Path, scope: &ScopeId, limit: usize) -> Result<Vec<Memory>> {
-    store::list_scoped(&store::open(database)?, scope, limit)
-}
-
-pub fn forget(database: &Path, id: i64) -> Result<bool> {
-    store::forget(&store::open(database)?, id)
-}
-
-pub fn forget_scoped(database: &Path, scope: &ScopeId, id: i64) -> Result<bool> {
-    store::forget_scoped(&store::open(database)?, scope, id)
-}
-
-pub fn count(database: &Path) -> Result<i64> {
-    store::count(&store::open(database)?)
-}
-
-pub fn scope_counts(database: &Path, scope: &ScopeId) -> Result<ScopeCounts> {
+pub fn list_visible(database: &Path, repository: &RepositoryId) -> Result<Vec<InventoryMemory>> {
     let connection = store::open(database)?;
-    let repository = store::scope_migration_count(&connection, scope, ScopeMigration::All)?;
-    let global =
-        store::scope_migration_count(&connection, &ScopeId::global(), ScopeMigration::All)?;
-    let visible = store::count_scoped(&connection, scope)?;
-    Ok(ScopeCounts {
-        repository,
-        global,
-        visible,
-    })
+    let sources = read_sources(&connection, None, Some(repository))?;
+    store::visible_inventory(&connection, &sources)
 }
 
-pub fn migrate_scope(database: &Path, request: ScopeMigrationRequest<'_>) -> Result<i64> {
-    store::migrate_scope(
-        &mut store::open(database)?,
-        request.source,
-        request.destination,
-        request.migration,
-        request.dry_run,
-    )
+fn list_placed_for(
+    database: &Path,
+    selector: Option<&PlacementSelector>,
+    repository: Option<&RepositoryId>,
+    limit: usize,
+) -> Result<Vec<InventoryMemory>> {
+    let connection = store::open(database)?;
+    let sources = read_sources(&connection, selector, repository)?;
+    store::list_inventory(&connection, &sources, limit)
+}
+
+pub fn visible_status(database: &Path, repository: &RepositoryId) -> Result<VisibleStackStatus> {
+    let connection = store::open(database)?;
+    let sources = store::visible_sources(&connection, repository)?;
+    store::visible_status(&connection, &sources)
+}
+
+pub fn forget_placed(
+    database: &Path,
+    selector: Option<PlacementSelector>,
+    id: i64,
+) -> Result<bool> {
+    let repository = repository_for_selector(selector.as_ref())?;
+    let connection = store::open(database)?;
+    let placement = exact_placement(&connection, selector.as_ref(), repository.as_ref())?;
+    store::forget_at(&connection, &placement, id)
+}
+
+pub fn copy_move(
+    database: &Path,
+    repository: &RepositoryId,
+    input: store::CopyMoveInput,
+) -> Result<store::CopyMoveResult> {
+    let mut connection = store::open(database)?;
+    let request = store::CopyMoveRequest::prepare(repository.clone(), input)?;
+    if let Some(result) = store::replay_copy_move(&connection, &request)? {
+        return Ok(result);
+    }
+    validate_transfer_placement(&connection, repository, request.from())?;
+    validate_transfer_placement(&connection, repository, request.to())?;
+    store::copy_move(&mut connection, request)
 }
 
 #[must_use]
-pub fn format_memories(memories: &[Memory]) -> String {
+pub fn format_memories(memories: &[InventoryMemory]) -> String {
     if memories.is_empty() {
         return "No local memories found.\n".to_owned();
     }
     let mut out = String::new();
-    for memory in memories {
+    for entry in memories {
+        let memory = &entry.memory;
         out.push_str(&format!(
             "#{} [{}] {}\n",
             memory.id, memory.kind, memory.content
@@ -191,16 +180,21 @@ pub fn format_memories(memories: &[Memory]) -> String {
         if !memory.tags.is_empty() {
             out.push_str(&format!("  tags: {}\n", memory.tags));
         }
-        out.push_str(&format!(
-            "  source: {}\n",
-            if memory.scope == "global" {
-                "global"
-            } else {
-                "repository"
-            }
-        ));
+        out.push_str(&format!("  placement: {}\n", memory.placement));
         if !memory.topic_key.is_empty() {
             out.push_str(&format!("  topic: {}\n", memory.topic_key));
+        }
+        out.push_str(&format!("  source_order: {}\n", entry.source_order));
+        match &entry.visibility {
+            store::Visibility::Visible => {
+                out.push_str("  visibility: visible\n  shadowed_by: none\n");
+            }
+            store::Visibility::Shadowed(cause) => {
+                out.push_str(&format!(
+                    "  visibility: shadowed\n  shadowed_by: source {} {} topic {}\n",
+                    cause.source_order, cause.placement, cause.topic_key
+                ));
+            }
         }
         out.push_str(&format!("  time: {}\n", memory.created_at));
     }
@@ -208,43 +202,103 @@ pub fn format_memories(memories: &[Memory]) -> String {
 }
 
 #[must_use]
-pub fn format_scope_show(scope: &ResolvedScope) -> String {
+pub fn format_copy_move(result: &store::CopyMoveResult) -> String {
     format!(
-        "active_scope: {}\nsource: {}\n",
-        scope.scope(),
-        scope.source().label()
+        "{} #{} from {} to {}\noperation_id: {}\n",
+        result.action.past_tense(),
+        result.memory_id,
+        result.from,
+        result.to,
+        result.operation_id
     )
 }
 
 #[must_use]
-pub fn format_scope_status(scope: &ScopeId, counts: ScopeCounts) -> String {
-    format!(
-        "active_scope: {scope}\nrepository_count: {}\nglobal_count: {}\nvisible_count: {}\n",
-        counts.repository, counts.global, counts.visible
-    )
+pub fn format_visible_status(status: &VisibleStackStatus) -> String {
+    let mut output = format!("schema_version: {}\n", status.schema_version);
+    for count in &status.placements {
+        output.push_str(&format!(
+            "source {} placement: {} addressable_count: {} effective_count: {}\n",
+            count.source_order, count.placement, count.addressable_count, count.effective_count
+        ));
+    }
+    output.push_str(&format!(
+        "addressable_total: {}\neffective_total: {}\n",
+        status.addressable_total, status.effective_total
+    ));
+    output
 }
 
-#[must_use]
-pub fn format_status(database: &Path, status: LocalStatus<'_>) -> String {
-    format!(
-        "database: {}\n{}AGENTS.md: {}\nconfigured: {}\n",
-        database.display(),
-        format_scope_status(status.scope, status.counts),
-        status.agents_path.display(),
-        if status.configured { "yes" } else { "no" }
-    )
+fn repository_for_selector(selector: Option<&PlacementSelector>) -> Result<Option<RepositoryId>> {
+    match selector {
+        Some(PlacementSelector::Universal) => Ok(None),
+        Some(PlacementSelector::Domain(_)) | None => {
+            Ok(Some(current_scope()?.repository().clone()))
+        }
+    }
 }
 
-#[must_use]
-pub fn format_remote_status(
-    address: &str,
-    count: i64,
-    agents_path: &Path,
-    configured: bool,
-) -> String {
-    format!(
-        "remote: {address}\ncount: {count}\nAGENTS.md: {}\nconfigured: {}\n",
-        agents_path.display(),
-        if configured { "yes" } else { "no" }
-    )
+fn read_sources(
+    connection: &rusqlite::Connection,
+    selector: Option<&PlacementSelector>,
+    repository: Option<&RepositoryId>,
+) -> Result<Vec<store::VisibleSource>> {
+    if selector.is_some() {
+        return Ok(vec![store::single_visible_source(exact_placement(
+            connection, selector, repository,
+        )?)]);
+    }
+    let repository = repository.context("repository placement requires a current repository")?;
+    store::visible_sources(connection, repository)
+}
+
+fn exact_placement(
+    connection: &rusqlite::Connection,
+    selector: Option<&PlacementSelector>,
+    repository: Option<&RepositoryId>,
+) -> Result<PlacementId> {
+    match selector {
+        Some(PlacementSelector::Universal) => Ok(PlacementId::Universal),
+        Some(PlacementSelector::Domain(domain)) => {
+            let repository =
+                repository.context("domain placement requires a current repository")?;
+            validate_domain_placement(connection, repository, domain)?;
+            Ok(PlacementId::Domain(domain.clone()))
+        }
+        None => repository
+            .cloned()
+            .map(PlacementId::Repository)
+            .context("repository placement requires a current repository"),
+    }
+}
+
+fn validate_domain_placement(
+    connection: &rusqlite::Connection,
+    repository: &RepositoryId,
+    domain: &DomainId,
+) -> Result<()> {
+    if !store::domains(connection)?.contains(domain) {
+        bail!("domain {domain} does not exist");
+    }
+    if !store::attached_domains(connection, repository)?.contains(domain) {
+        bail!("domain {domain} is not attached to this repository");
+    }
+    Ok(())
+}
+
+fn validate_transfer_placement(
+    connection: &rusqlite::Connection,
+    repository: &RepositoryId,
+    placement: &PlacementId,
+) -> Result<()> {
+    match placement {
+        PlacementId::Repository(placement_repository) => {
+            if placement_repository != repository {
+                bail!("repository placement must match the current repository");
+            }
+        }
+        PlacementId::Domain(domain) => validate_domain_placement(connection, repository, domain)?,
+        PlacementId::Universal => {}
+    }
+    Ok(())
 }
