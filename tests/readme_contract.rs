@@ -41,7 +41,7 @@ fn install_commands(readme: &str) -> Vec<&str> {
 
 fn install_contract_is_valid(readme: &str) -> bool {
     let section = install_section(readme);
-    let global_install = "pnpm add -g @lyy-gh/memocap@0.0.5";
+    let global_install = "pnpm add -g @lyy-gh/memocap@0.0.6";
     let plugin_install = "opencode plugin @lyy-gh/memocap";
     let Some(global_position) = section.find(global_install) else {
         return false;
@@ -121,7 +121,7 @@ fn repository_rows_name_only_opencode_without_changing_third_party_rows() {
 #[test]
 fn bilingual_install_contract_has_same_machine_consumed_values() {
     for value in [
-        "pnpm add -g @lyy-gh/memocap@0.0.5",
+        "pnpm add -g @lyy-gh/memocap@0.0.6",
         "opencode plugin @lyy-gh/memocap",
         "git clone https://github.com/LYY/memocap",
     ] {
@@ -139,7 +139,8 @@ fn both_readmes_document_the_current_scope_command_surface() {
             "--tags <TAGS>",
             "--force",
             "--id <ID>",
-            "--global",
+            "--domain <DOMAIN>",
+            "--universal",
             "--topic <TOPIC>",
             "memocap recall",
             "--limit <LIMIT>",
@@ -147,12 +148,18 @@ fn both_readmes_document_the_current_scope_command_surface() {
             "memocap list",
             "memocap forget",
             "memocap scope show",
-            "memocap scope migrate",
-            "--from <FROM>",
-            "--dry-run",
+            "memocap scope domain create",
+            "memocap scope domain attach",
+            "memocap scope domain detach",
+            "memocap scope domain list",
+            "memocap scope domain delete",
+            "memocap scope copy",
+            "memocap scope move",
+            "--from <PLACEMENT>",
+            "--to <PLACEMENT>",
             "--yes",
-            "memocap install",
-            "memocap uninstall",
+            "memocap operation status",
+            "--recovery <RECOVERY>",
             "memocap status",
             "memocap serve",
             "--bind <BIND>",
@@ -164,21 +171,17 @@ fn both_readmes_document_the_current_scope_command_surface() {
 }
 
 #[test]
-fn both_readmes_document_scope_visibility_topic_shadow_and_migration() {
+fn both_readmes_document_scope_visibility_and_topic_shadow() {
     assert!(ENGLISH.contains("repository scope"));
-    assert!(ENGLISH.contains("global scope"));
-    assert!(ENGLISH.contains("recall includes the current repository scope and the global scope"));
-    assert!(ENGLISH.contains("same non-empty topic"));
-    assert!(ENGLISH.contains("does not automatically migrate"));
-    assert!(ENGLISH.contains("local-only"));
-    assert!(ENGLISH.contains("non-Git directory"));
+    assert!(ENGLISH.contains("universal memory"));
+    assert!(ENGLISH.contains("default visible stack is ordered as follows"));
+    assert!(ENGLISH.contains("same non-empty normalized topic shadows matching"));
+    assert!(ENGLISH.contains("canonical non-Git directory path"));
 
     assert!(CHINESE.contains("仓库 scope"));
-    assert!(CHINESE.contains("global scope"));
-    assert!(CHINESE.contains("recall 会同时检索当前仓库 scope 和 global scope"));
-    assert!(CHINESE.contains("相同的非空 topic"));
-    assert!(CHINESE.contains("不会自动迁移"));
-    assert!(CHINESE.contains("仅限本地"));
+    assert!(CHINESE.contains("universal memory"));
+    assert!(CHINESE.contains("默认 visible stack 顺序是"));
+    assert!(CHINESE.contains("相同的非空 normalized topic 会遮蔽"));
     assert!(CHINESE.contains("非 Git 目录"));
 }
 
@@ -189,12 +192,14 @@ fn both_readmes_document_strict_remote_selection_and_scope_transport() {
     assert!(ENGLISH.contains("address and token"));
     assert!(ENGLISH.contains("scope"));
     assert!(ENGLISH.contains("does not fall back to local"));
+    assert!(ENGLISH.contains("Remote requests carry a valid remote scope ID"));
 
     assert!(CHINESE.contains("MEMOCAP_ADDR"));
     assert!(CHINESE.contains("MEMOCAP_TOKEN"));
     assert!(CHINESE.contains("地址和 token"));
     assert!(CHINESE.contains("scope"));
     assert!(CHINESE.contains("不会回退到本地"));
+    assert!(CHINESE.contains("远程请求携带有效 remote scope ID"));
 }
 
 #[test]
@@ -212,34 +217,129 @@ fn both_readmes_document_non_git_scope_identity() {
 }
 
 #[test]
-fn both_readmes_document_migration_source_and_mode_constraints() {
-    assert!(ENGLISH.contains("exactly one of"));
-    assert!(ENGLISH.contains("--all"));
-    assert!(ENGLISH.contains("--id <ID>"));
-    assert!(ENGLISH.contains("--dry-run"));
-    assert!(ENGLISH.contains("--yes"));
+fn bilingual_scope_command_blocks_are_behaviorally_aligned() {
+    assert_eq!(command_matrix(ENGLISH), command_matrix(CHINESE));
+    for command in [
+        "memocap scope show",
+        "memocap scope domain create <DOMAIN>",
+        "memocap scope domain attach <DOMAIN> [--before <DOMAIN>]",
+        "memocap scope domain detach <DOMAIN>",
+        "memocap scope domain list [--all]",
+        "memocap scope domain delete <DOMAIN>",
+        "memocap scope copy --id <ID> --from <PLACEMENT> --to <PLACEMENT>",
+        "memocap scope move --id <ID> --from <PLACEMENT> --to <PLACEMENT> --yes",
+        "memocap operation status --recovery <RECOVERY>",
+    ] {
+        assert!(
+            command_matrix(ENGLISH).contains(command),
+            "matrix missing {command}"
+        );
+    }
+}
 
-    assert!(CHINESE.contains("只能选择一个"));
-    assert!(CHINESE.contains("--all"));
-    assert!(CHINESE.contains("--id <ID>"));
-    assert!(CHINESE.contains("--dry-run"));
-    assert!(CHINESE.contains("--yes"));
+fn command_matrix(readme: &str) -> &str {
+    let heading = if readme.contains("## Command matrix") {
+        "## Command matrix"
+    } else {
+        "## 命令矩阵"
+    };
+    let section = readme
+        .split_once(heading)
+        .map(|(_, section)| section)
+        .expect("README must contain command matrix heading");
+    let (_, block) = section
+        .split_once("```text\n")
+        .expect("README must contain command matrix block");
+    block
+        .split_once("\n```")
+        .map(|(matrix, _)| matrix)
+        .expect("README command matrix must close")
+}
+
+fn current_docs_contract_is_valid(readme: &str) -> bool {
+    let required = [
+        "memocap scope domain create",
+        "memocap scope copy",
+        "memocap scope move",
+        "memocap operation status --recovery",
+        "repository, then attached domains in persisted order, then universal",
+        "not ACL, IAM, per-user authorization, or tenant isolation",
+        "does not auto-classify content",
+        "guarantee compliance",
+        "not prove manual replay is safe",
+        "removed, not deprecated",
+        "Legacy unversioned HTTP routes are removed",
+        "Runtime validation is separate",
+        "Namespace selection is separate again",
+        "Authorization is only",
+    ];
+    let forbidden = [
+        "POST /remember",
+        "POST /recall",
+        "POST /list",
+        "POST /forget",
+        "POST /status",
+        "universal, then attached domains",
+        "is ACL/IAM",
+        "auto-classifies content",
+        "not_found permits manual replay",
+    ];
+    required.iter().all(|claim| readme.contains(claim))
+        && forbidden.iter().all(|claim| !readme.contains(claim))
+        && !command_matrix(readme).contains("memocap install")
+        && !command_matrix(readme).contains("memocap uninstall")
+        && !command_matrix(readme).contains("--global")
 }
 
 #[test]
-fn bilingual_scope_command_blocks_are_behaviorally_aligned() {
-    let expected = [
-        "memocap scope show",
-        "memocap remember --global",
-        "memocap recall --global",
-        "memocap remember --topic",
-        "memocap scope migrate --from global --all --dry-run",
-        "memocap scope migrate --from global --all --yes",
-    ];
-    for command in expected {
-        assert!(ENGLISH.contains(command), "English missing {command}");
-        assert!(CHINESE.contains(command), "Chinese missing {command}");
-    }
+fn both_readmes_keep_current_domain_remote_and_recovery_contract() {
+    assert!(current_docs_contract_is_valid(ENGLISH));
+    assert!(CHINESE.contains("已移除的 surface 是 removed，不是 deprecated"));
+    assert!(CHINESE.contains("不会自动分类"));
+    assert!(CHINESE.contains("不是 ACL、IAM、按用户授权或 tenant isolation"));
+    assert!(CHINESE.contains("not_found alone 不证明手工 replay 安全"));
+}
+
+#[test]
+fn readme_contract_rejects_inverted_stack_precedence() {
+    let mutated = ENGLISH.replace(
+        "repository, then attached domains in persisted order, then universal",
+        "universal, then attached domains in persisted order, then repository",
+    );
+    assert!(!current_docs_contract_is_valid(&mutated));
+}
+
+#[test]
+fn readme_contract_rejects_auto_classification_claim() {
+    let mutated = ENGLISH.replace("does not auto-classify", "auto-classifies");
+    assert!(!current_docs_contract_is_valid(&mutated));
+}
+
+#[test]
+fn readme_contract_rejects_acl_claim() {
+    let mutated = ENGLISH.replace(
+        "not ACL, IAM, per-user authorization, or tenant isolation",
+        "is ACL/IAM authorization with tenant isolation",
+    );
+    assert!(!current_docs_contract_is_valid(&mutated));
+}
+
+#[test]
+fn readme_contract_rejects_unsafe_replay_claim() {
+    let mutated = ENGLISH.replace(
+        "not prove manual replay is safe",
+        "proves manual replay is safe",
+    );
+    assert!(!current_docs_contract_is_valid(&mutated));
+}
+
+#[test]
+fn readme_contract_rejects_restored_legacy_route_claim() {
+    let mutated = ENGLISH.replace(
+        "Legacy unversioned HTTP routes are removed.",
+        "Legacy unversioned HTTP routes remain available.",
+    );
+    assert!(!current_docs_contract_is_valid(&mutated));
 }
 
 #[test]
@@ -272,8 +372,8 @@ fn inserted_unknown_command_between_install_steps_is_rejected() {
             "\n"
         };
         let mutated = readme.replace(
-            &format!("pnpm add -g @lyy-gh/memocap@0.0.5{newline}opencode plugin @lyy-gh/memocap"),
-            &format!("pnpm add -g @lyy-gh/memocap@0.0.5{newline}echo unexpected{newline}opencode plugin @lyy-gh/memocap"),
+            &format!("pnpm add -g @lyy-gh/memocap@0.0.6{newline}opencode plugin @lyy-gh/memocap"),
+            &format!("pnpm add -g @lyy-gh/memocap@0.0.6{newline}echo unexpected{newline}opencode plugin @lyy-gh/memocap"),
         );
 
         assert!(!install_contract_is_valid(&mutated));
