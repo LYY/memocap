@@ -176,6 +176,12 @@ function runPublication(release) {
   });
 }
 
+function publicationFailureDetails(execution, release) {
+  const details = [execution.error?.message, execution.stdout, execution.stderr];
+  if (fs.existsSync(release.log)) details.push(fs.readFileSync(release.log, "utf8"));
+  return details.filter(Boolean).join("\n");
+}
+
 function expectedNames() {
   return assets.flatMap((asset) => [asset, `${asset}.sha256`]).sort();
 }
@@ -185,7 +191,7 @@ test("creates a public release with every launcher asset and checksum", (context
 
   const execution = runPublication(release);
 
-  assert.equal(execution.status, 0, execution.stderr);
+  assert.equal(execution.status, 0, publicationFailureDetails(execution, release));
   assert.deepEqual(fs.readdirSync(release.remoteAssets).sort(), expectedNames());
   const log = fs.readFileSync(release.log, "utf8");
   assert.match(log, new RegExp(`release create ${tag} .*--verify-tag --target ${tagSha}`));
@@ -197,7 +203,7 @@ test("replaces only known release assets on an idempotent rerun", (context) => {
 
   const execution = runPublication(release);
 
-  assert.equal(execution.status, 0, execution.stderr);
+  assert.equal(execution.status, 0, publicationFailureDetails(execution, release));
   assert.deepEqual(fs.readdirSync(release.remoteAssets).sort(), expectedNames());
   for (const name of expectedNames()) {
     assert.deepEqual(
