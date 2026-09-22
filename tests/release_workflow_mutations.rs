@@ -20,6 +20,16 @@ fn mutate_registry(workflow: &str, before: &str, after: &str) -> String {
     format!("{prefix}{}", mutate(registry, before, after))
 }
 
+fn mutate_release(workflow: &str, before: &str, after: &str) -> String {
+    let index = workflow.find("  release:\n").expect("missing release job");
+    let (prefix, release) = workflow.split_at(index);
+    let registry = release
+        .find("\n  registry:\n")
+        .expect("missing registry job");
+    let (release, suffix) = release.split_at(registry);
+    format!("{prefix}{}{suffix}", mutate(release, before, after))
+}
+
 #[test]
 fn release_contract_rejects_tag_authority_and_identity_mutations() {
     let workflow = normalized_workflow(RELEASE_WORKFLOW);
@@ -42,6 +52,14 @@ fn release_contract_rejects_tag_authority_and_identity_mutations() {
             "permissions:\n  contents: read\n  actions: read",
             "permissions:\n  contents: read\n  actions: write",
         ),
+        (
+            "    permissions:\n      contents: read\n      actions: read",
+            "    permissions:\n      contents: write\n      actions: read",
+        ),
+        (
+            "    permissions:\n      contents: read\n    strategy:",
+            "    permissions:\n      contents: write\n    strategy:",
+        ),
         ("GITHUB_WORKFLOW_SHA", "GITHUB_SHA"),
         ("GITHUB_WORKFLOW_REF", "GITHUB_REF"),
         ("[ \"$workflow_identity\" = \"$tag_workflow\" ]", "true"),
@@ -50,10 +68,6 @@ fn release_contract_rejects_tag_authority_and_identity_mutations() {
             "true",
         ),
         ("on:\n", "on:\n  workflow_dispatch:\n"),
-        (
-            "  registry:\n",
-            "  release:\n    permissions:\n      contents: write\n\n  registry:\n",
-        ),
         (
             "  registry:\n",
             "  registry:\n    permissions:\n      contents: write\n",
@@ -67,6 +81,54 @@ fn release_contract_rejects_tag_authority_and_identity_mutations() {
         assert!(
             release_contract(&mutated).is_err(),
             "mutation accepted: {before}"
+        );
+    }
+}
+
+#[test]
+fn release_contract_rejects_publication_bypass_mutations() {
+    let workflow = normalized_workflow(RELEASE_WORKFLOW);
+    assert_eq!(release_contract(&workflow), Ok(()));
+
+    for (before, after) in [
+        ("needs: [validate, binaries]", "needs: binaries"),
+        ("needs: [validate, binaries]", "needs: validate"),
+        ("contents: write", "contents: read"),
+        (
+            "[ \"${#present[@]}\" -eq 6 ]",
+            "[ \"${#present[@]}\" -ge 6 ]",
+        ),
+        ("[ -f \"$path\" ] && [ ! -L \"$path\" ]", "[ -f \"$path\" ]"),
+        (
+            "[ \"$manifest\" = \"$digest  $asset\" ]",
+            "true # accept untrusted checksum",
+        ),
+        (
+            "[ \"$(remote_tag_sha)\" = \"$TAG_SHA\" ]\n          if release=",
+            "true # accept moved tag\n          if release=",
+        ),
+        (
+            "--verify-tag --target \"$TAG_SHA\"",
+            "--target \"$TAG_SHA\"",
+        ),
+        (" --clobber", ""),
+        (
+            "verify_known_assets \"$release\"\n            gh release upload",
+            "true # accept unknown assets\n            gh release upload",
+        ),
+        (
+            "actual_names=\"$(jq -r '.assets[].name' <<< \"$release\" | sort)\"",
+            "actual_names=\"$expected_names\"",
+        ),
+        (
+            "[ \"$(jq -r '.isDraft' <<< \"$release\")\" = false ]",
+            "true # allow draft release",
+        ),
+    ] {
+        let mutated = mutate_release(&workflow, before, after);
+        assert!(
+            release_contract(&mutated).is_err(),
+            "release mutation accepted: {before}"
         );
     }
 }

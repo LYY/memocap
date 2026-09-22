@@ -23,10 +23,20 @@ fn release_build_pins_cargo_minimum_toolchain() {
 }
 
 #[test]
-fn release_workflow_is_read_only_except_registry_oidc_publish() {
+fn release_workflow_publishes_launcher_assets_after_validated_builds() {
     let workflow = normalized_workflow(RELEASE_WORKFLOW);
 
-    assert!(!workflow.contains("contents: write"));
-    assert!(!workflow.contains("gh release "));
+    for required in [
+        "  release:\n",
+        "needs: [validate, binaries]",
+        "contents: write",
+        "gh release create \"$TAG\"",
+        "gh release upload \"$TAG\"",
+        "memocap-x86_64-unknown-linux-gnu",
+        "memocap-aarch64-apple-darwin",
+        "memocap-x86_64-pc-windows-msvc.exe",
+    ] {
+        assert!(workflow.contains(required), "missing {required}");
+    }
     assert!(!workflow.contains("workflow_dispatch"));
 }

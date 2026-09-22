@@ -1,32 +1,211 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
+const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
-const workflow = fs.readFileSync(
-  path.resolve(__dirname, "../.github/workflows/release.yml"),
-  "utf8",
-).replace(/\r\n/g, "\n");
+const assets = [
+  "memocap-x86_64-unknown-linux-gnu",
+  "memocap-aarch64-apple-darwin",
+  "memocap-x86_64-pc-windows-msvc.exe",
+];
+const tag = "v0.0.7";
+const tagSha = "0123456789012345678901234567890123456789";
+const workflow = fs
+  .readFileSync(path.resolve(__dirname, "../.github/workflows/release.yml"), "utf8")
+  .replace(/\r\n/g, "\n");
 
-test("keeps release workflow read-only while registry publishes through OIDC", () => {
-  // Given
-  const marker = "  registry:\n";
+function publicationScript() {
+  const marker = "      - name: Publish verified GitHub Release assets\n";
   const start = workflow.indexOf(marker);
-  assert.notEqual(start, -1, "missing registry job");
-  const rest = workflow.slice(start + marker.length);
-  const next = rest.search(/\n  [^\s]/);
-  const registry = workflow.slice(start, next === -1 ? undefined : start + marker.length + next);
+  assert.notEqual(start, -1, "missing release publication step");
+  const end = workflow.indexOf("\n      - ", start + marker.length);
+  const step = workflow.slice(start, end === -1 ? undefined : end);
+  const run = step.indexOf("        run: |\n");
+  assert.notEqual(run, -1, "missing release publication script");
+  return step
+    .slice(run + "        run: |\n".length)
+    .split("\n")
+    .filter((line) => line.startsWith("          "))
+    .map((line) => line.slice(10))
+    .join("\n");
+}
 
-  // When
-  const releaseWrites = ["  release:\n", "contents: write", "gh release ", "workflow_dispatch"];
+function writeAsset(directory, name, content = `fixture:${name}`) {
+  const binary = Buffer.from(content);
+  fs.writeFileSync(path.join(directory, name), binary);
+  const digest = crypto.createHash("sha256").update(binary).digest("hex");
+  fs.writeFileSync(path.join(directory, `${name}.sha256`), `${digest}  ${name}\n`);
+}
 
-  // Then
-  for (const releaseWrite of releaseWrites) {
-    assert.equal(workflow.includes(releaseWrite), false, `forbidden release write: ${releaseWrite}`);
-  }
-  assert.match(registry, /environment: npm-release/);
-  assert.match(registry, /id-token: write/);
-  assert.match(registry, /npm publish --access public --provenance --ignore-scripts/);
+function writeGhStub(bin) {
+  fs.writeFileSync(
+    path.join(bin, "gh.cjs"),
+    `"use strict";
+const fs = require("node:fs");
+const path = require("node:path");
+const args = process.argv.slice(2);
+const statePath = process.env.FAKE_GH_STATE;
+const remote = process.env.FAKE_GH_ASSETS;
+const log = process.env.FAKE_GH_LOG;
+const state = () => JSON.parse(fs.readFileSync(statePath, "utf8"));
+const save = (value) => fs.writeFileSync(statePath, JSON.stringify(value));
+const record = () => fs.appendFileSync(log, args.join(" ") + "\\n");
+const release = () => ({
+  tagName: process.env.TAG,
+  isDraft: false,
+  isPrerelease: false,
+  assets: fs.readdirSync(remote).sort().map((name) => ({ name })),
 });
+const copySources = () => {
+  const end = args.indexOf("--repo");
+  for (const source of args.slice(3, end)) {
+    fs.copyFileSync(source, path.join(remote, path.basename(source)));
+  }
+};
+record();
+if (args[0] === "api") {
+  process.stdout.write(JSON.stringify({ object: { type: "commit", sha: process.env.TAG_SHA } }));
+  process.exit(0);
+}
+if (args[0] !== "release") process.exit(1);
+if (args[1] === "view") {
+  if (!state().exists) process.exit(1);
+  process.stdout.write(JSON.stringify(release()));
+  process.exit(0);
+}
+if (args[1] === "create") {
+  if (state().exists || !args.includes("--verify-tag") || !args.includes("--target")) process.exit(2);
+  copySources();
+  save({ exists: true });
+  process.exit(0);
+}
+if (args[1] === "upload") {
+  if (!state().exists || !args.includes("--clobber")) process.exit(3);
+  copySources();
+  process.exit(0);
+}
+if (args[1] === "download") {
+  const directory = args[args.indexOf("--dir") + 1];
+  for (const name of fs.readdirSync(remote)) {
+    fs.copyFileSync(path.join(remote, name), path.join(directory, name));
+  }
+  process.exit(0);
+}
+process.exit(1);
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    path.join(bin, "gh"),
+    '#!/usr/bin/env bash\nexec node "$(dirname "$0")/gh.cjs" "$@"\n',
+    { mode: 0o755 },
+  );
+}
+
+function fixture(
+  context,
+  { existing = false, unexpected = false, mismatched = false, remoteUnexpected = false } = {},
+) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-release-publication-"));
+  context.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const bin = path.join(root, "bin");
+  const releaseAssets = path.join(root, "release-assets");
+  const remoteAssets = path.join(root, "remote-assets");
+  const state = path.join(root, "state.json");
+  const log = path.join(root, "gh.log");
+  fs.mkdirSync(bin);
+  fs.mkdirSync(releaseAssets);
+  fs.mkdirSync(remoteAssets);
+  fs.writeFileSync(state, JSON.stringify({ exists: existing }));
+  for (const asset of assets) {
+    writeAsset(releaseAssets, asset);
+    if (existing) writeAsset(remoteAssets, asset, `stale:${asset}`);
+  }
+  if (unexpected) fs.writeFileSync(path.join(releaseAssets, "unexpected"), "untrusted");
+  if (remoteUnexpected) fs.writeFileSync(path.join(remoteAssets, "unexpected"), "untrusted");
+  if (mismatched) fs.writeFileSync(path.join(releaseAssets, `${assets[0]}.sha256`), `${"0".repeat(64)}  ${assets[0]}\n`);
+  writeGhStub(bin);
+  return { bin, log, releaseAssets, remoteAssets, root, state };
+}
+
+function runPublication(release) {
+  return spawnSync("bash", ["-c", publicationScript()], {
+    cwd: release.root,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      FAKE_GH_ASSETS: release.remoteAssets,
+      FAKE_GH_LOG: release.log,
+      FAKE_GH_STATE: release.state,
+      GH_TOKEN: "fixture-token",
+      GITHUB_REPOSITORY: "LYY/memocap",
+      PATH: `${release.bin}${path.delimiter}${process.env.PATH}`,
+      TAG: tag,
+      TAG_SHA: tagSha,
+    },
+  });
+}
+
+function expectedNames() {
+  return assets.flatMap((asset) => [asset, `${asset}.sha256`]).sort();
+}
+
+test("creates a public release with every launcher asset and checksum", (context) => {
+  const release = fixture(context);
+
+  const execution = runPublication(release);
+
+  assert.equal(execution.status, 0, execution.stderr);
+  assert.deepEqual(fs.readdirSync(release.remoteAssets).sort(), expectedNames());
+  const log = fs.readFileSync(release.log, "utf8");
+  assert.match(log, new RegExp(`release create ${tag} .*--verify-tag --target ${tagSha}`));
+  assert.doesNotMatch(log, /release upload/);
+});
+
+test("replaces only known release assets on an idempotent rerun", (context) => {
+  const release = fixture(context, { existing: true });
+
+  const execution = runPublication(release);
+
+  assert.equal(execution.status, 0, execution.stderr);
+  assert.deepEqual(fs.readdirSync(release.remoteAssets).sort(), expectedNames());
+  for (const name of expectedNames()) {
+    assert.deepEqual(
+      fs.readFileSync(path.join(release.remoteAssets, name)),
+      fs.readFileSync(path.join(release.releaseAssets, name)),
+    );
+  }
+  const log = fs.readFileSync(release.log, "utf8");
+  assert.match(log, new RegExp(`release upload ${tag} .*--clobber`));
+  assert.doesNotMatch(log, /release create/);
+});
+
+test("rejects an unknown existing asset before a release write", (context) => {
+  const release = fixture(context, { existing: true, remoteUnexpected: true });
+
+  const execution = runPublication(release);
+
+  assert.notEqual(execution.status, 0);
+  const log = fs.readFileSync(release.log, "utf8");
+  assert.doesNotMatch(log, /release (create|upload)/);
+});
+
+for (const scenario of [
+  { name: "unexpected artifact", options: { unexpected: true } },
+  { name: "mismatched checksum", options: { mismatched: true } },
+]) {
+  test(`rejects ${scenario.name} before a release write`, (context) => {
+    const release = fixture(context, scenario.options);
+
+    const execution = runPublication(release);
+
+    assert.notEqual(execution.status, 0);
+    assert.deepEqual(fs.readdirSync(release.remoteAssets), []);
+    assert.equal(fs.existsSync(release.log), false);
+  });
+}

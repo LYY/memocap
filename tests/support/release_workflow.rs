@@ -1,5 +1,7 @@
 pub const RELEASE_WORKFLOW: &str = include_str!("../../.github/workflows/release.yml");
 
+#[path = "release_assets_workflow.rs"]
+mod release_assets_workflow;
 #[path = "release_registry_workflow.rs"]
 mod release_registry_workflow;
 
@@ -106,24 +108,31 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
 
     let validate = workflow.find("  validate:\n").ok_or("missing validate")?;
     let binaries = workflow.find("  binaries:\n").ok_or("missing binaries")?;
+    let release = workflow.find("  release:\n").ok_or("missing release")?;
     let registry = workflow.find("  registry:\n").ok_or("missing registry")?;
-    if !(validate < binaries && binaries < registry) {
+    if !(validate < binaries && binaries < release && release < registry) {
         return Err("jobs out of order".to_owned());
     }
     require(job(workflow, "binaries"), "needs: validate")?;
-    require(job(workflow, "registry"), "needs: [validate, binaries]")?;
+    require(job(workflow, "release"), "needs: [validate, binaries]")?;
+    require(job(workflow, "registry"), "needs: [validate, release]")?;
     require(job(workflow, "registry"), "environment: npm-release")?;
 
     if permissions(workflow, 0) != vec![("contents", "read"), ("actions", "read")]
         || permissions(job(workflow, "validate"), 4)
             != vec![("contents", "read"), ("actions", "read")]
         || permissions(job(workflow, "binaries"), 4) != vec![("contents", "read")]
+        || permissions(job(workflow, "release"), 4) != vec![("contents", "write")]
         || permissions(job(workflow, "registry"), 4)
             != vec![("contents", "read"), ("id-token", "write")]
+        || workflow.matches("contents: write").count() != 1
+        || workflow.matches("gh release ").count()
+            != job(workflow, "release").matches("gh release ").count()
     {
         return Err("permissions are not least privilege".to_owned());
     }
 
+    release_assets_workflow::validate(job(workflow, "release"))?;
     release_registry_workflow::validate(workflow, job(workflow, "registry"))?;
 
     for reference in workflow
@@ -137,15 +146,11 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
             return Err(format!("action is not SHA pinned: {reference}"));
         }
     }
-    if workflow.contains("  release:\n")
-        || workflow.contains("contents: write")
-        || workflow.contains("gh release ")
-        || workflow.contains("workflow_dispatch")
-        || workflow.contains("--clobber")
+    if workflow.contains("workflow_dispatch")
         || workflow.contains("overwrite:")
         || workflow.contains("release_recovery_sha")
     {
-        return Err("release may overwrite assets or allow historical recovery".to_owned());
+        return Err("release authority may not allow historical recovery".to_owned());
     }
     Ok(())
 }
