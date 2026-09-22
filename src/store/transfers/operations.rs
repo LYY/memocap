@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use rusqlite::{params, OptionalExtension, Transaction, TransactionBehavior};
 
-use crate::scope::{OperationId, RepositoryId};
+use crate::scope::{DomainId, OperationId, PlacementId, RepositoryId};
 
 use super::{CopyMoveAction, CopyMoveRequest, CopyMoveResult, StoredResult};
 
@@ -18,6 +18,8 @@ pub fn copy_move(
     if request.from == request.to {
         bail!("source and destination placements must differ");
     }
+    validate_placement(&transaction, request.repository(), request.from())?;
+    validate_placement(&transaction, request.repository(), request.to())?;
     let memory_id = match request.action {
         CopyMoveAction::Copy => copy_memory(&transaction, &request)?,
         CopyMoveAction::Move => move_memory(&transaction, &request)?,
@@ -48,6 +50,47 @@ pub fn copy_move(
     )?;
     transaction.commit()?;
     Ok(result)
+}
+
+fn validate_placement(
+    transaction: &Transaction<'_>,
+    repository: &RepositoryId,
+    placement: &PlacementId,
+) -> Result<()> {
+    match placement {
+        PlacementId::Repository(placement_repository) if placement_repository != repository => {
+            bail!("repository placement must match the current repository");
+        }
+        PlacementId::Repository(_) | PlacementId::Universal => Ok(()),
+        PlacementId::Domain(domain) => validate_domain_placement(transaction, repository, domain),
+    }
+}
+
+fn validate_domain_placement(
+    transaction: &Transaction<'_>,
+    repository: &RepositoryId,
+    domain: &DomainId,
+) -> Result<()> {
+    let exists = transaction.query_row(
+        "SELECT EXISTS(SELECT 1 FROM domains WHERE domain_id = ?1)",
+        [domain.as_str()],
+        |row| row.get::<_, i64>(0),
+    )?;
+    if exists == 0 {
+        bail!("domain {domain} does not exist");
+    }
+    let attached = transaction.query_row(
+        "SELECT EXISTS(
+             SELECT 1 FROM repository_domain_attachments
+             WHERE repository_id = ?1 AND domain_id = ?2
+         )",
+        params![repository.as_str(), domain.as_str()],
+        |row| row.get::<_, i64>(0),
+    )?;
+    if attached == 0 {
+        bail!("domain {domain} is not attached to this repository");
+    }
+    Ok(())
 }
 
 pub fn replay_copy_move(
