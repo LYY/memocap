@@ -3,6 +3,9 @@ use memocap::{
     store::{self, CopyMoveAction, CopyMoveInput, CopyMoveRequest, RememberOptions},
 };
 
+#[path = "copy_move_store/validation_matrix.rs"]
+mod validation_matrix;
+
 fn repository() -> RepositoryId {
     format!("repository:{}", "a".repeat(64)).parse().unwrap()
 }

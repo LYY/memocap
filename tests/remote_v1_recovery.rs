@@ -8,6 +8,8 @@ use memocap::{
 };
 use tiny_http::{Header, Response, Server, StatusCode};
 
+#[path = "remote_v1_recovery/transfer_conflict.rs"]
+mod transfer_conflict;
 #[path = "remote_v1_recovery/transfer_race.rs"]
 mod transfer_race;
 
