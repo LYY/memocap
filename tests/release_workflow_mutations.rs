@@ -125,7 +125,7 @@ fn release_contract_rejects_publication_bypass_mutations() {
             "jq -r '.assets[].name'",
         ),
         (
-            "actual_names=\"$(jq -r '.assets[].name' <<< \"$release\" | sort)\"",
+            "actual_names=\"$(jq -r '.assets[].name' <<< \"$release\" | tr -d '\\r' | sort)\"",
             "actual_names=\"$expected_names\"",
         ),
         (
