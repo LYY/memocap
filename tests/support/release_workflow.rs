@@ -81,152 +81,47 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
     }
     for required in [
         "fetch-depth: 0",
-        "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
+        "git fetch --no-tags origin main",
+        "git merge-base --is-ancestor \"$sha\" origin/main",
+        "gh run list \\",
+        "--workflow CI \\",
+        "--event push \\",
+        "--branch main \\",
+        "--commit \"$sha\" \\",
+        "--status completed \\",
+        "--json conclusion,event,headBranch,headSha,name",
+        "any(.[]; .name == \"CI\" and .event == \"push\" and .headBranch == \"main\" and .headSha == $sha and .conclusion == \"success\")",
         "GITHUB_WORKFLOW_SHA",
         "GITHUB_WORKFLOW_REF",
         "tag_workflow=\"$(git rev-parse \"$sha:.github/workflows/release.yml\")\"",
-        "main_workflow=\"$(git rev-parse \"origin/main:.github/workflows/release.yml\")\"",
         "workflow_identity=\"$(git rev-parse \"$GITHUB_WORKFLOW_SHA:.github/workflows/release.yml\")\"",
         "expected_workflow_ref=\"$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/tags/$tag\"",
         "[ \"$workflow_identity\" = \"$tag_workflow\" ]",
         "[ \"$GITHUB_WORKFLOW_REF\" = \"$expected_workflow_ref\" ]",
-        "[ \"$tag_workflow\" = \"$main_workflow\" ]",
         "Set-Content -NoNewline -Encoding ascii",
         "scripts/check-release.mjs",
-        "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
     ] {
         require(workflow, required)?;
     }
 
     let validate = workflow.find("  validate:\n").ok_or("missing validate")?;
     let binaries = workflow.find("  binaries:\n").ok_or("missing binaries")?;
-    let release = workflow.find("  release:\n").ok_or("missing release")?;
     let registry = workflow.find("  registry:\n").ok_or("missing registry")?;
-    if !(validate < binaries && binaries < release && release < registry) {
+    if !(validate < binaries && binaries < registry) {
         return Err("jobs out of order".to_owned());
     }
     require(job(workflow, "binaries"), "needs: validate")?;
-    require(job(workflow, "release"), "needs: [validate, binaries]")?;
-    require(job(workflow, "registry"), "needs: [validate, release]")?;
+    require(job(workflow, "registry"), "needs: [validate, binaries]")?;
     require(job(workflow, "registry"), "environment: npm-release")?;
 
-    if permissions(workflow, 0) != vec![("contents", "read")]
-        || permissions(job(workflow, "validate"), 4) != vec![("contents", "read")]
+    if permissions(workflow, 0) != vec![("contents", "read"), ("actions", "read")]
+        || permissions(job(workflow, "validate"), 4)
+            != vec![("contents", "read"), ("actions", "read")]
         || permissions(job(workflow, "binaries"), 4) != vec![("contents", "read")]
-        || permissions(job(workflow, "release"), 4) != vec![("contents", "write")]
         || permissions(job(workflow, "registry"), 4)
             != vec![("contents", "read"), ("id-token", "write")]
     {
         return Err("permissions are not least privilege".to_owned());
-    }
-
-    let reconcile = job(workflow, "release");
-    for required in [
-        "verify_existing_binary() {",
-        "verify_existing_checksum() {",
-        "1:0) verify_existing_binary \"$asset\" ;;",
-        "0:1) verify_existing_checksum \"$asset\" ;;",
-        "missing=()",
-        "gh release upload \"$TAG\" \"${missing[@]}\" --repo \"$GITHUB_REPOSITORY\"",
-        "wait_for_uploaded_assets() {",
-        "release=\"$(wait_for_uploaded_assets \"$release\"",
-    ] {
-        require(reconcile, required)?;
-    }
-    require(reconcile, "wait_for_release() {")?;
-    require(reconcile, "release=\"$(wait_for_release)\"")?;
-    before(
-        reconcile,
-        "gh release create",
-        "release=\"$(wait_for_release)\"",
-    )?;
-    require(
-        reconcile,
-        "if [ \"$count\" -ne 1 ] || [ \"$checksum_count\" -ne 1 ]; then",
-    )?;
-    let initial_read = "release=\"$(read_release)\"\n          if";
-    let initial_read_position = reconcile
-        .find(initial_read)
-        .ok_or("missing initial release read")?;
-    let state_machine = &reconcile[initial_read_position..];
-    for command in reconcile
-        .lines()
-        .map(str::trim_start)
-        .filter(|line| line.starts_with("gh release "))
-    {
-        if command.starts_with("gh release download ") {
-            continue;
-        }
-        if ![
-            "gh release create ",
-            "gh release upload ",
-            "gh release edit ",
-        ]
-        .iter()
-        .any(|allowed| command.starts_with(allowed))
-        {
-            return Err(format!("unexpected gh release command: {command}"));
-        }
-    }
-    for write in ["gh release create", "gh release upload", "gh release edit"] {
-        if reconcile.matches(write).count() != 1 {
-            return Err(format!("expected one release write via {write}"));
-        }
-        if reconcile
-            .find(write)
-            .is_some_and(|position| position < initial_read_position)
-        {
-            return Err(format!("release writes before initial read via {write}"));
-        }
-    }
-    before(
-        state_machine,
-        "gh release create",
-        "verify_identity \"$release\"",
-    )?;
-    before(
-        state_machine,
-        "verify_identity \"$release\"",
-        "case \"$state\" in",
-    )?;
-    for guard in [
-        ".[0].draft | type",
-        ".[0].prerelease | type",
-        ".[0].assets | type",
-    ] {
-        require(reconcile, guard)?;
-    }
-    let draft = reconcile
-        .split_once("draft)\n")
-        .map(|(_, branch)| branch.split(";;").next().unwrap_or(branch))
-        .ok_or("missing draft branch")?;
-    let validation = "verify_existing_assets \"$release\"";
-    let before_validation = draft
-        .split_once(validation)
-        .map(|(before, _)| before)
-        .ok_or("missing draft asset validation")?;
-    for write in ["gh release create", "gh release upload", "gh release edit"] {
-        if before_validation.contains(write) {
-            return Err(format!(
-                "draft branch writes before asset validation via {write}"
-            ));
-        }
-    }
-    before(draft, validation, "gh release upload")?;
-    before(
-        draft,
-        "gh release upload",
-        "verify_known_assets \"$release\"",
-    )?;
-    before(draft, "verify_known_assets \"$release\"", "gh release edit")?;
-    let public = reconcile
-        .split_once("public)\n")
-        .map(|(_, branch)| branch.split(";;").next().unwrap_or(branch))
-        .ok_or("missing public branch")?;
-    for write in ["gh release create", "gh release upload", "gh release edit"] {
-        if public.contains(write) {
-            return Err(format!("public branch writes via {write}"));
-        }
     }
 
     release_registry_workflow::validate(workflow, job(workflow, "registry"))?;
@@ -242,7 +137,11 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
             return Err(format!("action is not SHA pinned: {reference}"));
         }
     }
-    if workflow.contains("--clobber")
+    if workflow.contains("  release:\n")
+        || workflow.contains("contents: write")
+        || workflow.contains("gh release ")
+        || workflow.contains("workflow_dispatch")
+        || workflow.contains("--clobber")
         || workflow.contains("overwrite:")
         || workflow.contains("release_recovery_sha")
     {

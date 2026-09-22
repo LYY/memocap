@@ -10,12 +10,14 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   validate:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+      actions: read
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       sha: ${{ steps.release.outputs.sha }}
@@ -25,20 +27,31 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           git fetch --no-tags origin main
           tag="${GITHUB_REF_NAME}"
           sha="$(git rev-parse "${tag}^{commit}")"
-          [ "$sha" = "$(git rev-parse origin/main)" ]
+          git merge-base --is-ancestor "$sha" origin/main
+          ci_runs="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow CI \
+            --event push \
+            --branch main \
+            --commit "$sha" \
+            --status completed \
+            --json conclusion,event,headBranch,headSha,name)"
+          jq -e --arg sha "$sha" '
+            any(.[]; .name == "CI" and .event == "push" and .headBranch == "main" and .headSha == $sha and .conclusion == "success")
+          ' <<< "$ci_runs" >/dev/null
           tag_workflow="$(git rev-parse "$sha:.github/workflows/release.yml")"
-          main_workflow="$(git rev-parse "origin/main:.github/workflows/release.yml")"
           workflow_identity="$(git rev-parse "$GITHUB_WORKFLOW_SHA:.github/workflows/release.yml")"
           expected_workflow_ref="$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/tags/$tag"
           [ "$workflow_identity" = "$tag_workflow" ]
           [ "$GITHUB_WORKFLOW_REF" = "$expected_workflow_ref" ]
-          [ "$tag_workflow" = "$main_workflow" ]
           printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
           printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
       - name: Verify actionlint
@@ -110,218 +123,8 @@ jobs:
             ${{ matrix.asset }}.sha256
           if-no-files-found: error
 
-  release:
-    needs: [validate, binaries]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          pattern: release-*
-          merge-multiple: true
-          path: release-assets
-      - name: Reconcile GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.validate.outputs.tag }}
-          TAG_SHA: ${{ needs.validate.outputs.sha }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd release-assets
-          sha256sum --check ./*.sha256
-          cd "$GITHUB_WORKSPACE"
-
-          read_release() {
-            local releases matches count
-            releases="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
-            matches="$(jq --arg tag "$TAG" '[.[][] | select(.tag_name == $tag)]' <<< "$releases")"
-            count="$(jq 'length' <<< "$matches")"
-            if [ "$count" -gt 1 ]; then
-              echo "multiple releases found for $TAG" >&2
-              return 1
-            fi
-            printf '%s' "$matches"
-          }
-
-          wait_for_release() {
-            local attempt release
-            for attempt in {1..10}; do
-              release="$(read_release)"
-              if [ "$(jq 'length' <<< "$release")" -eq 1 ]; then
-                printf '%s' "$release"
-                return 0
-              fi
-              sleep 1
-            done
-            echo "release $TAG did not become visible after $attempt checks" >&2
-            return 1
-          }
-
-          verify_identity() {
-            local release="$1"
-            [ "$(jq 'length' <<< "$release")" -eq 1 ]
-           [ "$(jq -r '.[0].tag_name' <<< "$release")" = "$TAG" ]
-           [ "$(jq -r '.[0].target_commitish' <<< "$release")" = "$TAG_SHA" ]
-          [ "$(jq -r '.[0].draft | type' <<< "$release")" = "boolean" ]
-          [ "$(jq -r '.[0].prerelease | type' <<< "$release")" = "boolean" ]
-          [ "$(jq -r '.[0].assets | type' <<< "$release")" = "array" ]
-           [ "$(jq -r '.[0].prerelease' <<< "$release")" = false ]
-          }
-
-          verify_asset() {
-            local asset="$1" checksum_asset expected remote_expected actual directory
-            checksum_asset="${asset}.sha256"
-            directory="$(mktemp -d)"
-            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$asset" --dir "$directory"
-            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$checksum_asset" --dir "$directory"
-            expected="$(awk '{print $1}' "release-assets/$checksum_asset")"
-            remote_expected="$(awk '{print $1}' "$directory/$checksum_asset")"
-            actual="$(sha256sum "$directory/$asset" | awk '{print $1}')"
-            [ "$remote_expected" = "$expected" ]
-            [ "$actual" = "$expected" ]
-          }
-
-          verify_known_assets() {
-            local release="$1" asset checksum_asset count checksum_count remote
-            for remote in $(jq -r '.[0].assets[]?.name' <<< "$release" | tr -d '\r'); do
-              case "$remote" in
-                memocap-x86_64-unknown-linux-gnu|memocap-aarch64-apple-darwin|memocap-x86_64-pc-windows-msvc.exe|memocap-x86_64-unknown-linux-gnu.sha256|memocap-aarch64-apple-darwin.sha256|memocap-x86_64-pc-windows-msvc.exe.sha256) ;;
-                *) echo "unexpected release asset $remote" >&2; return 1 ;;
-              esac
-            done
-            for asset in \
-              memocap-x86_64-unknown-linux-gnu \
-              memocap-aarch64-apple-darwin \
-              memocap-x86_64-pc-windows-msvc.exe; do
-              checksum_asset="${asset}.sha256"
-              count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
-              checksum_count="$(jq --arg asset "$checksum_asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
-              if [ "$count" -ne 1 ] || [ "$checksum_count" -ne 1 ]; then
-                echo "missing or duplicate release asset $asset" >&2
-                return 1
-              fi
-              verify_asset "$asset"
-            done
-          }
-
-          verify_existing_binary() {
-            local asset="$1" expected actual directory
-            directory="$(mktemp -d)"
-            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$asset" --dir "$directory"
-            expected="$(awk '{print $1}' "release-assets/${asset}.sha256")"
-            actual="$(sha256sum "$directory/$asset" | awk '{print $1}')"
-            [ "$actual" = "$expected" ]
-          }
-
-          verify_existing_checksum() {
-            local asset="$1" checksum_asset directory
-            checksum_asset="${asset}.sha256"
-            directory="$(mktemp -d)"
-            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$checksum_asset" --dir "$directory"
-            cmp --silent "release-assets/$checksum_asset" "$directory/$checksum_asset"
-          }
-
-          verify_existing_assets() {
-            local release="$1" asset checksum_asset count checksum_count remote
-            for remote in $(jq -r '.[0].assets[]?.name' <<< "$release"); do
-              case "$remote" in
-                memocap-x86_64-unknown-linux-gnu|memocap-aarch64-apple-darwin|memocap-x86_64-pc-windows-msvc.exe|memocap-x86_64-unknown-linux-gnu.sha256|memocap-aarch64-apple-darwin.sha256|memocap-x86_64-pc-windows-msvc.exe.sha256) ;;
-                *) echo "unexpected release asset $remote" >&2; return 1 ;;
-              esac
-            done
-            for asset in \
-              memocap-x86_64-unknown-linux-gnu \
-              memocap-aarch64-apple-darwin \
-              memocap-x86_64-pc-windows-msvc.exe; do
-              checksum_asset="${asset}.sha256"
-              count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
-              checksum_count="$(jq --arg asset "$checksum_asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
-              case "$count:$checksum_count" in
-                0:0) ;;
-                1:0) verify_existing_binary "$asset" ;;
-                0:1) verify_existing_checksum "$asset" ;;
-                1:1) verify_asset "$asset" ;;
-                *) echo "missing or duplicate release asset $asset" >&2; return 1 ;;
-              esac
-            done
-          }
-
-          wait_for_uploaded_assets() {
-            local release="$1" asset count attempt visible
-            shift
-            for attempt in {1..10}; do
-              if release="$(read_release)" && verify_identity "$release"; then
-                visible=true
-                for asset in "$@"; do
-                  asset="$(basename "$asset")"
-                  count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
-                  if [ "$count" -ne 1 ]; then
-                    visible=false
-                    break
-                  fi
-                done
-                if [ "$visible" = true ]; then
-                  printf '%s' "$release"
-                  return 0
-                fi
-              fi
-              if [ "$attempt" -lt 10 ]; then
-                sleep 2
-              fi
-            done
-            return 1
-          }
-
-          release="$(read_release)"
-          if [ "$(jq 'length' <<< "$release")" -eq 0 ]; then
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --target "$TAG_SHA" --title "$TAG" --generate-notes
-            release="$(wait_for_release)"
-          fi
-          verify_identity "$release"
-          state="$(jq -r 'if .[0].draft then "draft" else "public" end' <<< "$release")"
-
-          case "$state" in
-            draft)
-              verify_existing_assets "$release"
-              for asset in \
-              memocap-x86_64-unknown-linux-gnu \
-              memocap-aarch64-apple-darwin \
-              memocap-x86_64-pc-windows-msvc.exe; do
-                checksum_asset="${asset}.sha256"
-                count="$(jq --arg asset "$asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
-                checksum_count="$(jq --arg asset "$checksum_asset" '[.[0].assets[]? | select(.name == $asset)] | length' <<< "$release")"
-                missing=()
-                if [ "$count" -eq 0 ]; then
-                  missing+=("release-assets/$asset")
-                fi
-                if [ "$checksum_count" -eq 0 ]; then
-                  missing+=("release-assets/$checksum_asset")
-                fi
-                if [ "${#missing[@]}" -gt 0 ]; then
-                  gh release upload "$TAG" "${missing[@]}" --repo "$GITHUB_REPOSITORY"
-                  release="$(wait_for_uploaded_assets "$release" "${missing[@]}")"
-                fi
-              done
-              verify_known_assets "$release"
-              gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
-              release="$(read_release)"
-              verify_identity "$release"
-              [ "$(jq -r '.[0].draft' <<< "$release")" = false ]
-              verify_known_assets "$release"
-              ;;
-            public)
-              verify_known_assets "$release"
-              ;;
-            *)
-              echo "invalid release state $state" >&2
-              exit 1
-              ;;
-          esac
-
   registry:
-    needs: [validate, release]
+    needs: [validate, binaries]
     runs-on: ubuntu-24.04
     environment: npm-release
     permissions:
@@ -336,53 +139,6 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          pattern: release-*
-          merge-multiple: true
-          path: release-assets
-      - name: Verify public Release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.validate.outputs.tag }}
-          TAG_SHA: ${{ needs.validate.outputs.sha }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          expected_assets=(
-            memocap-x86_64-unknown-linux-gnu
-            memocap-aarch64-apple-darwin
-            memocap-x86_64-pc-windows-msvc.exe
-          )
-          expected_files=()
-          for asset in "${expected_assets[@]}"; do
-            expected_files+=("$asset" "${asset}.sha256")
-          done
-          cd release-assets
-          sha256sum --check ./*.sha256
-          cd "$GITHUB_WORKSPACE"
-          release="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$TAG")"
-          [ "$(jq -r '.draft' <<< "$release")" = false ]
-          [ "$(jq -r '.tag_name' <<< "$release")" = "$TAG" ]
-          [ "$(jq -r '.target_commitish' <<< "$release")" = "$TAG_SHA" ]
-          expected_names="$(printf '%s\n' "${expected_files[@]}" | sort)"
-          actual_assets="$(jq -r '[.assets[].name] | sort | join("\n")' <<< "$release")"
-          [ "$actual_assets" = "$expected_names" ]
-          for asset in "${expected_assets[@]}"; do
-            checksum_asset="${asset}.sha256"
-            count="$(jq --arg asset "$asset" '[.assets[] | select(.name == $asset)] | length' <<< "$release")"
-            [ "$count" -eq 1 ]
-            checksum_count="$(jq --arg asset "$checksum_asset" '[.assets[] | select(.name == $asset)] | length' <<< "$release")"
-            [ "$checksum_count" -eq 1 ]
-            expected="$(awk '{print $1}' "release-assets/$checksum_asset")"
-            directory="$(mktemp -d)"
-            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$asset" --dir "$directory"
-            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$checksum_asset" --dir "$directory"
-            remote_expected="$(awk '{print $1}' "$directory/$checksum_asset")"
-            actual="$(sha256sum "$directory/$asset" | awk '{print $1}')"
-            [ "$remote_expected" = "$expected" ]
-            [ "$actual" = "$expected" ]
-          done
       - id: registry
         name: Inspect registry package
         shell: bash

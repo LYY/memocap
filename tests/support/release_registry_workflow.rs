@@ -1,26 +1,6 @@
 use super::{before, require, step};
 
 pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
-    before(
-        registry,
-        "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-        "- name: Verify public Release assets",
-    )?;
-    let assets = step(registry, "Verify public Release assets");
-    for required in [
-        ".tag_name",
-        "expected_assets=(",
-        "[.assets[].name] | sort | join",
-        "actual_assets",
-        "[ \"$actual_assets\" = \"$expected_names\" ]",
-        "gh release download",
-        "sha256sum \"$directory/$asset\"",
-        "[ \"$actual\" = \"$expected\" ]",
-    ] {
-        require(assets, required)?;
-    }
-    before(assets, "actual_assets", "gh release download")?;
-
     let inspection = registry
         .split_once("      - id: registry\n")
         .and_then(|(_, steps)| steps.split_once("\n      - name: Publish missing package"))
@@ -102,11 +82,6 @@ pub(super) fn validate(workflow: &str, registry: &str) -> Result<(), String> {
         provenance,
         "npm view \"$package@$version\" --json > \"$actual\"",
         "[ \"$(jq -r '.name' \"$actual\")\" = \"$package\" ]",
-    )?;
-    before(
-        registry,
-        "Verify public Release assets",
-        "Publish missing package",
     )?;
     before(
         registry,

@@ -21,3 +21,12 @@ fn release_build_pins_cargo_minimum_toolchain() {
 
     assert!(workflow.contains("toolchain: 1.88.0"));
 }
+
+#[test]
+fn release_workflow_is_read_only_except_registry_oidc_publish() {
+    let workflow = normalized_workflow(RELEASE_WORKFLOW);
+
+    assert!(!workflow.contains("contents: write"));
+    assert!(!workflow.contains("gh release "));
+    assert!(!workflow.contains("workflow_dispatch"));
+}

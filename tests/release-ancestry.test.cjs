@@ -33,6 +33,7 @@ function fixture(context) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-release-ancestry-"));
   const remote = path.join(directory, "origin.git");
   const root = path.join(directory, "checkout");
+  const bin = path.join(root, "test-bin");
   context.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   git(directory, ["clone", "--bare", repositoryRoot, remote]);
   git(directory, ["--git-dir", remote, "update-ref", "refs/heads/main", git(repositoryRoot, ["rev-parse", "HEAD"])]);
@@ -44,9 +45,33 @@ function fixture(context) {
   git(root, ["add", workflowPath, "release-validation-current"]);
   git(root, ["commit", "-m", "current release workflow"]);
   const current = git(root, ["rev-parse", "HEAD"]);
-  const main = commit(root, "release-validation-final", "final\n");
+  const main = commit(root, "release-validation-later-main", "later\n");
   git(root, ["push", "origin", "main"]);
-  return { current, main, root };
+
+  fs.mkdirSync(bin);
+  fs.writeFileSync(
+    path.join(root, "run"),
+    `"use strict";
+const expected = [
+  "list", "--repo", "LYY/memocap", "--workflow", "CI", "--event", "push",
+  "--branch", "main", "--commit", process.env.GITHUB_EXPECTED_SHA,
+  "--status", "completed", "--json", "conclusion,event,headBranch,headSha,name",
+];
+if (JSON.stringify(process.argv.slice(2)) !== JSON.stringify(expected)) {
+  process.stderr.write("unexpected gh run arguments\\n");
+  process.exit(1);
+}
+process.stdout.write(process.env.GITHUB_CI_RUNS);
+`,
+  );
+  const gh = path.join(bin, process.platform === "win32" ? "gh.exe" : "gh");
+  if (process.platform === "win32") {
+    fs.copyFileSync(process.execPath, gh);
+  } else {
+    fs.symlinkSync(process.execPath, gh);
+  }
+
+  return { current, main, root, bin };
 }
 
 function validationScript() {
@@ -63,19 +88,24 @@ function validationScript() {
     .join("\n");
 }
 
-function validationResult(root, tag, workflowSha) {
-  const output = path.join(root, "github-output");
+function validationResult(release, options) {
+  const output = path.join(release.root, `github-output-${options.tag}`);
   return spawnSync("bash", ["-c", validationScript()], {
-    cwd: root,
+    cwd: release.root,
     encoding: "utf8",
     env: {
       ...process.env,
-      MSYS_NO_PATHCONV: "1",
+      GITHUB_CI_RUNS: JSON.stringify(options.runs),
+      GITHUB_EXPECTED_SHA: options.expectedSha,
       GITHUB_OUTPUT: output,
-      GITHUB_REF_NAME: tag,
+      GITHUB_REF_NAME: options.tag,
       GITHUB_REPOSITORY: "LYY/memocap",
-      GITHUB_WORKFLOW_REF: `LYY/memocap/${workflowPath}@refs/tags/${tag}`,
-      GITHUB_WORKFLOW_SHA: workflowSha,
+      GITHUB_WORKFLOW_REF: options.workflowRef
+        ?? `LYY/memocap/${workflowPath}@refs/tags/${options.tag}`,
+      GITHUB_WORKFLOW_SHA: options.workflowSha,
+      GH_TOKEN: "fixture-token",
+      MSYS_NO_PATHCONV: "1",
+      PATH: `${release.bin}${path.delimiter}${process.env.PATH}`,
     },
   });
 }
@@ -84,22 +114,106 @@ function tag(root, name, sha) {
   git(root, ["tag", name, sha]);
 }
 
-test("accepts a tag from the final origin/main commit", (context) => {
+function successfulCi(sha) {
+  return {
+    conclusion: "success",
+    event: "push",
+    headBranch: "main",
+    headSha: sha,
+    name: "CI",
+  };
+}
+
+test("accepts a tested tag from main history after main advances", (context) => {
+  // Given
   const release = fixture(context);
-  const name = "v0.0.2-final";
-  tag(release.root, name, release.main);
+  const tagName = "v0.0.7-main-ancestor";
+  tag(release.root, tagName, release.current);
 
-  const execution = validationResult(release.root, name, release.main);
+  // When
+  const execution = validationResult(release, {
+    expectedSha: release.current,
+    runs: [successfulCi(release.current)],
+    tag: tagName,
+    workflowSha: release.current,
+  });
 
+  // Then
   assert.equal(execution.status, 0, execution.stderr);
+  assert.notEqual(release.current, release.main);
 });
 
-test("rejects a tag from an ancestor with the current workflow snapshot", (context) => {
+test("rejects a tag outside origin main history", (context) => {
+  // Given
   const release = fixture(context);
-  const name = "v0.0.2-ancestor";
-  tag(release.root, name, release.current);
+  const outside = git(release.root, [
+    "commit-tree",
+    `${release.current}^{tree}`,
+    "-p",
+    release.current,
+    "-m",
+    "outside main",
+  ]);
+  const tagName = "v0.0.7-off-main";
+  tag(release.root, tagName, outside);
 
-  const execution = validationResult(release.root, name, release.current);
+  // When
+  const execution = validationResult(release, {
+    expectedSha: outside,
+    runs: [successfulCi(outside)],
+    tag: tagName,
+    workflowSha: release.current,
+  });
 
+  // Then
+  assert.notEqual(execution.status, 0);
+});
+
+for (const [name, runs] of [
+  ["missing", []],
+  ["failed", [{ ...successfulCi("expected"), conclusion: "failure" }]],
+  ["wrong-event", [{ ...successfulCi("expected"), event: "pull_request" }]],
+  ["wrong-branch", [{ ...successfulCi("expected"), headBranch: "release" }]],
+  ["wrong-sha", [successfulCi("other")]],
+]) {
+  test(`rejects ${name} CI evidence`, (context) => {
+    // Given
+    const release = fixture(context);
+    const tagName = `v0.0.7-${name}`;
+    tag(release.root, tagName, release.current);
+    const exactRuns = runs.map((run) => ({
+      ...run,
+      headSha: run.headSha === "expected" ? release.current : run.headSha,
+    }));
+
+    // When
+    const execution = validationResult(release, {
+      expectedSha: release.current,
+      runs: exactRuns,
+      tag: tagName,
+      workflowSha: release.current,
+    });
+
+    // Then
+    assert.notEqual(execution.status, 0);
+  });
+}
+
+test("rejects a workflow ref that does not identify the tag workflow", (context) => {
+  // Given
+  const release = fixture(context);
+  const tagName = "v0.0.7-workflow-ref";
+  tag(release.root, tagName, release.current);
+
+  // When
+  const execution = validationResult(release, {
+    expectedSha: release.current,
+    runs: [successfulCi(release.current)],
+    tag: tagName,
+    workflowRef: "LYY/memocap/.github/workflows/release.yml@refs/tags/v0.0.7-other",
+    workflowSha: release.current,
+  });
+
+  // Then
   assert.notEqual(execution.status, 0);
 });
