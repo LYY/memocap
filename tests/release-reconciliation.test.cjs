@@ -109,6 +109,11 @@ process.exit(1);
     '#!/usr/bin/env bash\nexec node "$(dirname "$0")/gh.cjs" "$@"\n',
     { mode: 0o755 },
   );
+  fs.writeFileSync(
+    path.join(bin, "mktemp"),
+    '#!/usr/bin/env bash\nmkdir -p verify-directory\nprintf "%s\\n" verify-directory\n',
+    { mode: 0o755 },
+  );
 }
 
 function fixture(
