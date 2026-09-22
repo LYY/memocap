@@ -13,11 +13,13 @@ use crate::{
 };
 
 mod domains;
+mod transfers;
 
 pub use domains::{
     attach_domain, attached_domains, create_domain, delete_domain, detach_domain, domains,
     format_domains, format_scope_show,
 };
+pub use transfers::{copy_move, format_copy_move};
 
 pub struct ScopedRemember<'a> {
     pub content: &'a str,
@@ -150,16 +152,6 @@ pub fn forget_placed(
     store::forget_at(&connection, &placement, id)
 }
 
-pub fn copy_move(
-    database: &Path,
-    repository: &RepositoryId,
-    input: store::CopyMoveInput,
-) -> Result<store::CopyMoveResult> {
-    let mut connection = store::open(database)?;
-    let request = store::CopyMoveRequest::prepare(repository.clone(), input)?;
-    store::copy_move(&mut connection, request)
-}
-
 #[must_use]
 pub fn format_memories(memories: &[InventoryMemory]) -> String {
     if memories.is_empty() {
@@ -194,18 +186,6 @@ pub fn format_memories(memories: &[InventoryMemory]) -> String {
         out.push_str(&format!("  time: {}\n", memory.created_at));
     }
     out
-}
-
-#[must_use]
-pub fn format_copy_move(result: &store::CopyMoveResult) -> String {
-    format!(
-        "{} #{} from {} to {}\noperation_id: {}\n",
-        result.action.past_tense(),
-        result.memory_id,
-        result.from,
-        result.to,
-        result.operation_id
-    )
 }
 
 #[must_use]
