@@ -106,7 +106,7 @@ process.exit(1);
   );
   fs.writeFileSync(
     path.join(bin, "gh"),
-    '#!/usr/bin/env bash\nexec node "$(dirname "$0")/gh.cjs" "$@"\n',
+    '#!/usr/bin/env bash\nexec node "$FAKE_GH_SCRIPT" "$@"\n',
     { mode: 0o755 },
   );
   fs.writeFileSync(
@@ -164,6 +164,7 @@ function runPublication(release) {
       ...process.env,
       FAKE_GH_ASSETS: release.remoteAssets,
       FAKE_GH_LOG: release.log,
+      FAKE_GH_SCRIPT: path.join(release.bin, "gh.cjs"),
       FAKE_GH_STATE: release.state,
       GH_TOKEN: "fixture-token",
       GITHUB_REPOSITORY: "LYY/memocap",
