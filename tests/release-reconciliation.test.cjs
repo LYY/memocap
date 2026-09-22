@@ -59,13 +59,17 @@ const release = () => ({
   tagName: process.env.TAG,
   isDraft: false,
   isPrerelease: false,
-  assets: fs.readdirSync(remote).sort().map((name) => ({ name })),
+  assets: state().assetNames.slice().sort().map((name) => ({ name })),
 });
 const copySources = () => {
+  const current = state();
   const end = args.indexOf("--repo");
   for (const source of args.slice(3, end)) {
-    fs.copyFileSync(source, path.join(remote, path.basename(source)));
+    const name = path.basename(source);
+    fs.copyFileSync(source, path.join(remote, name));
+    if (!current.assetNames.includes(name)) current.assetNames.push(name);
   }
+  save(current);
 };
 record();
 if (args[0] === "api") {
@@ -81,7 +85,7 @@ if (args[1] === "view") {
 if (args[1] === "create") {
   if (state().exists || !args.includes("--verify-tag") || !args.includes("--target")) process.exit(2);
   copySources();
-  save({ exists: true });
+  save({ ...state(), exists: true });
   process.exit(0);
 }
 if (args[1] === "upload") {
@@ -91,7 +95,7 @@ if (args[1] === "upload") {
 }
 if (args[1] === "download") {
   const directory = args[args.indexOf("--dir") + 1];
-  for (const name of fs.readdirSync(remote)) {
+  for (const name of state().assetNames) {
     fs.copyFileSync(path.join(remote, name), path.join(directory, name));
   }
   process.exit(0);
@@ -127,16 +131,21 @@ function fixture(
   fs.mkdirSync(bin);
   fs.mkdirSync(releaseAssets);
   fs.mkdirSync(remoteAssets);
-  fs.writeFileSync(state, JSON.stringify({ exists: existing }));
+  const assetNames = [];
   for (const asset of assets) {
     writeAsset(releaseAssets, asset);
-    if (existing) writeAsset(remoteAssets, asset, `stale:${asset}`);
+    if (existing) {
+      writeAsset(remoteAssets, asset, `stale:${asset}`);
+      assetNames.push(asset, `${asset}.sha256`);
+    }
   }
   if (unexpected) fs.writeFileSync(path.join(releaseAssets, "unexpected"), "untrusted");
-  if (remoteUnexpected) fs.writeFileSync(path.join(remoteAssets, "unexpected"), "untrusted");
-  if (remoteUnknownName !== undefined) {
-    fs.writeFileSync(path.join(remoteAssets, remoteUnknownName), "untrusted");
+  if (remoteUnexpected) {
+    fs.writeFileSync(path.join(remoteAssets, "unexpected"), "untrusted");
+    assetNames.push("unexpected");
   }
+  if (remoteUnknownName !== undefined) assetNames.push(remoteUnknownName);
+  fs.writeFileSync(state, JSON.stringify({ exists: existing, assetNames }));
   if (mismatched) fs.writeFileSync(path.join(releaseAssets, `${assets[0]}.sha256`), `${"0".repeat(64)}  ${assets[0]}\n`);
   writeGhStub(bin);
   return { bin, log, releaseAssets, remoteAssets, root, state };
@@ -153,7 +162,7 @@ function runPublication(release) {
       FAKE_GH_STATE: release.state,
       GH_TOKEN: "fixture-token",
       GITHUB_REPOSITORY: "LYY/memocap",
-      PATH: `${release.bin}${path.delimiter}${process.env.PATH}`,
+      PATH: `${release.bin}:${process.env.PATH}`,
       TAG: tag,
       TAG_SHA: tagSha,
     },
