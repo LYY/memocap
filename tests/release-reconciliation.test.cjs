@@ -106,7 +106,7 @@ process.exit(1);
   );
   fs.writeFileSync(
     path.join(bin, "gh"),
-    '#!/usr/bin/env bash\nscript="$FAKE_GH_SCRIPT"\nif command -v cygpath >/dev/null 2>&1; then\n  script="$(cygpath -w "$script")"\nfi\nexec node "$script" "$@"\n',
+    '#!/usr/bin/env bash\nif command -v cygpath >/dev/null 2>&1; then\n  for variable in FAKE_GH_ASSETS FAKE_GH_LOG FAKE_GH_SCRIPT FAKE_GH_STATE; do\n    export "$variable=$(cygpath -w "${!variable}")"\n  done\nfi\nexec node "$FAKE_GH_SCRIPT" "$@"\n',
     { mode: 0o755 },
   );
   fs.writeFileSync(
