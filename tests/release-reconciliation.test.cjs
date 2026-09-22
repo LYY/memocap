@@ -104,9 +104,14 @@ process.exit(1);
 `,
     { mode: 0o755 },
   );
+  const ghLauncher = process.platform === "win32" ? "gh.cmd" : "gh";
+  const ghCommand =
+    process.platform === "win32"
+      ? '@echo off\r\nnode "%~dp0gh.cjs" %*\r\nexit /b %ERRORLEVEL%\r\n'
+      : '#!/usr/bin/env bash\nexec node "$(dirname "$0")/gh.cjs" "$@"\n';
   fs.writeFileSync(
-    path.join(bin, "gh"),
-    '#!/usr/bin/env bash\nexec node "$FAKE_GH_SCRIPT" "$@"\n',
+    path.join(bin, ghLauncher),
+    ghCommand,
     { mode: 0o755 },
   );
   fs.writeFileSync(
@@ -164,7 +169,6 @@ function runPublication(release) {
       ...process.env,
       FAKE_GH_ASSETS: release.remoteAssets,
       FAKE_GH_LOG: release.log,
-      FAKE_GH_SCRIPT: path.join(release.bin, "gh.cjs"),
       FAKE_GH_STATE: release.state,
       GH_TOKEN: "fixture-token",
       GITHUB_REPOSITORY: "LYY/memocap",
