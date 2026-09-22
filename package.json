@@ -1,6 +1,6 @@
 {
   "name": "@lyy-gh/memocap",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Local-first SQLite memory for OpenCode",
   "license": "MIT",
   "type": "module",
