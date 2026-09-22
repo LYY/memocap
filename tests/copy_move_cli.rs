@@ -2,6 +2,14 @@ use std::{
     fs,
     path::PathBuf,
     process::{Command, Output},
+    sync::mpsc,
+    thread,
+};
+
+use memocap::{
+    cli,
+    scope::{DomainId, PlacementId, RepositoryId},
+    store::{self, CopyMoveAction, CopyMoveInput},
 };
 
 struct Fixture {
@@ -370,6 +378,17 @@ fn committed_copy_and_move_replay_after_domain_detach_without_new_mutations() {
         "--to",
         "domain:team/replay",
     ]);
+    let new_detached_source = fixture.run(&[
+        "scope",
+        "move",
+        "--id",
+        &copied_id,
+        "--from",
+        "domain:team/replay",
+        "--to",
+        "universal",
+        "--yes",
+    ]);
     let new_missing_source = fixture.run(&[
         "scope",
         "copy",
@@ -392,6 +411,7 @@ fn committed_copy_and_move_replay_after_domain_detach_without_new_mutations() {
         &new_detached_destination,
         "is not attached to this repository",
     );
+    assert_failure(&new_detached_source, "is not attached to this repository");
     assert_failure(&new_missing_source, "not found in source placement");
     let database = rusqlite::Connection::open(fixture.database()).unwrap();
     assert_eq!(
@@ -507,6 +527,27 @@ fn copy_move_rejects_conflict_unattached_invalid_and_unconfirmed_requests_withou
         "--to",
         &repository,
     ]);
+    let foreign_repository = format!("repository:{}", "b".repeat(64));
+    let foreign_source = fixture.run(&[
+        "scope",
+        "copy",
+        "--id",
+        &source_id,
+        "--from",
+        &foreign_repository,
+        "--to",
+        "universal",
+    ]);
+    let foreign_destination = fixture.run(&[
+        "scope",
+        "copy",
+        "--id",
+        &source_id,
+        "--from",
+        &repository,
+        "--to",
+        &foreign_repository,
+    ]);
 
     // Then
     assert_failure(&conflict, "operation ID conflict");
@@ -516,6 +557,14 @@ fn copy_move_rejects_conflict_unattached_invalid_and_unconfirmed_requests_withou
     assert_failure(
         &same_placement,
         "source and destination placements must differ",
+    );
+    assert_failure(
+        &foreign_source,
+        "repository placement must match the current repository",
+    );
+    assert_failure(
+        &foreign_destination,
+        "repository placement must match the current repository",
     );
     let database = rusqlite::Connection::open(fixture.database()).unwrap();
     assert_eq!(
@@ -540,5 +589,76 @@ fn copy_move_rejects_conflict_unattached_invalid_and_unconfirmed_requests_withou
             })
             .unwrap(),
         1
+    );
+}
+
+#[test]
+fn local_copy_rejects_destination_detached_before_store_without_mutation() {
+    // Given
+    let fixture = Fixture::new();
+    let source = fixture.run(&["remember", "local handoff source", "--force"]);
+    assert_success(&source);
+    let source_id = saved_id(&source).parse::<i64>().unwrap();
+    let repository = fixture.repository_id().parse::<RepositoryId>().unwrap();
+    let destination = "transfer/local-handoff".parse::<DomainId>().unwrap();
+    let database = fixture.database();
+    let mut connection = store::open(&database).unwrap();
+    assert!(store::create_domain(&mut connection, &destination).unwrap());
+    assert!(store::attach_domain(&mut connection, &repository, &destination, None).unwrap());
+    let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
+    let (release_sender, release_receiver) = mpsc::sync_channel(1);
+    let transfer_database = database.clone();
+    let transfer_repository = repository.clone();
+    let transfer_destination = destination.clone();
+    let transfer = thread::spawn(move || {
+        ready_sender.send(()).unwrap();
+        release_receiver.recv().unwrap();
+        cli::copy_move(
+            &transfer_database,
+            &transfer_repository,
+            CopyMoveInput {
+                action: CopyMoveAction::Copy,
+                memory_id: source_id,
+                from: PlacementId::Repository(transfer_repository.clone()),
+                to: PlacementId::Domain(transfer_destination),
+                operation_id: Some("00000000-0000-0000-0000-000000000201".parse().unwrap()),
+                applicability_note: None,
+            },
+        )
+    });
+    ready_receiver.recv().unwrap();
+    assert!(store::detach_domain(&mut connection, &repository, &destination).unwrap());
+
+    // When
+    release_sender.send(()).unwrap();
+    let failure = transfer.join().unwrap().unwrap_err();
+
+    // Then
+    assert_eq!(
+        failure.to_string(),
+        "domain transfer/local-handoff is not attached to this repository"
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM memories", [], |row| row
+                .get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM memory_provenance", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM operation_ledger", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        0
     );
 }

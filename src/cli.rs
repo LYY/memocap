@@ -157,11 +157,6 @@ pub fn copy_move(
 ) -> Result<store::CopyMoveResult> {
     let mut connection = store::open(database)?;
     let request = store::CopyMoveRequest::prepare(repository.clone(), input)?;
-    if let Some(result) = store::replay_copy_move(&connection, &request)? {
-        return Ok(result);
-    }
-    validate_transfer_placement(&connection, repository, request.from())?;
-    validate_transfer_placement(&connection, repository, request.to())?;
     store::copy_move(&mut connection, request)
 }
 
@@ -282,23 +277,6 @@ fn validate_domain_placement(
     }
     if !store::attached_domains(connection, repository)?.contains(domain) {
         bail!("domain {domain} is not attached to this repository");
-    }
-    Ok(())
-}
-
-fn validate_transfer_placement(
-    connection: &rusqlite::Connection,
-    repository: &RepositoryId,
-    placement: &PlacementId,
-) -> Result<()> {
-    match placement {
-        PlacementId::Repository(placement_repository) => {
-            if placement_repository != repository {
-                bail!("repository placement must match the current repository");
-            }
-        }
-        PlacementId::Domain(domain) => validate_domain_placement(connection, repository, domain)?,
-        PlacementId::Universal => {}
     }
     Ok(())
 }
