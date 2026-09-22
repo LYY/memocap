@@ -186,16 +186,6 @@ fn domain_values(domains: &[DomainId]) -> Vec<String> {
 
 fn transfer(connection: &mut Connection, transfer: super::request::Transfer) -> Outgoing {
     let request = transfer.request;
-    match store::replay_copy_move(connection, &request) {
-        Ok(Some(result)) => return transfer_result(result),
-        Ok(None) => {}
-        Err(_) => return error(409, "conflict"),
-    }
-    if validate_placement(connection, request.repository(), request.from()).is_err()
-        || validate_placement(connection, request.repository(), request.to()).is_err()
-    {
-        return error(400, "invalid_request");
-    }
     match store::copy_move(connection, request) {
         Ok(result) => transfer_result(result),
         Err(error_value) if error_value.to_string().contains("operation ID conflict") => {

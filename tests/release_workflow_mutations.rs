@@ -20,70 +20,46 @@ fn mutate_registry(workflow: &str, before: &str, after: &str) -> String {
     format!("{prefix}{}", mutate(registry, before, after))
 }
 
-#[test]
-fn release_contract_rejects_release_write_before_initial_read() {
-    let workflow = normalized_workflow(RELEASE_WORKFLOW);
-    let mutated = mutate(
-        &workflow,
-        "release=\"$(read_release)\"\n          if",
-        "gh release edit \"$TAG\" --draft\n          release=\"$(read_release)\"\n          if",
-    );
-
-    assert!(release_contract(&mutated).is_err());
+fn mutate_release(workflow: &str, before: &str, after: &str) -> String {
+    let index = workflow.find("  release:\n").expect("missing release job");
+    let (prefix, release) = workflow.split_at(index);
+    let registry = release
+        .find("\n  registry:\n")
+        .expect("missing registry job");
+    let (release, suffix) = release.split_at(registry);
+    format!("{prefix}{}{suffix}", mutate(release, before, after))
 }
 
 #[test]
-fn release_contract_requires_draft_readback_retry() {
+fn release_contract_rejects_tag_authority_and_identity_mutations() {
     let workflow = normalized_workflow(RELEASE_WORKFLOW);
     assert_eq!(release_contract(&workflow), Ok(()));
-    let mutated = mutate(
-        &workflow,
-        "release=\"$(wait_for_release)\"",
-        "release=\"$(read_release)\"",
-    );
 
-    assert!(release_contract(&mutated).is_err());
-}
-
-#[test]
-fn release_contract_rejects_critical_workflow_mutations() {
-    let workflow = normalized_workflow(RELEASE_WORKFLOW);
-    assert_eq!(release_contract(&workflow), Ok(()));
     for (before, after) in [
-        (
-            "[ \"$sha\" = \"$(git rev-parse origin/main)\" ]",
-            "git merge-base --is-ancestor \"$sha\" origin/main",
-        ),
+        ("git merge-base --is-ancestor \"$sha\" origin/main", "true"),
         (
             "group: release-${{ github.repository }}-${{ github.ref_name }}",
             "group: release-${{ github.repository }}",
         ),
         ("cancel-in-progress: false", "cancel-in-progress: true"),
+        ("gh run list", "gh run view"),
+        ("--workflow CI", "--workflow Release"),
+        ("--event push", "--event pull_request"),
+        ("--branch main", "--branch release"),
+        ("--commit \"$sha\"", "--commit \"$GITHUB_SHA\""),
+        (".conclusion == \"success\"", ".conclusion == \"failure\""),
         (
-            "Set-Content -NoNewline -Encoding ascii",
-            "Out-File -Encoding ascii",
+            "permissions:\n  contents: read\n  actions: read",
+            "permissions:\n  contents: read\n  actions: write",
         ),
         (
-            "verify_existing_assets \"$release\"",
-            ": # skipped asset verification",
+            "    permissions:\n      contents: read\n      actions: read",
+            "    permissions:\n      contents: write\n      actions: read",
         ),
         (
-            "verify_existing_assets \"$release\"",
-            "gh release edit \"$TAG\" --draft\n        verify_existing_assets \"$release\"",
+            "    permissions:\n      contents: read\n    strategy:",
+            "    permissions:\n      contents: write\n    strategy:",
         ),
-        (
-            "1:0) verify_existing_binary \"$asset\" ;;",
-            "1:0) : # skipped binary verification ;;;",
-        ),
-        (
-            "0:1) verify_existing_checksum \"$asset\" ;;",
-            "0:1) : # skipped checksum verification ;;;",
-        ),
-        (
-            "release=\"$(wait_for_uploaded_assets \"$release\" \"${missing[@]}\")\"",
-            "release=\"$(read_release)\"",
-        ),
-        (".[0].draft | type", ".[0].draft"),
         ("GITHUB_WORKFLOW_SHA", "GITHUB_SHA"),
         ("GITHUB_WORKFLOW_REF", "GITHUB_REF"),
         ("[ \"$workflow_identity\" = \"$tag_workflow\" ]", "true"),
@@ -91,8 +67,15 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "[ \"$GITHUB_WORKFLOW_REF\" = \"$expected_workflow_ref\" ]",
             "true",
         ),
-        ("[ \"$tag_workflow\" = \"$main_workflow\" ]", "true"),
-        ("environment: npm-release", "environment: npm-stage"),
+        ("on:\n", "on:\n  workflow_dispatch:\n"),
+        (
+            "  registry:\n",
+            "  registry:\n    permissions:\n      contents: write\n",
+        ),
+        (
+            "environment: npm-release",
+            "environment: npm-release # gh release create \"$TAG\"",
+        ),
     ] {
         let mutated = mutate(&workflow, before, after);
         assert!(
@@ -100,18 +83,70 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "mutation accepted: {before}"
         );
     }
-    let historical_recovery = mutate(
-        &workflow,
-        "[ \"$tag_workflow\" = \"$main_workflow\" ]",
-        "release_recovery_sha=\"86b4c20a79db2d4cac3eeaeebf19143778e572d2\"\n          if [ \"$sha\" = \"$release_recovery_sha\" ]; then\n            true\n          else\n            [ \"$tag_workflow\" = \"$main_workflow\" ]\n          fi",
-    );
-    assert!(release_contract(&historical_recovery).is_err());
+}
+
+#[test]
+fn release_contract_rejects_publication_bypass_mutations() {
+    let workflow = normalized_workflow(RELEASE_WORKFLOW);
+    assert_eq!(release_contract(&workflow), Ok(()));
+
     for (before, after) in [
-        ("[.assets[].name] | sort | join", "[.assets[].name] | join"),
+        ("needs: [validate, binaries]", "needs: binaries"),
+        ("needs: [validate, binaries]", "needs: validate"),
+        ("contents: write", "contents: read"),
         (
-            "sha256sum \"$directory/$asset\"",
-            "true # skipped digest verification",
+            "[ \"${#present[@]}\" -eq 6 ]",
+            "[ \"${#present[@]}\" -ge 6 ]",
         ),
+        ("[ -f \"$path\" ] && [ ! -L \"$path\" ]", "[ -f \"$path\" ]"),
+        (
+            "[ \"$manifest\" = \"$digest  $asset\" ]",
+            "true # accept untrusted checksum",
+        ),
+        (
+            "[ \"$(remote_tag_sha)\" = \"$TAG_SHA\" ]\n          if release=",
+            "true # accept moved tag\n          if release=",
+        ),
+        (
+            "--verify-tag --target \"$TAG_SHA\"",
+            "--target \"$TAG_SHA\"",
+        ),
+        (" --clobber", ""),
+        (
+            "verify_known_assets \"$release\"\n            gh release upload",
+            "true # accept unknown assets\n            gh release upload",
+        ),
+        (
+            "while IFS= read -r -d '' remote; do",
+            "for remote in $(jq -r '.assets[].name' <<< \"$release\"); do",
+        ),
+        (
+            "jq -j '.assets[] | .name, \"\\u0000\"'",
+            "jq -r '.assets[].name'",
+        ),
+        (
+            "actual_names=\"$(jq -r '.assets[].name' <<< \"$release\" | tr -d '\\r' | sort)\"",
+            "actual_names=\"$expected_names\"",
+        ),
+        (
+            "[ \"$(jq -r '.isDraft' <<< \"$release\")\" = false ]",
+            "true # allow draft release",
+        ),
+    ] {
+        let mutated = mutate_release(&workflow, before, after);
+        assert!(
+            release_contract(&mutated).is_err(),
+            "release mutation accepted: {before}"
+        );
+    }
+}
+
+#[test]
+fn release_contract_retains_registry_oidc_publish_guards() {
+    let workflow = normalized_workflow(RELEASE_WORKFLOW);
+    assert_eq!(release_contract(&workflow), Ok(()));
+
+    for (before, after) in [
         ("id-token: write", "id-token: none"),
         (
             "npm install --ignore-scripts --package-lock=false",
@@ -156,17 +191,11 @@ fn release_contract_rejects_critical_workflow_mutations() {
             "npm pack --ignore-scripts --dry-run --json",
             "npm pack --dry-run --json",
         ),
-        ("[ \"$actual_assets\" = \"$expected_names\" ]", "true # skipped exact asset equality"),
-        ("for attempt in {1..10}; do", "for attempt in {1..1}; do"),
         (
             "for verification_attempt in {1..10}; do",
             "for verification_attempt in {1..1}; do",
         ),
         ("if registry_matches; then", "if false; then"),
-        (
-            "if npm publish --access public --provenance --ignore-scripts; then",
-            "npm publish --access public --provenance --ignore-scripts",
-        ),
     ] {
         let mutated = mutate_registry(&workflow, before, after);
         assert!(

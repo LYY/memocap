@@ -1,13 +1,24 @@
 use memocap::{
-    scope::{OperationId, PlacementId, RepositoryId},
+    scope::{DomainId, OperationId, PlacementId, RepositoryId},
     store::{self, CopyMoveAction, CopyMoveInput, CopyMoveRequest, RememberOptions},
 };
+
+#[path = "copy_move_store/validation_matrix.rs"]
+mod validation_matrix;
 
 fn repository() -> RepositoryId {
     format!("repository:{}", "a".repeat(64)).parse().unwrap()
 }
 
+fn other_repository() -> RepositoryId {
+    format!("repository:{}", "b".repeat(64)).parse().unwrap()
+}
+
 fn operation_id(value: &str) -> OperationId {
+    value.parse().unwrap()
+}
+
+fn domain(value: &str) -> DomainId {
     value.parse().unwrap()
 }
 
@@ -346,5 +357,268 @@ fn transaction_failure_rolls_back_memory_provenance_and_ledger_after_reopen() {
             })
             .unwrap(),
         0
+    );
+}
+
+#[test]
+fn copy_rejects_detached_destination_before_mutating_store() {
+    // Given
+    let directory = tempfile::tempdir().unwrap();
+    let repository = repository();
+    let source = PlacementId::Repository(repository.clone());
+    let destination = domain("transfer/detached-destination");
+    let mut connection = store::open(&directory.path().join("memocap.db")).unwrap();
+    let source_id = remember_source(&connection, &source);
+    assert!(store::create_domain(&mut connection, &destination).unwrap());
+    assert!(store::attach_domain(&mut connection, &repository, &destination, None).unwrap());
+    assert!(store::detach_domain(&mut connection, &repository, &destination).unwrap());
+    let request = CopyMoveRequest::prepare(
+        repository,
+        CopyMoveInput {
+            action: CopyMoveAction::Copy,
+            memory_id: source_id,
+            from: source,
+            to: PlacementId::Domain(destination),
+            operation_id: Some(operation_id("00000000-0000-0000-0000-000000000006")),
+            applicability_note: None,
+        },
+    )
+    .unwrap();
+
+    // When
+    let failure = store::copy_move(&mut connection, request);
+
+    // Then
+    assert!(failure
+        .unwrap_err()
+        .to_string()
+        .contains("is not attached to this repository"));
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM memories", [], |row| row
+                .get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM memory_provenance", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM operation_ledger", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        0
+    );
+}
+
+#[test]
+fn move_rejects_detached_source_without_provenance_or_ledger() {
+    // Given
+    let directory = tempfile::tempdir().unwrap();
+    let repository = repository();
+    let source_domain = domain("transfer/detached-source");
+    let source = PlacementId::Domain(source_domain.clone());
+    let mut connection = store::open(&directory.path().join("memocap.db")).unwrap();
+    assert!(store::create_domain(&mut connection, &source_domain).unwrap());
+    assert!(store::attach_domain(&mut connection, &repository, &source_domain, None).unwrap());
+    let source_id = remember_source(&connection, &source);
+    assert!(store::detach_domain(&mut connection, &repository, &source_domain).unwrap());
+    let request = CopyMoveRequest::prepare(
+        repository,
+        CopyMoveInput {
+            action: CopyMoveAction::Move,
+            memory_id: source_id,
+            from: source,
+            to: PlacementId::Universal,
+            operation_id: Some(operation_id("00000000-0000-0000-0000-000000000007")),
+            applicability_note: None,
+        },
+    )
+    .unwrap();
+
+    // When
+    let failure = store::copy_move(&mut connection, request);
+
+    // Then
+    assert!(failure
+        .unwrap_err()
+        .to_string()
+        .contains("is not attached to this repository"));
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM memories", [], |row| row
+                .get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM memory_provenance", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM operation_ledger", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        0
+    );
+}
+
+#[test]
+fn copy_and_move_reject_foreign_repository_placements_without_mutation() {
+    // Given
+    let directory = tempfile::tempdir().unwrap();
+    let repository = repository();
+    let foreign_repository = other_repository();
+    let source = PlacementId::Repository(repository.clone());
+    let mut connection = store::open(&directory.path().join("memocap.db")).unwrap();
+    let source_id = remember_source(&connection, &source);
+    let foreign_destination = CopyMoveRequest::prepare(
+        repository.clone(),
+        CopyMoveInput {
+            action: CopyMoveAction::Copy,
+            memory_id: source_id,
+            from: source.clone(),
+            to: PlacementId::Repository(foreign_repository.clone()),
+            operation_id: Some(operation_id("00000000-0000-0000-0000-000000000008")),
+            applicability_note: None,
+        },
+    )
+    .unwrap();
+    let foreign_source = CopyMoveRequest::prepare(
+        repository,
+        CopyMoveInput {
+            action: CopyMoveAction::Move,
+            memory_id: source_id,
+            from: PlacementId::Repository(foreign_repository),
+            to: PlacementId::Universal,
+            operation_id: Some(operation_id("00000000-0000-0000-0000-000000000009")),
+            applicability_note: None,
+        },
+    )
+    .unwrap();
+
+    // When
+    let destination_failure = store::copy_move(&mut connection, foreign_destination);
+    let source_failure = store::copy_move(&mut connection, foreign_source);
+
+    // Then
+    for failure in [destination_failure, source_failure] {
+        assert!(failure
+            .unwrap_err()
+            .to_string()
+            .contains("repository placement must match the current repository"));
+    }
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM memories", [], |row| row
+                .get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM memory_provenance", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM operation_ledger", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        0
+    );
+}
+
+#[test]
+fn replay_and_conflict_precede_detached_destination_validation() {
+    // Given
+    let directory = tempfile::tempdir().unwrap();
+    let repository = repository();
+    let source = PlacementId::Repository(repository.clone());
+    let destination_domain = domain("transfer/replay-after-detach");
+    let destination = PlacementId::Domain(destination_domain.clone());
+    let mut connection = store::open(&directory.path().join("memocap.db")).unwrap();
+    let source_id = remember_source(&connection, &source);
+    assert!(store::create_domain(&mut connection, &destination_domain).unwrap());
+    assert!(store::attach_domain(&mut connection, &repository, &destination_domain, None).unwrap());
+    let operation = operation_id("00000000-0000-0000-0000-000000000010");
+    let copy = CopyMoveInput {
+        action: CopyMoveAction::Copy,
+        memory_id: source_id,
+        from: source.clone(),
+        to: destination.clone(),
+        operation_id: Some(operation.clone()),
+        applicability_note: None,
+    };
+    let copied = store::copy_move(
+        &mut connection,
+        CopyMoveRequest::prepare(repository.clone(), copy.clone()).unwrap(),
+    )
+    .unwrap();
+    assert!(store::detach_domain(&mut connection, &repository, &destination_domain).unwrap());
+    let conflict = CopyMoveInput {
+        action: CopyMoveAction::Move,
+        memory_id: source_id,
+        from: source,
+        to: destination,
+        operation_id: Some(operation),
+        applicability_note: None,
+    };
+
+    // When
+    let replayed = store::copy_move(
+        &mut connection,
+        CopyMoveRequest::prepare(repository.clone(), copy).unwrap(),
+    );
+    let conflict = store::copy_move(
+        &mut connection,
+        CopyMoveRequest::prepare(repository, conflict).unwrap(),
+    );
+
+    // Then
+    assert_eq!(replayed.unwrap(), copied);
+    assert!(conflict
+        .unwrap_err()
+        .to_string()
+        .contains("operation ID conflict"));
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM memories", [], |row| row
+                .get::<_, i64>(0))
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM memory_provenance", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT COUNT(*) FROM operation_ledger", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap(),
+        1
     );
 }
