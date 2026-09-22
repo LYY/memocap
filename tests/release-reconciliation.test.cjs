@@ -10,18 +10,14 @@ const workflow = fs.readFileSync(
   "utf8",
 ).replace(/\r\n/g, "\n");
 
-function job(name) {
-  const marker = `  ${name}:\n`;
-  const start = workflow.indexOf(marker);
-  assert.notEqual(start, -1, `missing ${name} job`);
-  const rest = workflow.slice(start + marker.length);
-  const next = rest.search(/\n  [^\s]/);
-  return workflow.slice(start, next === -1 ? undefined : start + marker.length + next);
-}
-
 test("keeps release workflow read-only while registry publishes through OIDC", () => {
   // Given
-  const registry = job("registry");
+  const marker = "  registry:\n";
+  const start = workflow.indexOf(marker);
+  assert.notEqual(start, -1, "missing registry job");
+  const rest = workflow.slice(start + marker.length);
+  const next = rest.search(/\n  [^\s]/);
+  const registry = workflow.slice(start, next === -1 ? undefined : start + marker.length + next);
 
   // When
   const releaseWrites = ["  release:\n", "contents: write", "gh release ", "workflow_dispatch"];
