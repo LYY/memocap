@@ -27,12 +27,12 @@ function publicationScript() {
   const step = workflow.slice(start, end === -1 ? undefined : end);
   const run = step.indexOf("        run: |\n");
   assert.notEqual(run, -1, "missing release publication script");
-  return `set -x\n${step
+  return step
     .slice(run + "        run: |\n".length)
     .split("\n")
     .filter((line) => line.startsWith("          "))
     .map((line) => line.slice(10))
-    .join("\n")}`;
+    .join("\n");
 }
 
 function writeAsset(directory, name, content = `fixture:${name}`) {

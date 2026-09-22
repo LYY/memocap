@@ -211,7 +211,7 @@ jobs:
           verify_release "$release"
           verify_known_assets "$release"
           expected_names="$(printf '%s\n' "${release_files[@]##*/}" | sort)"
-          actual_names="$(jq -r '.assets[].name' <<< "$release" | sort)"
+          actual_names="$(jq -r '.assets[].name' <<< "$release" | tr -d '\r' | sort)"
           [ "$actual_names" = "$expected_names" ]
 
           verify_directory="$(mktemp -d)"
