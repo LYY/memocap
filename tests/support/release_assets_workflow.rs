@@ -20,7 +20,7 @@ pub(super) fn validate(release: &str) -> Result<(), String> {
         "while IFS= read -r -d '' remote; do",
         "done < <(jq -j '.assets[] | .name, \"\\u0000\"' <<< \"$release\")",
         "verify_known_assets \"$release\"",
-        "actual_names=\"$(jq -r '.assets[].name' <<< \"$release\" | sort)\"",
+        "actual_names=\"$(jq -r '.assets[].name' <<< \"$release\" | tr -d '\\r' | sort)\"",
         "[ \"$actual_names\" = \"$expected_names\" ]",
         "gh release download \"$TAG\" --repo \"$GITHUB_REPOSITORY\" --dir \"$verify_directory\"",
         "cmp --silent \"release-assets/$asset\" \"$verify_directory/$asset\"",
