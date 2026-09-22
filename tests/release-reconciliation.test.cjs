@@ -179,6 +179,7 @@ function runPublication(release) {
 function publicationFailureDetails(execution, release) {
   const details = [execution.error?.message, execution.stdout, execution.stderr];
   if (fs.existsSync(release.log)) details.push(fs.readFileSync(release.log, "utf8"));
+  if (fs.existsSync(release.state)) details.push(fs.readFileSync(release.state, "utf8"));
   return details.filter(Boolean).join("\n");
 }
 
