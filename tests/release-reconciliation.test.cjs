@@ -109,7 +109,13 @@ process.exit(1);
 
 function fixture(
   context,
-  { existing = false, unexpected = false, mismatched = false, remoteUnexpected = false } = {},
+  {
+    existing = false,
+    unexpected = false,
+    mismatched = false,
+    remoteUnexpected = false,
+    remoteUnknownName,
+  } = {},
 ) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-release-publication-"));
   context.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -128,6 +134,9 @@ function fixture(
   }
   if (unexpected) fs.writeFileSync(path.join(releaseAssets, "unexpected"), "untrusted");
   if (remoteUnexpected) fs.writeFileSync(path.join(remoteAssets, "unexpected"), "untrusted");
+  if (remoteUnknownName !== undefined) {
+    fs.writeFileSync(path.join(remoteAssets, remoteUnknownName), "untrusted");
+  }
   if (mismatched) fs.writeFileSync(path.join(releaseAssets, `${assets[0]}.sha256`), `${"0".repeat(64)}  ${assets[0]}\n`);
   writeGhStub(bin);
   return { bin, log, releaseAssets, remoteAssets, root, state };
@@ -194,6 +203,28 @@ test("rejects an unknown existing asset before a release write", (context) => {
   const log = fs.readFileSync(release.log, "utf8");
   assert.doesNotMatch(log, /release (create|upload)/);
 });
+
+for (const [caseName, remoteUnknownName] of [
+  ["whitespace-composed", `${assets[0]} ${assets[1]}`],
+  ["newline-containing", `unknown\n${assets[0]}`],
+  ["shell-metacharacter", "unknown;$()[]*?"],
+]) {
+  test(`rejects a ${caseName} unknown asset before a release write`, (context) => {
+    const release = fixture(context, { existing: true, remoteUnknownName });
+    const recognizedBytes = new Map(
+      expectedNames().map((name) => [name, fs.readFileSync(path.join(release.remoteAssets, name))]),
+    );
+
+    const execution = runPublication(release);
+
+    assert.notEqual(execution.status, 0);
+    const log = fs.readFileSync(release.log, "utf8");
+    assert.doesNotMatch(log, /release (create|upload)/);
+    for (const [name, before] of recognizedBytes) {
+      assert.deepEqual(fs.readFileSync(path.join(release.remoteAssets, name)), before);
+    }
+  });
+}
 
 for (const scenario of [
   { name: "unexpected artifact", options: { unexpected: true } },

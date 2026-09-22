@@ -189,12 +189,12 @@ jobs:
 
           verify_known_assets() {
             local release="$1" remote
-            for remote in $(jq -r '.assets[].name' <<< "$release"); do
+            while IFS= read -r -d '' remote; do
               case "$remote" in
                 memocap-x86_64-unknown-linux-gnu|memocap-aarch64-apple-darwin|memocap-x86_64-pc-windows-msvc.exe|memocap-x86_64-unknown-linux-gnu.sha256|memocap-aarch64-apple-darwin.sha256|memocap-x86_64-pc-windows-msvc.exe.sha256) ;;
                 *) echo "unexpected release asset $remote" >&2; return 1 ;;
               esac
-            done
+            done < <(jq -j '.assets[] | .name, "\u0000"' <<< "$release")
           }
 
           [ "$(remote_tag_sha)" = "$TAG_SHA" ]

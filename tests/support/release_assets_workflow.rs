@@ -17,6 +17,8 @@ pub(super) fn validate(release: &str) -> Result<(), String> {
         "gh release view \"$TAG\" --repo \"$GITHUB_REPOSITORY\" --json tagName,isDraft,isPrerelease,assets",
         "[ \"$(jq -r '.isDraft' <<< \"$release\")\" = false ]",
         "[ \"$(jq -r '.isPrerelease' <<< \"$release\")\" = false ]",
+        "while IFS= read -r -d '' remote; do",
+        "done < <(jq -j '.assets[] | .name, \"\\u0000\"' <<< \"$release\")",
         "verify_known_assets \"$release\"",
         "actual_names=\"$(jq -r '.assets[].name' <<< \"$release\" | sort)\"",
         "[ \"$actual_names\" = \"$expected_names\" ]",
@@ -44,6 +46,7 @@ pub(super) fn validate(release: &str) -> Result<(), String> {
     if release.contains("gh release edit")
         || release.contains("sleep ")
         || release.contains("for attempt")
+        || release.contains("for remote in $(")
     {
         return Err("release publication may not poll or mutate release identity".to_owned());
     }

@@ -117,6 +117,14 @@ fn release_contract_rejects_publication_bypass_mutations() {
             "true # accept unknown assets\n            gh release upload",
         ),
         (
+            "while IFS= read -r -d '' remote; do",
+            "for remote in $(jq -r '.assets[].name' <<< \"$release\"); do",
+        ),
+        (
+            "jq -j '.assets[] | .name, \"\\u0000\"'",
+            "jq -r '.assets[].name'",
+        ),
+        (
             "actual_names=\"$(jq -r '.assets[].name' <<< \"$release\" | sort)\"",
             "actual_names=\"$expected_names\"",
         ),
