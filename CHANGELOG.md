@@ -1,6 +1,18 @@
 # Changelog
 
-## 0.0.6 (unreleased)
+## 0.0.7 (2026-09-22)
+
+This release establishes a race-safe release authority.
+
+- A tag-only release accepts a tag commit in `origin/main` history only when a
+  successful `CI` push run on `main` for the exact tag SHA exists.
+- Workflow identity is bound to the workflow carried by the tag. Validation does
+  not require the tag to equal the current `origin/main` tip, so later main
+  commits cannot invalidate an already tested tag.
+- The release workflow is read-only apart from the npm trusted-publisher OIDC
+  release contract, which retains registry integrity and provenance checks.
+
+## 0.0.6 (2026-09-22)
 
 This release changes the memory contract to domain-aware placements and a
 visible stack. It is a breaking release for scripts and operators.
