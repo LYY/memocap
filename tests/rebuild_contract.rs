@@ -16,6 +16,26 @@ fn with_lf_line_endings(text: &str) -> String {
     text.replace("\r\n", "\n")
 }
 
+fn v007_release_boundary_is_accurate(changelog: &str) -> bool {
+    let changelog = with_lf_line_endings(changelog);
+    let Some((_, after_heading)) = changelog.split_once("## 0.0.7") else {
+        return false;
+    };
+    let Some((section, _)) = after_heading.split_once("## 0.0.6") else {
+        return false;
+    };
+    let compact = section.lines().map(str::trim).collect::<Vec<_>>().join(" ");
+
+    [
+        "Validation and binary-build jobs are read-only.",
+        "The sole constrained `release` job holds `contents: write` and creates or uploads verified GitHub Release assets.",
+        "The `registry` job uses npm trusted-publisher OIDC to publish the package and verify registry integrity and provenance.",
+    ]
+    .iter()
+    .all(|claim| compact.contains(claim))
+        && !compact.contains("release workflow is read-only apart from")
+}
+
 const HISTORICAL_CHANGELOG: &str = r#"## 0.1.3 — 2026-09-02
 
 记住前先查重，召回默认少灌一点。
@@ -111,6 +131,33 @@ fn changelog_starts_with_v007_release_contract_and_dates_v006_historical() {
     }
     assert!(changelog.contains("## 0.0.5 (2026-09-20)"));
     assert!(changelog.contains("## 0.0.3 (2026-09-07)"));
+}
+
+#[test]
+fn changelog_v007_distinguishes_release_workflow_write_authorities() {
+    assert!(
+        v007_release_boundary_is_accurate(CHANGELOG),
+        "v0.0.7 changelog must distinguish read-only validation/build, GitHub asset writes, and npm OIDC publication"
+    );
+}
+
+#[test]
+fn changelog_release_boundary_contract_rejects_stale_mutations() {
+    for (before, after) in [
+        (
+            "- Validation and binary-build jobs are read-only.\n- The sole constrained `release` job holds `contents: write` and creates or uploads\n  verified GitHub Release assets.\n- The `registry` job uses npm trusted-publisher OIDC to publish the package and\n  verify registry integrity and provenance.",
+            "- The release workflow is read-only apart from the npm trusted-publisher OIDC\n  release contract, which retains registry integrity and provenance checks.",
+        ),
+        (
+            "The sole constrained `release` job holds `contents: write` and creates or uploads\n  verified GitHub Release assets.",
+            "The `release` job prepares verified GitHub Release assets.",
+        ),
+    ] {
+        assert_eq!(CHANGELOG.matches(before).count(), 1, "mutation target missing");
+        let mutated = CHANGELOG.replacen(before, after, 1);
+
+        assert!(!v007_release_boundary_is_accurate(&mutated));
+    }
 }
 
 #[test]

@@ -9,8 +9,11 @@ This release establishes a race-safe release authority.
 - Workflow identity is bound to the workflow carried by the tag. Validation does
   not require the tag to equal the current `origin/main` tip, so later main
   commits cannot invalidate an already tested tag.
-- The release workflow is read-only apart from the npm trusted-publisher OIDC
-  release contract, which retains registry integrity and provenance checks.
+- Validation and binary-build jobs are read-only.
+- The sole constrained `release` job holds `contents: write` and creates or uploads
+  verified GitHub Release assets.
+- The `registry` job uses npm trusted-publisher OIDC to publish the package and
+  verify registry integrity and provenance.
 
 ## 0.0.6 (2026-09-22)
 
