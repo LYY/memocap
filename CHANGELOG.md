@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.8 (2026-09-23)
+
+Patch release for the release-boundary documentation correction.
+
 ## 0.0.7 (2026-09-22)
 
 This release establishes a race-safe release authority.

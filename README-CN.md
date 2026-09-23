@@ -15,7 +15,7 @@ OpenCode 是唯一官方支持的集成。插件通过全局 `memocap` CLI 调�
 先安装全局 CLI，再注册 OpenCode 插件：
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.0.7
+pnpm add -g @lyy-gh/memocap@0.0.8
 opencode plugin @lyy-gh/memocap
 ```
 

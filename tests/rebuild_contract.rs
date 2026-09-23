@@ -1,6 +1,6 @@
 const REBUILD: &str = include_str!("../docs/REBUILD.md");
 const CHANGELOG: &str = include_str!("../CHANGELOG.md");
-const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.7";
+const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.8";
 const PLUGIN_INSTALL: &str = "opencode plugin @lyy-gh/memocap";
 
 const V002_CHANGELOG: &str = r#"## 0.0.2 (2026-09-04)
@@ -98,14 +98,17 @@ fn rebuild_spec_has_no_stale_host_install_claims() {
 }
 
 #[test]
-fn changelog_starts_with_v007_release_contract_and_dates_v006_historical() {
+fn changelog_starts_with_v008_patch_and_preserves_v007_v006_history() {
     let changelog = with_lf_line_endings(CHANGELOG);
     let top_section = changelog
         .split_once("## 0.0.5")
         .map(|(section, _)| section)
         .expect("CHANGELOG must retain historical releases");
 
-    assert!(top_section.starts_with("# Changelog\n\n## 0.0.7 (2026-09-22)"));
+    assert!(top_section.starts_with("# Changelog\n\n## 0.0.8 (2026-09-23)"));
+    assert!(
+        top_section.contains("Patch release for the release-boundary documentation correction.")
+    );
     for claim in [
         "race-safe release authority",
         "successful `CI` push run on `main` for the exact tag SHA",
@@ -362,8 +365,8 @@ fn rebuild_contract_rejects_extra_install_command_mutation() {
 #[test]
 fn rebuild_contract_rejects_missing_opening_install_fence_mutation() {
     let mutated = with_lf_line_endings(REBUILD).replacen(
-        "```bash\npnpm add -g @lyy-gh/memocap@0.0.7",
-        "pnpm add -g @lyy-gh/memocap@0.0.7",
+        "```bash\npnpm add -g @lyy-gh/memocap@0.0.8",
+        "pnpm add -g @lyy-gh/memocap@0.0.8",
         1,
     );
 

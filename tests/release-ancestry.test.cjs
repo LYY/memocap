@@ -127,7 +127,7 @@ function successfulCi(sha) {
 test("accepts a tested tag from main history after main advances", (context) => {
   // Given
   const release = fixture(context);
-  const tagName = "v0.0.7-main-ancestor";
+  const tagName = "v0.0.8-main-ancestor";
   tag(release.root, tagName, release.current);
 
   // When
@@ -154,7 +154,7 @@ test("rejects a tag outside origin main history", (context) => {
     "-m",
     "outside main",
   ]);
-  const tagName = "v0.0.7-off-main";
+  const tagName = "v0.0.8-off-main";
   tag(release.root, tagName, outside);
 
   // When
@@ -179,7 +179,7 @@ for (const [name, runs] of [
   test(`rejects ${name} CI evidence`, (context) => {
     // Given
     const release = fixture(context);
-    const tagName = `v0.0.7-${name}`;
+    const tagName = `v0.0.8-${name}`;
     tag(release.root, tagName, release.current);
     const exactRuns = runs.map((run) => ({
       ...run,
@@ -202,7 +202,7 @@ for (const [name, runs] of [
 test("rejects a workflow ref that does not identify the tag workflow", (context) => {
   // Given
   const release = fixture(context);
-  const tagName = "v0.0.7-workflow-ref";
+  const tagName = "v0.0.8-workflow-ref";
   tag(release.root, tagName, release.current);
 
   // When
@@ -210,7 +210,7 @@ test("rejects a workflow ref that does not identify the tag workflow", (context)
     expectedSha: release.current,
     runs: [successfulCi(release.current)],
     tag: tagName,
-    workflowRef: "LYY/memocap/.github/workflows/release.yml@refs/tags/v0.0.7-other",
+    workflowRef: "LYY/memocap/.github/workflows/release.yml@refs/tags/v0.0.8-other",
     workflowSha: release.current,
   });
 

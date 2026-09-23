@@ -57,7 +57,7 @@ recognized-old-schema reset.
 For a local client, install the CLI and select the server explicitly:
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.0.7
+pnpm add -g @lyy-gh/memocap@0.0.8
 export MEMOCAP_ADDR=http://127.0.0.1:8787
 export MEMOCAP_TOKEN='replace-with-a-long-random-token'
 memocap scope show
