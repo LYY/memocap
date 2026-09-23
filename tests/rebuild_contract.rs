@@ -146,6 +146,8 @@ fn changelog_v007_distinguishes_release_workflow_write_authorities() {
 
 #[test]
 fn changelog_release_boundary_contract_rejects_stale_mutations() {
+    let changelog = with_lf_line_endings(CHANGELOG);
+
     for (before, after) in [
         (
             "- Validation and binary-build jobs are read-only.\n- The sole constrained `release` job holds `contents: write` and creates or uploads\n  verified GitHub Release assets.\n- The `registry` job uses npm trusted-publisher OIDC to publish the package and\n  verify registry integrity and provenance.",
@@ -156,8 +158,8 @@ fn changelog_release_boundary_contract_rejects_stale_mutations() {
             "The `release` job prepares verified GitHub Release assets.",
         ),
     ] {
-        assert_eq!(CHANGELOG.matches(before).count(), 1, "mutation target missing");
-        let mutated = CHANGELOG.replacen(before, after, 1);
+        assert_eq!(changelog.matches(before).count(), 1, "mutation target missing");
+        let mutated = changelog.replacen(before, after, 1);
 
         assert!(!v007_release_boundary_is_accurate(&mutated));
     }
