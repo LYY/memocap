@@ -32,8 +32,13 @@ Least-sharing placement policy:
 - Universal example: "HTTP 429 responses can include Retry-After in any codebase" uses `--universal`.
 - Mixed example: "This repository uses `src/db.rs`; parameterized SQL prevents injection across databases" must split into repository and universal memories.
 - Uncertain example: "Compact output improves scanability" stays in the repository when broader applicability is unclear.
+- Preserve exact facts: names, paths, commands, versions, values, and constraints; generalization supplements rather than replaces them.
+- Put likely user query wording and aliases in content or tags; recall uses AND matching across FTS content/tags.
+- Treat repository-specific implementation and reusable method as separate layers.
+- Store a dual-layer memory only when both layers share placement and lifecycle; otherwise split records and classify each separately.
+- Generalize a rule only when its evidence supports it.
+- Use `--topic` only for an explicit replacement relationship, never association; use content/tags for retrieval associations.
 - This policy guides model behavior but does not guarantee it; the memocap CLI does not scan for secrets.
-- Use `--topic` only for an explicit replacement relationship.
 - Copy existing memory: use explicit `memocap scope copy --id <ID> --from <PLACEMENT> --to <PLACEMENT> [--note <NOTE>]` to preserve the source memory.
 - Move existing memory: use explicit `memocap scope move --id <ID> --from <PLACEMENT> --to <PLACEMENT> --yes [--note <NOTE>]` only for explicit relocation.
 - After each write, report the selected placement and a short rationale.

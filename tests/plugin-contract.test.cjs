@@ -89,6 +89,42 @@ const safeguards = [
   ["CLI limitation", /CLI does not scan for secrets/i],
 ];
 
+const retrievalPolicies = [
+  ["preserve exact facts", [
+    /^Preserve exact facts\b/i,
+    /\bgeneralization supplements\b/i,
+    /\brather than replaces\b/i,
+  ]],
+  ["query aliases", [
+    /^Put likely user query wording and aliases\b/i,
+    /\bcontent or tags\b/i,
+    /\bAND matching\b.*\bFTS\b/i,
+  ]],
+  ["separate knowledge layers", [
+    /^Treat\b/i,
+    /\brepository-specific implementation\b/i,
+    /\breusable method\b/i,
+    /\bseparate layers\b/i,
+  ]],
+  ["split divergent lifecycle layers", [
+    /^Store\b/i,
+    /\bdual-layer memory\b/i,
+    /\bonly when both layers share placement and lifecycle\b/i,
+    /\botherwise split records\b/i,
+    /\bclassify each separately\b/i,
+  ]],
+  ["evidence-backed generalization", [
+    /^Generalize a rule only when\b/i,
+    /\bevidence supports it\b/i,
+  ]],
+  ["topic replacement only", [
+    /^Use\s+`--topic`\s+only for\b/i,
+    /\breplacement relationship\b/i,
+    /\bnever association\b/i,
+    /\bcontent\/tags\b.*\bretrieval associations\b/i,
+  ]],
+];
+
 const examples = [
   ["repository", /Repository example:.*src\/release\.rs.*repository/i],
   ["attached domain", /Attached-domain example:.*rust\/cli.*--domain rust\/cli/i],
@@ -112,6 +148,12 @@ function assertPolicy(text) {
   }
   for (const [name, pattern] of safeguards) {
     assert.ok(lines.some((line) => pattern.test(line)), `guidance includes ${name}`);
+  }
+  for (const [name, pattern] of retrievalPolicies) {
+    assert.ok(
+      lines.some((line) => (Array.isArray(pattern) ? pattern.every((part) => part.test(line)) : pattern.test(line))),
+      `guidance includes ${name}`,
+    );
   }
   for (const [name, pattern] of examples) {
     assert.ok(lines.some((line) => pattern.test(line)), `guidance includes ${name} example`);
@@ -189,4 +231,19 @@ test("policy contract rejects universal fallback for uncertain candidates", () =
     "6. Uncertain: when placement remains uncertain, store in universal memory.",
   );
   assert.throws(() => assertPolicy(mutated), /repository fallback/);
+});
+
+test("policy contract rejects inverted retrieval guidance", () => {
+  const policy = staticRules();
+  assertPolicy(policy);
+  for (const [pattern, replacement] of [
+    [/^- Preserve exact facts:.*$/m, "- Preserve exact facts: generalization replaces exact facts."],
+    [/^- Treat repository-specific implementation.*$/m, "- Do not treat repository-specific implementation and reusable method as separate layers."],
+    [/^- Store a dual-layer memory.*$/m, "- Store a dual-layer memory even when placement or lifecycle diverges."],
+    [/^- Generalize a rule only when.*$/m, "- Generalize every rule regardless of whether its evidence supports it."],
+    [/^- Use `--topic` only for.*$/m, "- Use `--topic` for associations, not only for explicit replacement relationships."],
+  ]) {
+    const mutated = replaceLine(policy, pattern, replacement);
+    assert.throws(() => assertPolicy(mutated));
+  }
 });
