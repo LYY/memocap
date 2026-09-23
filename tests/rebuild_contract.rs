@@ -1,6 +1,6 @@
 const REBUILD: &str = include_str!("../docs/REBUILD.md");
 const CHANGELOG: &str = include_str!("../CHANGELOG.md");
-const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.7";
+const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.8";
 const PLUGIN_INSTALL: &str = "opencode plugin @lyy-gh/memocap";
 
 const V002_CHANGELOG: &str = r#"## 0.0.2 (2026-09-04)
@@ -14,6 +14,26 @@ const V002_CHANGELOG: &str = r#"## 0.0.2 (2026-09-04)
 
 fn with_lf_line_endings(text: &str) -> String {
     text.replace("\r\n", "\n")
+}
+
+fn v007_release_boundary_is_accurate(changelog: &str) -> bool {
+    let changelog = with_lf_line_endings(changelog);
+    let Some((_, after_heading)) = changelog.split_once("## 0.0.7") else {
+        return false;
+    };
+    let Some((section, _)) = after_heading.split_once("## 0.0.6") else {
+        return false;
+    };
+    let compact = section.lines().map(str::trim).collect::<Vec<_>>().join(" ");
+
+    [
+        "Validation and binary-build jobs are read-only.",
+        "The sole constrained `release` job holds `contents: write` and creates or uploads verified GitHub Release assets.",
+        "The `registry` job uses npm trusted-publisher OIDC to publish the package and verify registry integrity and provenance.",
+    ]
+    .iter()
+    .all(|claim| compact.contains(claim))
+        && !compact.contains("release workflow is read-only apart from")
 }
 
 const HISTORICAL_CHANGELOG: &str = r#"## 0.1.3 — 2026-09-02
@@ -78,14 +98,17 @@ fn rebuild_spec_has_no_stale_host_install_claims() {
 }
 
 #[test]
-fn changelog_starts_with_v007_release_contract_and_dates_v006_historical() {
+fn changelog_starts_with_v008_patch_and_preserves_v007_v006_history() {
     let changelog = with_lf_line_endings(CHANGELOG);
     let top_section = changelog
         .split_once("## 0.0.5")
         .map(|(section, _)| section)
         .expect("CHANGELOG must retain historical releases");
 
-    assert!(top_section.starts_with("# Changelog\n\n## 0.0.7 (2026-09-22)"));
+    assert!(top_section.starts_with("# Changelog\n\n## 0.0.8 (2026-09-23)"));
+    assert!(
+        top_section.contains("Patch release for the release-boundary documentation correction.")
+    );
     for claim in [
         "race-safe release authority",
         "successful `CI` push run on `main` for the exact tag SHA",
@@ -111,6 +134,35 @@ fn changelog_starts_with_v007_release_contract_and_dates_v006_historical() {
     }
     assert!(changelog.contains("## 0.0.5 (2026-09-20)"));
     assert!(changelog.contains("## 0.0.3 (2026-09-07)"));
+}
+
+#[test]
+fn changelog_v007_distinguishes_release_workflow_write_authorities() {
+    assert!(
+        v007_release_boundary_is_accurate(CHANGELOG),
+        "v0.0.7 changelog must distinguish read-only validation/build, GitHub asset writes, and npm OIDC publication"
+    );
+}
+
+#[test]
+fn changelog_release_boundary_contract_rejects_stale_mutations() {
+    let changelog = with_lf_line_endings(CHANGELOG);
+
+    for (before, after) in [
+        (
+            "- Validation and binary-build jobs are read-only.\n- The sole constrained `release` job holds `contents: write` and creates or uploads\n  verified GitHub Release assets.\n- The `registry` job uses npm trusted-publisher OIDC to publish the package and\n  verify registry integrity and provenance.",
+            "- The release workflow is read-only apart from the npm trusted-publisher OIDC\n  release contract, which retains registry integrity and provenance checks.",
+        ),
+        (
+            "The sole constrained `release` job holds `contents: write` and creates or uploads\n  verified GitHub Release assets.",
+            "The `release` job prepares verified GitHub Release assets.",
+        ),
+    ] {
+        assert_eq!(changelog.matches(before).count(), 1, "mutation target missing");
+        let mutated = changelog.replacen(before, after, 1);
+
+        assert!(!v007_release_boundary_is_accurate(&mutated));
+    }
 }
 
 #[test]
@@ -315,8 +367,8 @@ fn rebuild_contract_rejects_extra_install_command_mutation() {
 #[test]
 fn rebuild_contract_rejects_missing_opening_install_fence_mutation() {
     let mutated = with_lf_line_endings(REBUILD).replacen(
-        "```bash\npnpm add -g @lyy-gh/memocap@0.0.7",
-        "pnpm add -g @lyy-gh/memocap@0.0.7",
+        "```bash\npnpm add -g @lyy-gh/memocap@0.0.8",
+        "pnpm add -g @lyy-gh/memocap@0.0.8",
         1,
     );
 
