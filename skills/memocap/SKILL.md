@@ -26,7 +26,7 @@ Least-sharing placement policy:
 - Mixed example: "This repository uses `src/db.rs`; parameterized SQL prevents injection across databases" must split into repository and universal memories.
 - Uncertain example: "Compact output improves scanability" stays in the repository when broader applicability is unclear.
 - Preserve exact facts: names, paths, commands, versions, values, and constraints; generalization supplements rather than replaces them.
-- Put likely user query wording and aliases in content or tags; recall uses AND matching across FTS content/tags.
+- Use the user's known working language for primary memory content. Add concise cross-language aliases in content or tags only for core concepts likely to be recalled across languages; do not mechanically translate every term. Recall uses AND matching across FTS content/tags.
 - Treat repository-specific implementation and reusable method as separate layers.
 - Store a dual-layer memory only when both layers share placement and lifecycle; otherwise split records and classify each separately.
 - Generalize a rule only when its evidence supports it.

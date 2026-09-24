@@ -96,7 +96,10 @@ const retrievalPolicies = [
     /\brather than replaces\b/i,
   ]],
   ["query aliases", [
-    /^Put likely user query wording and aliases\b/i,
+    /^Use the user's known working language for primary memory content\./i,
+    /\bconcise cross-language aliases\b/i,
+    /\bonly for core concepts likely to be recalled across languages\b/i,
+    /\bdo not mechanically translate every term\b/i,
     /\bcontent or tags\b/i,
     /\bAND matching\b.*\bFTS\b/i,
   ]],
@@ -238,6 +241,8 @@ test("policy contract rejects inverted retrieval guidance", () => {
   assertPolicy(policy);
   for (const [pattern, replacement] of [
     [/^- Preserve exact facts:.*$/m, "- Preserve exact facts: generalization replaces exact facts."],
+    [/^- Use the user's known working language for primary memory content\..*$/m, "- Use one fixed language for all primary memory content; add aliases only when needed."],
+    [/^- Use the user's known working language for primary memory content\..*$/m, "- Translate every term into every language in memory content and tags."],
     [/^- Treat repository-specific implementation.*$/m, "- Do not treat repository-specific implementation and reusable method as separate layers."],
     [/^- Store a dual-layer memory.*$/m, "- Store a dual-layer memory even when placement or lifecycle diverges."],
     [/^- Generalize a rule only when.*$/m, "- Generalize every rule regardless of whether its evidence supports it."],
