@@ -3,8 +3,8 @@
 This document is the authority for SQLite schema lifecycle behavior. Package
 release identity and database schema identity are independent.
 
-Package release `0.0.8` does not make the database schema `1.0` become
-`0.0.8`. The current schema policy remains `1.0` for every package release that
+Package release `0.0.9` does not make the database schema `1.0` become
+`0.0.9`. The current schema policy remains `1.0` for every package release that
 uses this contract.
 
 ## Opening Commands
@@ -32,7 +32,7 @@ The following JSON object is machine-parseable and is part of this contract.
   "contract": "memocap-schema-versioning",
   "schema_version": "1.0",
   "package_version": {
-    "example": "0.0.8",
+    "example": "0.0.9",
     "manifest_unchanged": false
   },
   "commands": {

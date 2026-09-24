@@ -85,7 +85,7 @@ fn contract_is_valid(markdown: &str) -> bool {
     };
     if contract.contract != "memocap-schema-versioning"
         || contract.schema_version != "1.0"
-        || contract.package_version.example != "0.0.8"
+        || contract.package_version.example != "0.0.9"
         || contract.package_version.manifest_unchanged
         || contract.commands.open
             != [

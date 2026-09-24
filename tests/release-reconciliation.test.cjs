@@ -13,7 +13,7 @@ const assets = [
   "memocap-aarch64-apple-darwin",
   "memocap-x86_64-pc-windows-msvc.exe",
 ];
-const tag = "v0.0.8";
+const tag = "v0.0.9";
 const tagSha = "0123456789012345678901234567890123456789";
 const workflow = fs
   .readFileSync(path.resolve(__dirname, "../.github/workflows/release.yml"), "utf8")

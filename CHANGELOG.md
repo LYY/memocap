@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.9 (2026-09-23)
+
+Patch release aligning the packaged OpenCode plugin and skill, plus the Rust-embedded guidance, with retrieval-oriented memory write rules.
+
 ## 0.0.8 (2026-09-23)
 
 Patch release for the release-boundary documentation correction.

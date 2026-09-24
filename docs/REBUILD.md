@@ -10,7 +10,7 @@ domain-aware memory 行为。
 安装顺序固定为先全局 CLI，再注册 OpenCode 插件：
 
 ```bash
-pnpm add -g @lyy-gh/memocap@0.0.8
+pnpm add -g @lyy-gh/memocap@0.0.9
 opencode plugin @lyy-gh/memocap
 ```
 

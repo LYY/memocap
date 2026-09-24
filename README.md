@@ -15,7 +15,7 @@ remote operation are documented in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 Install the global CLI first, then register the OpenCode plugin:
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.0.8
+pnpm add -g @lyy-gh/memocap@0.0.9
 opencode plugin @lyy-gh/memocap
 ```
 
