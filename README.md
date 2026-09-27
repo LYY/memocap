@@ -15,7 +15,7 @@ remote operation are documented in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 Install the global CLI first, then register the OpenCode plugin:
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.0.9
+pnpm add -g @lyy-gh/memocap@0.0.10
 opencode plugin @lyy-gh/memocap
 ```
 
@@ -157,10 +157,13 @@ manually replay a lost request from a bare `not_found` result.
 
 ## Policy boundaries
 
-The OpenCode skill's least-sharing policy is model guidance. It asks the model
-to reject unsafe candidates, choose repository or attached-domain placement,
-use universal only for stable cross-domain knowledge, split mixed candidates,
-and use repository placement when uncertain. It does not auto-classify content, scan secrets, or guarantee compliance. It is not a compliance guarantee and it does not create or attach domains.
+The OpenCode skill's memory-admission and least-sharing policy is model guidance.
+It admits only stable repository conventions, enduring preferences, and
+continuing decisions whose rationale is absent from a durable, authoritative,
+cheaply queryable source, then chooses repository or attached-domain placement.
+Temporary state remains in its source system. The policy does not auto-classify content,
+scan secrets, or guarantee compliance. It is not a compliance guarantee and it does not
+create or attach domains.
 
 Runtime validation is separate. The CLI and server validate repository IDs,
 domain registration, current-repository attachment, exact placements, and

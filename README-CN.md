@@ -15,7 +15,7 @@ OpenCode 是唯一官方支持的集成。插件通过全局 `memocap` CLI 调�
 先安装全局 CLI，再注册 OpenCode 插件：
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.0.9
+pnpm add -g @lyy-gh/memocap@0.0.10
 opencode plugin @lyy-gh/memocap
 ```
 
@@ -146,10 +146,11 @@ not_found alone 不证明手工 replay 安全。
 
 ## Policy boundaries
 
-OpenCode skill 的 least-sharing policy 是 model guidance。它要求模型拒绝不安全
-候选、选择 repository 或 attached-domain placement、只在稳定跨 domain 时使用
-universal、拆分 mixed candidate，并在不确定时使用 repository。它不会自动分类、
-扫描 secret、保证合规。这不是 compliance guarantee，也不会自动创建或挂载 domain。
+OpenCode skill 的 memory-admission 与 least-sharing policy 是 model guidance。它只接纳
+稳定的 repository convention、持续的 preference，以及理由未被持久、权威且易查询来源
+保留的 continuing decision，再选择 repository 或 attached-domain placement。临时状态保留
+在其 source system 中。它不会自动分类、扫描 secret、保证合规。这不是 compliance guarantee，
+也不会自动创建或挂载 domain。
 
 Runtime validation 是另一层。CLI 和 server 会验证 repository ID、domain
 registry、当前 repository attachment、精确 placement 和 operation fingerprint。
