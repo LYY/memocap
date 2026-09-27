@@ -3,8 +3,7 @@ use crossterm::event::KeyCode;
 use crate::store::InventoryMemory;
 
 pub(super) const INVENTORY_PAGE_STEP: usize = 3;
-pub(super) const WELCOME_MESSAGE: &str =
-    "Recall-first. Store durable conventions, preferences, and decisions only when their rationale is not in an authoritative source.";
+pub(super) const WELCOME_MESSAGE: &str = "Recall-first.";
 
 pub(super) enum UiView {
     Message(String),
