@@ -100,14 +100,35 @@ fn rebuild_spec_has_no_stale_host_install_claims() {
 #[test]
 fn changelog_starts_with_v0010_patch_and_preserves_v009_history() {
     let changelog = with_lf_line_endings(CHANGELOG);
+    let v0010_section = changelog
+        .split_once("## 0.0.10 (2026-09-27)")
+        .and_then(|(_, section)| section.split_once("## 0.0.9 (2026-09-23)"))
+        .map(|(section, _)| section)
+        .expect("CHANGELOG must retain bounded v0.0.10 section");
+    let compact_v0010_section = v0010_section
+        .lines()
+        .map(str::trim)
+        .collect::<Vec<_>>()
+        .join(" ");
     let top_section = changelog
         .split_once("## 0.0.5")
         .map(|(section, _)| section)
         .expect("CHANGELOG must retain historical releases");
 
     assert!(top_section.starts_with("# Changelog\n\n## 0.0.10 (2026-09-27)"));
-    assert!(top_section
-        .contains("Patch release that admits only durable memory before least-sharing placement."));
+    assert!(compact_v0010_section.contains(
+        "Patch release making memory guidance language-aware while admitting only durable memory before least-sharing placement."
+    ));
+    for claim in [
+        "user's known working language for primary memory content",
+        "concise cross-language aliases only for core concepts likely to be recalled across languages",
+        "does not mechanically translate every term",
+    ] {
+        assert!(
+            compact_v0010_section.contains(claim),
+            "missing v0.0.10 claim: {claim}"
+        );
+    }
     assert!(top_section.contains("## 0.0.9 (2026-09-23)"));
     assert!(top_section.contains("## 0.0.8 (2026-09-23)"));
     assert!(

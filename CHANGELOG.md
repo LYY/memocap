@@ -2,8 +2,11 @@
 
 ## 0.0.10 (2026-09-27)
 
-Patch release that admits only durable memory before least-sharing placement.
+Patch release making memory guidance language-aware while admitting only durable memory before least-sharing placement.
 
+- Memory guidance now uses the user's known working language for primary memory
+  content, adds concise cross-language aliases only for core concepts likely to
+  be recalled across languages, and does not mechanically translate every term.
 - Long-term memory now stores stable repository conventions, enduring preferences,
   or continuing decisions only when their rationale is not already available from
   a durable, authoritative, cheaply queryable source.
