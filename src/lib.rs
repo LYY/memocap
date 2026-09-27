@@ -31,7 +31,7 @@ Memory admission and least-sharing placement policy:
 - Never create or attach a domain automatically.
 - Repository example: "This repository releases from `src/release.rs`" stays in the repository.
 - Attached-domain example: "Crates in attached `rust/cli` use cargo-nextest" uses `--domain rust/cli`.
-- Universal example: "HTTP 429 responses can include Retry-After in any codebase" uses `--universal`.
+- Universal example: when no durable profile records its rationale, "The user prefers timeline-ordered status updates across unrelated repositories because they compare work chronologically" uses `--universal`.
 - Mixed example: "This repository uses `src/db.rs`; parameterized SQL prevents injection across databases" must split into repository and universal memories.
 - Uncertain example: "Compact output improves scanability" stays in the repository when broader applicability is unclear.
 - Preserve exact facts: names, paths, commands, versions, values, and constraints; generalization supplements rather than replaces them.

@@ -131,7 +131,7 @@ const retrievalPolicies = [
 const examples = [
   ["repository", /Repository example:.*src\/release\.rs.*repository/i],
   ["attached domain", /Attached-domain example:.*rust\/cli.*--domain rust\/cli/i],
-  ["universal", /Universal example:.*HTTP 429.*any codebase.*--universal/i],
+  ["universal", /Universal example:.*no durable profile.*user prefers.*unrelated repositories.*--universal/i],
   ["mixed", /Mixed example:.*src\/db\.rs.*parameterized SQL.*split/i],
   ["uncertain", /Uncertain example:.*compact output improves scanability.*repository/i],
 ];
