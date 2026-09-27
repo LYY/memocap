@@ -160,10 +160,10 @@ manually replay a lost request from a bare `not_found` result.
 The OpenCode skill's memory-admission and least-sharing policy is model guidance.
 It admits only stable repository conventions, enduring preferences, and
 continuing decisions whose rationale is absent from a durable, authoritative,
-cheaply queryable source, then chooses repository or attached-domain placement.
-Temporary state remains in its source system. The policy does not auto-classify content,
-scan secrets, or guarantee compliance. It is not a compliance guarantee and it does not
-create or attach domains.
+cheaply queryable source, then chooses repository, attached-domain, or
+universal placement. Temporary state remains in its source system. The policy
+does not auto-classify content, scan secrets, or guarantee compliance. It is
+not a compliance guarantee and it does not create or attach domains.
 
 Runtime validation is separate. The CLI and server validate repository IDs,
 domain registration, current-repository attachment, exact placements, and
