@@ -3,8 +3,7 @@ use crossterm::event::KeyCode;
 use crate::store::InventoryMemory;
 
 pub(super) const INVENTORY_PAGE_STEP: usize = 3;
-pub(super) const WELCOME_MESSAGE: &str =
-    "Recall-first, then answer. Value-store decisions, preferences, tasks, agreements, and context.";
+pub(super) const WELCOME_MESSAGE: &str = "Recall-first.";
 
 pub(super) enum UiView {
     Message(String),

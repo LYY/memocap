@@ -1,6 +1,6 @@
 const REBUILD: &str = include_str!("../docs/REBUILD.md");
 const CHANGELOG: &str = include_str!("../CHANGELOG.md");
-const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.9";
+const GLOBAL_INSTALL: &str = "pnpm add -g @lyy-gh/memocap@0.0.10";
 const PLUGIN_INSTALL: &str = "opencode plugin @lyy-gh/memocap";
 
 const V002_CHANGELOG: &str = r#"## 0.0.2 (2026-09-04)
@@ -98,17 +98,38 @@ fn rebuild_spec_has_no_stale_host_install_claims() {
 }
 
 #[test]
-fn changelog_starts_with_v009_patch_and_preserves_v008_history() {
+fn changelog_starts_with_v0010_patch_and_preserves_v009_history() {
     let changelog = with_lf_line_endings(CHANGELOG);
+    let v0010_section = changelog
+        .split_once("## 0.0.10 (2026-09-27)")
+        .and_then(|(_, section)| section.split_once("## 0.0.9 (2026-09-23)"))
+        .map(|(section, _)| section)
+        .expect("CHANGELOG must retain bounded v0.0.10 section");
+    let compact_v0010_section = v0010_section
+        .lines()
+        .map(str::trim)
+        .collect::<Vec<_>>()
+        .join(" ");
     let top_section = changelog
         .split_once("## 0.0.5")
         .map(|(section, _)| section)
         .expect("CHANGELOG must retain historical releases");
 
-    assert!(top_section.starts_with("# Changelog\n\n## 0.0.9 (2026-09-23)"));
-    assert!(
-        top_section.contains("Patch release aligning the packaged OpenCode plugin and skill, plus the Rust-embedded guidance, with retrieval-oriented memory write rules.")
-    );
+    assert!(top_section.starts_with("# Changelog\n\n## 0.0.10 (2026-09-27)"));
+    assert!(compact_v0010_section.contains(
+        "Patch release making memory guidance language-aware while admitting only durable memory before least-sharing placement."
+    ));
+    for claim in [
+        "user's known working language for primary memory content",
+        "concise cross-language aliases only for core concepts likely to be recalled across languages",
+        "does not mechanically translate every term",
+    ] {
+        assert!(
+            compact_v0010_section.contains(claim),
+            "missing v0.0.10 claim: {claim}"
+        );
+    }
+    assert!(top_section.contains("## 0.0.9 (2026-09-23)"));
     assert!(top_section.contains("## 0.0.8 (2026-09-23)"));
     assert!(
         top_section.contains("Patch release for the release-boundary documentation correction.")
@@ -176,7 +197,7 @@ fn changelog_preserves_v002_release_entry() {
         .find("## 0.0.2")
         .expect("CHANGELOG must retain the v0.0.2 release");
     let end = changelog[start..]
-        .find("## 0.0.1")
+        .find("## 0.0.1 (2026-09-02)")
         .map(|index| start + index)
         .expect("CHANGELOG must retain the v0.0.1 release");
 
@@ -197,7 +218,7 @@ fn changelog_preserves_historical_content_from_v013_onward() {
 fn changelog_preserves_v001_release_entry() {
     let changelog = with_lf_line_endings(CHANGELOG);
     let start = changelog
-        .find("## 0.0.1")
+        .find("## 0.0.1 (2026-09-02)")
         .expect("CHANGELOG must retain the v0.0.1 release");
     let end = changelog[start..]
         .find("## 0.1.3")
@@ -371,8 +392,8 @@ fn rebuild_contract_rejects_extra_install_command_mutation() {
 #[test]
 fn rebuild_contract_rejects_missing_opening_install_fence_mutation() {
     let mutated = with_lf_line_endings(REBUILD).replacen(
-        "```bash\npnpm add -g @lyy-gh/memocap@0.0.9",
-        "pnpm add -g @lyy-gh/memocap@0.0.9",
+        "```bash\npnpm add -g @lyy-gh/memocap@0.0.10",
+        "pnpm add -g @lyy-gh/memocap@0.0.10",
         1,
     );
 
