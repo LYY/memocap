@@ -1,6 +1,6 @@
 {
   "name": "@lyy-gh/memocap",
-  "version": "0.0.10",
+  "version": "0.1.0",
   "description": "Local-first SQLite memory for OpenCode",
   "license": "MIT",
   "type": "module",
@@ -9,7 +9,8 @@
     ".": "./plugin/index.js"
   },
   "bin": {
-    "memocap": "bin/cli.cjs"
+    "memocap": "bin/cli.cjs",
+    "memocap-setup": "scripts/setup.mjs"
   },
   "repository": {
     "type": "git",
@@ -19,9 +20,19 @@
     "bin",
     "plugin",
     "skills",
+    "scripts/setup.mjs",
+    "scripts/setup",
+    "scripts/install.sh",
+    "scripts/install.ps1",
     "README.md",
     "README-CN.md",
     "docs/SCHEMA-VERSIONING.md",
-    "docs/DEPLOYMENT.md"
-  ]
+    "docs/DEPLOYMENT.md",
+    "docs/INSTALL.md",
+    "docs/INSTALL-AGENT.md"
+  ],
+  "dependencies": {
+    "@opencode-ai/plugin": "1.19.3",
+    "jsonc-parser": "3.3.1"
+  }
 }
