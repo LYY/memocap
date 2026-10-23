@@ -1,5 +1,36 @@
 # Changelog
 
+## @lyy-gh/memocap 0.1.0 (2026-10-23)
+
+Implemented outcomes for package target `0.1.0` and Git tag target `v0.1.0`.
+Publication and registry provenance verification are separate release gates;
+this entry does not claim either has completed.
+
+- Explicit `--repo` targets, up to eight repositories for recall, and
+  `--match all|any` make selection and query matching visible. Recall preserves
+  per-repository topic shadowing and applies one shared result/character budget.
+- `--json` receipts report operation identity, targets, query terms, matched and
+  returned IDs, limits, errors, and activity outcome. Full inventory is explicit
+  through `scope list --all` and paged `list --placement`.
+- Retained operation metadata lives in a separate `.activity.sqlite` store.
+  Activity is bounded operational history with possible gaps, not a full audit
+  log. Auxiliary failure never changes a successful core write into a failure
+  or authorizes replaying it.
+- OpenCode uses its package's absolute bundled launcher and checks the native
+  version. Current-request recall receipts, explicit scope switching, memory
+  tools, and `/memory` commands expose what ran and what was prepared for model
+  input; they do not prove model understanding or adoption.
+- `memocap-setup install/check/update/doctor/uninstall` manages explicitly
+  selected integrations, preserves unrelated configuration and memory data,
+  freezes the resolved update target, and uses a version-checked exact-target
+  worker when needed. It distinguishes static readiness from runtime
+  verification. Skills use the matching release tree and pinned Skills 1.7.4.
+- Core schema remains `1.0`, including its existing complete fingerprint.
+  Existing compatible core data is retained and remains usable by v0.0.10;
+  auxiliary activity is independent. A software downgrade is not a database
+  restore. See [installation](docs/INSTALL.md) and
+  [schema lifecycle](docs/SCHEMA-VERSIONING.md) before operating older stores.
+
 ## 0.0.10 (2026-09-27)
 
 Patch release making memory guidance language-aware while admitting only durable memory before least-sharing placement.
@@ -96,6 +127,13 @@ major schemas refuse without mutation.
 
 - 通过 Git tag 发布，并保留 tag、源码仓库和构建 artifact 的 release provenance。
 - 发布包由 LYY/memocap GitHub Release 提供，OpenCode 插件通过全局 `memocap` CLI 工作。
+
+## Pre-independent project history
+
+The entries below predate the independent `@lyy-gh/memocap` release line that
+began at `0.0.1`. Their historical version numbers and host claims describe
+that earlier project context. In particular, the 2026-08-25 `0.1.0` entry is
+not the current `@lyy-gh/memocap` `0.1.0` release target above.
 
 ## 0.1.3 — 2026-09-02
 

@@ -5,7 +5,7 @@ fn npm_package_has_independent_opencode_identity() {
     let package: Value = serde_json::from_str(include_str!("../package.json")).unwrap();
 
     assert_eq!(package["name"], "@lyy-gh/memocap");
-    assert_eq!(package["version"], "0.0.10");
+    assert_eq!(package["version"], "0.1.0");
     assert_eq!(
         package["description"],
         "Local-first SQLite memory for OpenCode"
@@ -18,7 +18,10 @@ fn npm_package_has_independent_opencode_identity() {
     assert!(package.get("pi").is_none());
     assert!(package.get("keywords").is_none());
     assert!(!package.to_string().contains("pi-package"));
-    assert_eq!(package["bin"], json!({ "memocap": "bin/cli.cjs" }));
+    assert_eq!(
+        package["bin"],
+        json!({ "memocap": "bin/cli.cjs", "memocap-setup": "scripts/setup.mjs" })
+    );
     assert_eq!(package["main"], "./plugin/index.js");
     assert_eq!(package["exports"], json!({ ".": "./plugin/index.js" }));
     assert_eq!(
@@ -27,10 +30,16 @@ fn npm_package_has_independent_opencode_identity() {
             "bin",
             "plugin",
             "skills",
+            "scripts/setup.mjs",
+            "scripts/setup",
+            "scripts/install.sh",
+            "scripts/install.ps1",
             "README.md",
             "README-CN.md",
             "docs/SCHEMA-VERSIONING.md",
-            "docs/DEPLOYMENT.md"
+            "docs/DEPLOYMENT.md",
+            "docs/INSTALL.md",
+            "docs/INSTALL-AGENT.md"
         ])
     );
 }
@@ -38,7 +47,7 @@ fn npm_package_has_independent_opencode_identity() {
 #[test]
 fn cargo_package_has_independent_opencode_identity() {
     assert_eq!(env!("CARGO_PKG_NAME"), "memocap");
-    assert_eq!(env!("CARGO_PKG_VERSION"), "0.0.10");
+    assert_eq!(env!("CARGO_PKG_VERSION"), "0.1.0");
     assert_eq!(
         env!("CARGO_PKG_DESCRIPTION"),
         "Local-first SQLite memory CLI for OpenCode"

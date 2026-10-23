@@ -16,7 +16,7 @@ function writeFixture(context, overrides = {}) {
   context.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(bin);
 
-  const version = overrides.version ?? "0.0.1";
+  const version = overrides.version ?? "0.1.0";
   const cargoVersion = overrides.cargoVersion ?? version;
   const lockVersion = overrides.lockVersion ?? cargoVersion;
   const repository = overrides.repository ?? "https://github.com/LYY/memocap.git";
@@ -31,7 +31,7 @@ function writeFixture(context, overrides = {}) {
         repository: cargoRepository,
       },
     ],
-    workspace_members: ["memocap 0.0.1 (path+file:///fixture)"],
+    workspace_members: ["memocap 0.1.0 (path+file:///fixture)"],
   };
 
   fs.writeFileSync(
@@ -85,12 +85,12 @@ function runCheck(fixture, tag) {
   });
 }
 
-test("accepts synchronized v0.0.1 release metadata", (context) => {
+test("accepts synchronized v0.1.0 release metadata", (context) => {
   // Given
   const fixture = writeFixture(context);
 
   // When
-  const execution = runCheck(fixture, "v0.0.1");
+  const execution = runCheck(fixture, "v0.1.0");
 
   // Then
   assert.equal(execution.status, 0, execution.stderr);
@@ -105,7 +105,7 @@ test("rejects malformed release tag", (context) => {
   const fixture = writeFixture(context);
 
   // When
-  const execution = runCheck(fixture, "v0.0.1.0");
+  const execution = runCheck(fixture, "v0.1.0.0");
 
   // Then
   assert.notEqual(execution.status, 0);
@@ -117,7 +117,7 @@ test("rejects release tag that differs from package version", (context) => {
   const fixture = writeFixture(context);
 
   // When
-  const execution = runCheck(fixture, "v0.0.2");
+  const execution = runCheck(fixture, "v0.1.1");
 
   // Then
   assert.notEqual(execution.status, 0);
@@ -126,10 +126,10 @@ test("rejects release tag that differs from package version", (context) => {
 
 test("rejects Cargo.lock version mismatch", (context) => {
   // Given
-  const fixture = writeFixture(context, { lockVersion: "0.0.2" });
+  const fixture = writeFixture(context, { lockVersion: "0.1.1" });
 
   // When
-  const execution = runCheck(fixture, "v0.0.1");
+  const execution = runCheck(fixture, "v0.1.0");
 
   // Then
   assert.notEqual(execution.status, 0);
@@ -141,7 +141,7 @@ test("rejects package identity outside the LYY scope", (context) => {
   const fixture = writeFixture(context, { packageName: "memocap" });
 
   // When
-  const execution = runCheck(fixture, "v0.0.1");
+  const execution = runCheck(fixture, "v0.1.0");
 
   // Then
   assert.notEqual(execution.status, 0);
@@ -153,7 +153,7 @@ test("rejects package repository outside LYY", (context) => {
   const fixture = writeFixture(context, { repository: "https://github.com/other/memocap.git" });
 
   // When
-  const execution = runCheck(fixture, "v0.0.1");
+  const execution = runCheck(fixture, "v0.1.0");
 
   // Then
   assert.notEqual(execution.status, 0);
@@ -165,7 +165,7 @@ test("rejects Cargo repository outside LYY", (context) => {
   const fixture = writeFixture(context, { cargoRepository: "https://github.com/other/memocap" });
 
   // When
-  const execution = runCheck(fixture, "v0.0.1");
+  const execution = runCheck(fixture, "v0.1.0");
 
   // Then
   assert.notEqual(execution.status, 0);
@@ -174,10 +174,10 @@ test("rejects Cargo repository outside LYY", (context) => {
 
 test("rejects Cargo metadata version mismatch", (context) => {
   // Given
-  const fixture = writeFixture(context, { cargoVersion: "0.0.2" });
+  const fixture = writeFixture(context, { cargoVersion: "0.1.1" });
 
   // When
-  const execution = runCheck(fixture, "v0.0.1");
+  const execution = runCheck(fixture, "v0.1.0");
 
   // Then
   assert.notEqual(execution.status, 0);

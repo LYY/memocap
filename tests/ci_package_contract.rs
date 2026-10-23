@@ -40,9 +40,8 @@ fn package_contract_runs_release_gates_before_packaging() {
         "actionlint_1.7.12_linux_amd64.tar.gz",
         "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
         "scripts/check-release.mjs",
-        "RELEASE_TAG: v0.0.10",
+        "RELEASE_TAG: v0.1.0",
         "node --check",
-        "node --test tests/*.test.cjs",
         "npm pack --dry-run --json",
     ] {
         assert!(
@@ -53,6 +52,7 @@ fn package_contract_runs_release_gates_before_packaging() {
     assert!(
         package_contract.find("actionlint").unwrap() < package_contract.find("npm pack").unwrap()
     );
+    assert!(!package_contract.contains("node --test tests/*.test.cjs"));
 }
 
 #[test]
@@ -92,5 +92,7 @@ fn assert_node_contract(workflow: &str) {
     let test = job(workflow, "test").replace("\r\n", "\n");
 
     assert!(test.contains("os: [ubuntu-latest, macos-latest, windows-latest]"));
+    assert!(test.contains("node-version: \"24\""));
+    assert!(test.find("npm ci --ignore-scripts").unwrap() < test.find("node --test").unwrap());
     assert!(test.contains("- name: Test Node contracts\n        run: node --test tests/*.test.cjs"));
 }
