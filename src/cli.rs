@@ -13,7 +13,13 @@ use crate::{
 };
 
 mod domains;
+mod targets;
 mod transfers;
+
+pub use targets::{
+    format_targeted_memories, recall_targeted, resolve_targets, RepositoryContext,
+    RepositoryTarget, TargetedRecall,
+};
 
 pub use domains::{
     attach_domain, attached_domains, create_domain, delete_domain, detach_domain, domains,

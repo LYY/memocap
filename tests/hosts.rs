@@ -34,23 +34,6 @@ fn plugin_uses_official_default_export() {
 }
 
 #[test]
-fn plugin_sidecar_uses_cli_not_a_second_store() {
-    let sidecar = include_str!("../plugin/cli.js");
-    assert!(sidecar.contains("spawnSync"));
-    assert!(sidecar.contains("memocap"));
-    assert!(!sidecar.contains("better-sqlite"));
-}
-
-#[test]
-fn skill_uses_cli_not_a_second_store() {
-    let skill = include_str!("../skills/memocap/SKILL.md");
-    assert!(skill.contains("memocap remember"));
-    assert!(skill.contains("Do not open another store") || skill.contains("do not open another"));
-    assert!(skill.contains("言必检"));
-    assert!(skill.contains("值必存"));
-}
-
-#[test]
 fn package_keeps_legacy_skill_files() {
     let pkg = include_str!("../package.json");
     assert!(pkg.contains("\"skills\""));

@@ -1,166 +1,39 @@
-"use strict";
+const assert = require('node:assert/strict');
+const test = require('node:test');
+const { sandbox, fixture, user } = require('./plugin-fixture.cjs');
 
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { pathToFileURL } = require("node:url");
-const { syncBuiltinESMExports } = require("node:module");
-const childProcess = require("node:child_process");
-const test = require("node:test");
-
-const pluginPath = path.resolve(__dirname, "../plugin/cli.js");
-
-let importCounter = 0;
-
-function loadPlugin() {
-  importCounter += 1;
-  return import(`${pathToFileURL(pluginPath).href}?test=${importCounter}`);
-}
-
-function writeExecutable(file, source) {
-  fs.writeFileSync(file, `#!${process.execPath}\n${source}`, { mode: 0o755 });
-}
-
-async function withEnvironment(values, action) {
-  const original = new Map(Object.keys(values).map((key) => [key, process.env[key]]));
-  try {
-    Object.assign(process.env, values);
-    return await action();
-  } finally {
-    for (const [key, value] of original) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-  }
-}
-
-test("plugin run invokes the global launcher on PATH from explicit project cwd", async (context) => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-plugin-"));
-  context.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
-  const projectDir = path.join(tempDir, "project");
-  fs.mkdirSync(projectDir);
-  if (process.platform === "win32") {
-    const launcher = path.join(tempDir, "global-cli.cjs");
-    fs.writeFileSync(launcher, `process.stdout.write(process.cwd() + "\\n" + process.argv.slice(2).join(" "));`);
-    fs.writeFileSync(
-      path.join(tempDir, "memocap.cmd"),
-      `@echo off\r\n"%~dp0global-cli.cjs" %*\r\n`,
-    );
-  } else {
-    writeExecutable(
-      path.join(tempDir, "memocap"),
-      `process.stdout.write(process.cwd() + "\\n" + process.argv.slice(2).join(" "));`,
-    );
-  }
-
-  await withEnvironment(
-    { PATH: `${tempDir}${path.delimiter}${process.env.PATH ?? ""}` },
-    async () => {
-      const { run } = await loadPlugin();
-
-      const [observedCwd, observedArgs] = run(["recall", "memory"], projectDir).split("\n");
-      assert.equal(fs.realpathSync(observedCwd), fs.realpathSync(projectDir));
-      assert.equal(observedArgs, "recall memory");
-    },
-  );
-});
-
-test("plugin run rejects missing cwd before spawning a sidecar", async (context) => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-plugin-missing-cwd-"));
-  context.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
-  const marker = path.join(tempDir, "spawned");
-  writeExecutable(path.join(tempDir, "memocap"), `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "spawned");`);
-
-  await withEnvironment(
-    { PATH: `${tempDir}${path.delimiter}${process.env.PATH ?? ""}` },
-    async () => {
-      const { run } = await loadPlugin();
-
-      assert.throws(() => run(["recall", "memory"]), /project directory/);
-      assert.equal(fs.existsSync(marker), false);
-    },
-  );
-});
-
-test("plugin run rejects empty cwd before spawning a sidecar", async (context) => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-plugin-empty-cwd-"));
-  context.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
-  const marker = path.join(tempDir, "spawned");
-  writeExecutable(path.join(tempDir, "memocap"), `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "spawned");`);
-
-  await withEnvironment(
-    { PATH: `${tempDir}${path.delimiter}${process.env.PATH ?? ""}` },
-    async () => {
-      const { run } = await loadPlugin();
-
-      assert.throws(() => run(["recall", "memory"], ""), /project directory/);
-      assert.equal(fs.existsSync(marker), false);
-    },
-  );
-});
-
-test("plugin run applies explicit cwd to Windows lookup and final launcher", async (context) => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-plugin-windows-"));
-  context.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
-  const projectDir = path.join(tempDir, "project");
-  const shim = path.join(tempDir, "memocap.cmd");
-  fs.mkdirSync(projectDir);
-  fs.writeFileSync(shim, `@echo off\r\n"%~dp0global-cli.cjs" %*\r\n`);
-
-  const calls = [];
-  const platform = Object.getOwnPropertyDescriptor(process, "platform");
-  assert.ok(platform);
-  context.mock.method(childProcess, "spawnSync", (command, args, options) => {
-    calls.push({ command, args, options });
-    if (command === "where.exe") {
-      return { status: 0, stdout: `${shim}\r\n`, stderr: "" };
-    }
-    return { status: 0, stdout: "global output\n", stderr: "" };
-  });
-  syncBuiltinESMExports();
-  Object.defineProperty(process, "platform", { ...platform, value: "win32" });
-  context.after(() => {
-    Object.defineProperty(process, "platform", platform);
-    context.mock.restoreAll();
-    syncBuiltinESMExports();
-  });
-
-  const { run } = await loadPlugin();
-
-  assert.equal(run(["recall", "memory"], projectDir), "global output\n");
-  assert.deepEqual(calls, [
-    {
-      command: "where.exe",
-      args: ["memocap.cmd"],
-      options: { cwd: projectDir, encoding: "utf8", windowsHide: true },
-    },
-    {
-      command: process.execPath,
-      args: [path.join(tempDir, "global-cli.cjs"), "recall", "memory"],
-      options: { cwd: projectDir, encoding: "utf8" },
-    },
-  ]);
-});
-
-test("compaction injects memory rules without executing a sidecar", async (context) => {
-  const calls = [];
-  context.mock.method(childProcess, "spawnSync", (...args) => {
-    calls.push(args);
-    return { status: 0, stdout: "", stderr: "" };
-  });
-  syncBuiltinESMExports();
-  context.after(() => {
-    context.mock.restoreAll();
-    syncBuiltinESMExports();
-  });
-
-  const { RULES, memocap } = await loadPlugin();
-  const plugin = await memocap({ directory: "/tmp/project" });
-  const output = { context: [] };
-
-  await plugin["experimental.session.compacting"]({}, output);
-
-  assert.deepEqual(output.context, [RULES]);
-  assert.deepEqual(calls, []);
+test('V1 exported server executes hooks through the real bridge and fixture child, with literal single-target write', async (context) => {
+  const fixturePackage = await sandbox();
+  context.after(fixturePackage.cleanup);
+  assert.equal(fixturePackage.module.default.id, 'memocap');
+  const host = fixture();
+  host.input.client.session.get = async () => ({ data: { directory: fixturePackage.A } });
+  const hooks = await fixturePackage.module.default.server(host.input);
+  const config = {};
+  await hooks.config(config);
+  assert.deepEqual(Object.keys(hooks.tool).sort(), ['memocap_recall', 'memocap_remember', 'memocap_scope']);
+  const message = user();
+  await hooks['chat.message']({ sessionID: 'A' }, { message: message.info, parts: message.parts });
+  await hooks['experimental.chat.messages.transform']({}, { messages: [message] });
+  assert.equal(message.parts.at(-1).metadata.memocap.injection_status, 'prepared');
+  assert.deepEqual(message.parts.at(-1).metadata.memocap.injected_ids, [91]);
+  const output = { parts: [] };
+  await hooks['command.execute.before']({ command: 'memory', sessionID: 'A', arguments: `scope "${fixturePackage.B}"` }, output);
+  assert.equal(JSON.parse(output.parts[0].text).status, 'ok');
+  let permissions = 0;
+  const toolContext = { sessionID: 'A', messageID: 'msg-1', directory: fixturePackage.A, worktree: fixturePackage.A,
+    abort: new AbortController().signal, ask: async () => { permissions++; }, metadata() {} };
+  const content = 'literal "quote" $(touch should-not-exist)\nline';
+  const saved = JSON.parse((await hooks.tool.memocap_remember.execute({ content }, toolContext)).output);
+  assert.equal(saved.status, 'inserted');
+  assert.equal(saved.readback.status, 'ok');
+  assert.equal(permissions, 1);
+  const writes = fixturePackage.calls().filter((argv) => argv[0] === 'remember');
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0][writes[0].indexOf('--repo') + 1], fixturePackage.B);
+  assert.equal(writes[0][writes[0].indexOf('--') + 1], content);
+  const compact = { context: [] };
+  await hooks['experimental.session.compacting']({ sessionID: 'A' }, compact);
+  assert.equal(compact.context.length, 1);
+  await hooks.dispose();
 });

@@ -11,14 +11,11 @@ use crate::ScopeCommand;
 
 use super::{domain, remote::RemoteSession};
 
-pub(crate) fn run(command: ScopeCommand) -> Result<()> {
+pub(crate) fn run(command: ScopeCommand, scope: &ResolvedScope) -> Result<()> {
     match config::resolve_target()? {
-        Target::Local { database } => {
-            let scope = cli::current_scope()?;
-            run_local(&database, &scope, command)
-        }
+        Target::Local { database } => run_local(&database, scope, command),
         Target::Remote { address, token } => {
-            let session = RemoteSession::current(&address, &token)?;
+            let session = RemoteSession::new(&address, &token, scope.clone());
             run_remote(&session, command)
         }
     }
@@ -30,6 +27,7 @@ fn run_local(
     command: ScopeCommand,
 ) -> Result<()> {
     match command {
+        ScopeCommand::List { .. } => bail!("inventory requires the observable operation API"),
         ScopeCommand::Show => {
             let domains = cli::attached_domains(database, scope.repository())?;
             print!("{}", cli::format_scope_show(scope, &domains));
@@ -87,6 +85,7 @@ fn run_local(
 
 fn run_remote(session: &RemoteSession<'_>, command: ScopeCommand) -> Result<()> {
     match command {
+        ScopeCommand::List { .. } => bail!("inventory requires the observable operation API"),
         ScopeCommand::Show => print!("{}", session.scope_show()?),
         ScopeCommand::Copy {
             id,

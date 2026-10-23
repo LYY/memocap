@@ -16,12 +16,12 @@ pub(crate) struct RemoteSession<'a> {
 }
 
 impl<'a> RemoteSession<'a> {
-    pub(crate) fn current(address: &'a str, token: &'a str) -> Result<Self> {
-        Ok(Self {
+    pub(crate) fn new(address: &'a str, token: &'a str, scope: ResolvedScope) -> Self {
+        Self {
             address,
             token,
-            scope: cli::current_scope()?,
-        })
+            scope,
+        }
     }
 
     pub(crate) fn remember(

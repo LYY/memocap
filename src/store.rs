@@ -7,20 +7,23 @@ use rusqlite::{params, Connection, TransactionBehavior};
 use crate::scope::{PlacementId, RepositoryId, ScopeId};
 
 mod domains;
+mod inspection;
 mod transfers;
 mod visible;
 
 pub use domains::{
     attach_domain, attached_domains, create_domain, delete_domain, detach_domain, domains,
 };
+pub use inspection::{memory_by_id, open_readonly, open_strict_readonly};
 pub use transfers::{
     copy_move, operation_status, replay_copy_move, CopyMoveAction, CopyMoveInput, CopyMoveRequest,
     CopyMoveResult,
 };
 pub use visible::{
-    list_inventory, recall_visible, single_visible_source, visible_inventory, visible_sources,
-    visible_status, InventoryMemory, PlacementCount, ShadowCause, Visibility, VisibleSource,
-    VisibleStackStatus,
+    list_inventory, merge_recalled, recall_targets, recall_visible, recall_visible_with_options,
+    single_visible_source, visible_inventory, visible_sources, visible_status, InventoryMemory,
+    MatchMode, PlacementCount, RecallApplicability, RecallOptions, RecallTarget, ShadowCause,
+    TargetRecall, TargetedMemory, Visibility, VisibleSource, VisibleStackStatus,
 };
 
 pub const DEFAULT_RECALL_LIMIT: usize = 3;

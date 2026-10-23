@@ -179,3 +179,34 @@ fn scope_domain_rejects_malformed_ids_before_creating_a_database() {
     assert!(String::from_utf8_lossy(&invalid.stderr).contains("invalid value"));
     assert!(!fixture.data.join("memocap.db").exists());
 }
+
+#[test]
+fn json_domain_receipts_identify_actual_action_and_committed_change() {
+    let fixture = Fixture::new();
+    for action in ["create", "attach", "detach", "delete"] {
+        for (changed, status) in [(true, "ok"), (false, "skipped")] {
+            let output = fixture.run(&["scope", "domain", action, "platform/rust", "--json"]);
+            assert_success(&output);
+            let receipt: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(receipt["status"], status);
+            assert_eq!(
+                receipt["domain_operation"],
+                serde_json::json!({
+                    "action": action,
+                    "domain": "platform/rust",
+                    "changed": changed
+                })
+            );
+        }
+    }
+    let output = fixture.run(&["scope", "domain", "list", "--all", "--json"]);
+    assert_success(&output);
+    let receipt: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(receipt["domains"], serde_json::json!([]));
+    assert_eq!(
+        receipt["domain_operation"],
+        serde_json::json!({
+            "action": "list", "domain": null, "changed": false
+        })
+    );
+}
