@@ -1,7 +1,8 @@
 # Deployment and Operations
 
-This guide describes the current operator contract for a domain-aware memocap
-server. The server owns one SQLite database. It is not a multi-tenant service.
+This guide describes the v0.1.0 operator contract for a domain-aware memocap
+server. The server owns the core SQLite database and its separate operational
+activity database. It is not a multi-tenant service.
 
 ## Trust boundary
 
@@ -17,7 +18,6 @@ authorization, or tenant isolation. Anyone who has the token can address the
 server's repository, domain, universal, and operation namespaces, subject to
 runtime validation. Run the service on a private network or put it behind a
 network policy when a shared token is not enough for your trust boundary.
-The remote trust boundary is not ACL, IAM, per-user authorization, or tenant isolation.
 
 Bearer authentication does not provide transport confidentiality or integrity.
 The server accepts HTTP and does not terminate TLS, so an untrusted network
@@ -57,11 +57,12 @@ recognized-old-schema reset.
 For a local client, install the CLI and select the server explicitly:
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.0.10
+pnpm add -g @lyy-gh/memocap@0.1.0
 export MEMOCAP_ADDR=http://127.0.0.1:8787
 export MEMOCAP_TOKEN='replace-with-a-long-random-token'
 memocap scope show
 memocap status
+memocap status --read-only --json
 ```
 
 When `MEMOCAP_ADDR` is set, the CLI is remote only. A missing token fails the
@@ -167,6 +168,8 @@ The server exposes these authenticated `POST` routes under `/v1`:
 
 | Route | Purpose |
 | --- | --- |
+| `/v1/capabilities` | Negotiate receipt, match mode, multi-target, inventory, activity, and read-only-status support before a new-semantics operation. |
+| `/v1/receipt` | Execute typed operations and return one format-1 receipt, including core outcome and independent activity outcome. |
 | `/v1/memories/remember` | Store one memory at an exact placement. |
 | `/v1/memories/recall` | Recall effective memories from the visible stack or one selected placement. |
 | `/v1/memories/list` | List addressable inventory from the visible stack or one selected placement. |
@@ -184,7 +187,46 @@ The server exposes these authenticated `POST` routes under `/v1`:
 Legacy unversioned routes such as `/remember`, `/recall`, `/list`, `/forget`,
 and `/status` are removed, not deprecated. There is no route fallback and no
 remote-to-local fallback.
-There is no route fallback and no remote-to-local fallback.
+
+The v0.1.0 JSON CLI and plugin negotiate capabilities before sending observable
+operations. An older server that lacks them fails explicitly; clients do not
+retry through legacy routes. Existing versioned routes above remain available
+for older clients and record native committed writes/recalls on the server.
+Only the server opens the remote core and activity stores. Client filesystem
+paths are display hints, never authority over server filesystem access.
+
+## Inventory and retained activity
+
+Use explicit repository paths for ordinary operations. Repeat `--repo` only for
+recall, up to eight targets; writes remain single-target. Default recall is AND
+matching (`--match all`); use `--match any` explicitly for OR matching. Receipts
+report actual targets, query terms, matched/returned IDs, limits, and errors.
+Topic shadowing happens per target before one global result/character budget.
+
+Full inventory is an explicit operator action. Counts come from core storage;
+activity history cannot reconstruct authoritative inventory:
+
+```sh
+memocap scope list --all --json
+memocap list --placement domain:rust/cli --limit 20 --offset 0 --json
+memocap activity list --writes --limit 20 --offset 0 --json
+memocap activity show '<OPERATION_UUID>' --json
+```
+
+The auxiliary path appends `.activity.sqlite` to the core filename and resides
+in the same persistent volume. It stores metadata and repository display hints,
+not full prompts or memory content. Recall/injection events are bounded to 30
+days and 10,000 entries; write metadata to 1,000 entries. Expiry, pruning,
+recording failure, or a crash after commit can leave gaps. A missing retained
+operation is `not_found_or_expired`, not proof that a write never happened.
+
+For missing auxiliary storage, a server administrator can run
+`memocap activity prepare --json` locally with `MEMOCAP_ADDR` unset and the
+server's `MEMOCAP_DB`; inspect afterward with `status --read-only --json`.
+Preparation never initializes the core. Remote preparation is refused, and
+unknown/corrupt auxiliary stores are not automatically reset. If recording fails
+after a successful core write, preserve its success and report the activity
+warning; never repeat the write to obtain a history entry.
 
 ## Response-loss recovery
 
@@ -200,11 +242,13 @@ memocap operation status --recovery '<RECOVERY_HANDLE>'
 The status result can be committed, `not_found`, or unknown. An HTTP 500,
 transport failure, or status lookup failure can leave the outcome unknown.
 `not_found` alone does not prove manual replay is safe, and an operation status
-request can itself become unknown. Operation status request can itself become unknown. Do not manually replay a lost request from a
+request can itself become unknown. Do not manually replay a lost request from a
 bare `not_found` observation. Keep and use the issued strict handle and repeat
 the status procedure according to your incident policy.
-not_found alone does not prove manual replay is safe.
-operation status request can itself become unknown.
+
+Other write receipts can report `outcome_unknown` after a lost or malformed
+response. The client does not automatically retry those writes. The transfer
+ledger recovery procedure does not authorize replaying arbitrary memory writes.
 
 ## TUI operations
 
@@ -232,3 +276,10 @@ Before maintenance, record the volume snapshot or backup required by your
 deployment policy. For ordinary deletion, use the exact `forget` placement and
 ID. For a transfer, record its operation ID and recovery handle in the operator
 log.
+
+Package `0.1.0` leaves the complete core-1.0 fingerprint unchanged. A compatible
+v0.0.10 binary can still use the core data, but cannot provide new receipts or
+activity features. Software upgrade/downgrade retains data; it is not backup
+restoration. Use SQLite's backup API or another WAL-aware backup method for the
+core and any retained auxiliary history you need. A raw file copy while WAL is
+active can omit committed data.

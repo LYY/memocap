@@ -6,33 +6,39 @@ memocap 是 OpenCode 的 local-first SQLite 记忆 sidecar。它把显式记忆�
 到当前仓库、已挂载 domain 或 universal placement，再通过一条有序 visible
 stack 进行 recall。
 
-OpenCode 是唯一官方支持的集成。插件通过全局 `memocap` CLI 调用 sidecar，
-不会打开第二份存储。数据库生命周期以[Schema versioning contract](docs/SCHEMA-VERSIONING.md)
+OpenCode 是唯一官方支持的集成。插件通过包内绝对路径的 CLI launcher 调用 sidecar，
+并校验 native 版本，不从全局 PATH 选择其他 `memocap`。数据库生命周期以[Schema versioning contract](docs/SCHEMA-VERSIONING.md)
 为准。部署和远程操作见[DEPLOYMENT.md](docs/DEPLOYMENT.md)。
 
 ## 安装
 
-先安装全局 CLI，再注册 OpenCode 插件：
+为当前用户安装 v0.1.0 CLI、OpenCode 插件和运行时 skill：
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.0.10
-opencode plugin @lyy-gh/memocap
+npx --yes --package @lyy-gh/memocap@0.1.0 memocap-setup install --global --yes --json
 ```
 
-全局 CLI 必须在 PATH 中（也就是 `PATH`）。插件会把 `memocap` 作为 sidecar 调用，不提供其他宿主集成，
-也不会建立第二个记忆库。
+需要 Node.js 22.20 或更高版本、npm/npx、Git 和 OpenCode 1.19.3。安装器不会
+安装或升级 OpenCode。项目安装、手动步骤、检查更新、恢复和数据处理见[安装指南](docs/INSTALL.md)。
+Agent 进行已获授权的非交互安装或更新时，按[Agent 指南](docs/INSTALL-AGENT.md)操作。
 
 ## 命令矩阵
 
 下面是当前 CLI surface。placement selector 互斥。`<PLACEMENT>` 是
 `repository:<64 lowercase hex>`、`domain:<DOMAIN>` 或 `universal`。
 
+全局 `--repo <PATH>` 显式选择真实仓库路径；只有 recall 可重复指定，最多八个目标。
+写操作始终只有一个目标。全局 `--json` 返回 format-1 receipt，供自动化使用；
+`serve` 和 `ui` 不支持它。package `0.1.0`、core schema `1.0`、receipt format
+`1` 是独立版本。
+
 ```text
 memocap remember [--type <TYPE>] [--tags <TAGS>] [--force] [--id <ID>] [--domain <DOMAIN> | --universal] [--topic <TOPIC>] <CONTENT>
-memocap recall [--limit <LIMIT>] [--type <TYPE>] [--max-chars <MAX_CHARS>] [--domain <DOMAIN> | --universal] <QUERY>
-memocap list [--limit <LIMIT>] [--domain <DOMAIN> | --universal]
+memocap recall [--match all|any] [--limit <LIMIT>] [--type <TYPE>] [--max-chars <MAX_CHARS>] [--domain <DOMAIN> | --universal] <QUERY>
+memocap list [--limit <LIMIT>] [--offset <OFFSET>] [--placement <PLACEMENT> | --domain <DOMAIN> | --universal]
 memocap forget [--domain <DOMAIN> | --universal] <ID>
 memocap scope show
+memocap scope list --all
 memocap scope domain create <DOMAIN>
 memocap scope domain attach <DOMAIN> [--before <DOMAIN>]
 memocap scope domain detach <DOMAIN>
@@ -41,9 +47,13 @@ memocap scope domain delete <DOMAIN>
 memocap scope copy --id <ID> --from <PLACEMENT> --to <PLACEMENT> [--operation-id <OPERATION_ID>] [--note <NOTE>]
 memocap scope move --id <ID> --from <PLACEMENT> --to <PLACEMENT> --yes [--operation-id <OPERATION_ID>] [--note <NOTE>]
 memocap operation status --recovery <RECOVERY>
-memocap status
+memocap status [--read-only]
+memocap activity list [--writes] [--limit <LIMIT>] [--offset <OFFSET>] [--repository <ID>] [--session <ID>] [--operation <ID>]
+memocap activity show <OPERATION_ID>
+memocap activity prepare
 memocap serve [--bind <BIND>]
 memocap ui
+memocap-setup <install|check|update|doctor|uninstall> [--global | --project <PATH>] [--to <VERSION>] [--dry-run] [--yes] [--json]
 ```
 
 `scope domain create` 注册可复用 domain ID。`attach` 把已注册 domain 挂载到
@@ -56,12 +66,36 @@ memocap ui
 使用 visible stack；selector 则限制到一个精确 domain 或 universal placement。
 `forget` 总是针对一个精确 placement，默认是当前仓库。
 
-已移除的 surface 是 removed，不是 deprecated。已移除的 CLI 包括
-`memocap install`、`memocap uninstall`、`--global` 以及旧 global 或 scope
-语法。已移除的 TUI 包括写入、删除和旧菜单操作，现在只保留 `Status`、
-`List visible memories`、`Exit`。Codex、Claude Code、Pi 的 host adapter 和
-host path state 已移除。旧的无版本 HTTP route 已移除，不是兼容或 deprecated
-路径。
+安装使用独立的 `memocap-setup`，其 `--global` 选择集成安装范围，不选择 universal
+memory。旧 `memocap install/uninstall`、旧 scope 语法、其他 host adapter、TUI
+写入和删除操作、无版本 HTTP route 仍已移除。
+
+## Receipt、库存和 activity
+
+Recall 默认 `--match all`；`any` 匹配至少一个规范化查询词。多仓库显式读取先按
+各仓库处理 topic shadow，再对合并结果应用一份条数和字符预算。Receipt 展示
+targets、searched placements、query terms、matched/returned IDs、截断、错误和
+activity 状态。本次请求已有有效插件 receipt（包括空结果或有效缓存）时，不必
+重复相同 recall。
+
+只有明确要求完整库存时才用 `scope list --all`，再用
+`list --placement <PLACEMENT> --limit 20 --offset 0` 分页查看精确 placement。
+`status --read-only --json` 检查 core 和 activity 兼容性，不产生逻辑写入：不写入
+数据或 schema、不初始化或迁移 core、不裁剪历史，也不记录 activity。SQLite
+`READ_ONLY` 连接仍可能协调 WAL/SHM sidecar；普通 WAL 检查不需要 owner snapshot。
+`activity prepare` 只显式准备本地附属存储，远程准备由服务器管理员负责。完整边界见
+[schema versioning contract](docs/SCHEMA-VERSIONING.md)。
+
+Activity 在 `<core filename>.activity.sqlite` 中保存有限运维元数据，不是完整审计。
+Recall/injection 最长保留 30 天、最多 10,000 条；write 元数据最多 1,000 条。
+过期、裁剪或记录失败可能留下缺口。Core 写入成功后 activity 失败仍是写入成功，
+应报告 warning，不能重放写入来修复历史。
+
+插件提供 `memocap_recall`、`memocap_remember`、`memocap_scope` tools。
+`/memory status`、`/memory recall`、`/memory scope <PATH...>`、`/memory scopes`、
+`/memory list`、`/memory recent`、`/memory why` 可查看会话目标和 recall receipt。
+准备进入模型输入不证明模型理解或采用。权限及显式切换目标规则见
+[runtime skill](skills/memocap/SKILL.md)。
 
 ## Scope 和 visible stack
 
@@ -81,8 +115,6 @@ memocap scope show
 1. 当前 repository。
 2. 按持久化 attachment 顺序排列的 attached domains。
 3. universal memory。
-
-Stack 顺序就是 repository、按持久化顺序排列的 attached domains、universal。
 
 Recall 会在 limit 和字符预算之前处理 topic shadow。repository 中相同的非空 normalized topic 会遮蔽所有更低层匹配记录。domain 会遮蔽 universal 的匹配
 记录。domain 之间互不遮蔽。`list` 和 TUI List 保留可寻址的 shadowed record，
@@ -121,28 +153,25 @@ List 使用与 CLI 相同的 visible inventory，包含 placement 和 shadow ann
 没有设置 remote address 时，CLI 打开本机 SQLite，不使用网络。设置
 `MEMOCAP_ADDR` 后进入 remote mode，并且必须设置 `MEMOCAP_TOKEN`。缺少 token
 会报错，remote mode 不会静默回退到本地。地址和 token 必须同时存在。
-不会回退到本地。
 
 服务器只接受 `/v1` 下经过认证的 `POST` 请求。`Authorization: Bearer <token>`
 只负责 gate 整个 server。这是一个共享 bearer token。它不是 ACL、IAM、按用户授权或 tenant isolation。placement 选择和 domain attachment 决定 namespace selection，
 不决定 authorization。
-不是 ACL、IAM、按用户授权或 tenant isolation。
 
 Bearer 鉴权不提供传输保密性或完整性。默认 Compose 部署只在宿主 loopback
 接口暴露明文 HTTP。远程客户端必须经过运维人员控制的 TLS 终结反向代理，或等效的
 可信加密网络边界；将 `MEMOCAP_ADDR` 设为其 `https://` endpoint。不要在所有宿主
 接口发布原始 HTTP 端口。
 
-远程 `scope show` 读取 `/v1/status`，显示远程 repository 的 attached domains
-和 visible-stack counts。route 列表、trust boundary、Compose 和 recovery
-流程见[DEPLOYMENT.md](docs/DEPLOYMENT.md)。远程请求携带有效 remote scope ID，且是有效 scope，
-服务器会严格校验。远程 scope ID 必须有效。
+JSON 操作先协商 `/v1/capabilities`，再调用 `/v1/receipt`；服务器不支持新语义时
+在发送操作前失败。既有 `/v1/status` 继续供旧客户端使用。route、trust boundary、
+Compose 和 recovery 流程见[DEPLOYMENT.md](docs/DEPLOYMENT.md)。服务器严格校验
+remote repository ID。
 
 远程 copy 或 move 丢失响应时，使用已发出的 recovery handle 运行
 `memocap operation status --recovery <RECOVERY>`。`not_found alone` 不证明
 手工 replay 安全，operation 仍可能是 unknown。不要只凭 bare `not_found`
 结果手工重放请求。
-not_found alone 不证明手工 replay 安全。
 
 ## Policy boundaries
 
@@ -159,10 +188,14 @@ Namespace selection 还是另一层：`--domain`、`--universal` 和默认 visib
 
 ## Schema 和 data loss
 
-打开旧版本数据库前先读 `SCHEMA-VERSIONING.md`。唯一
+打开旧版本数据库前先读[SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md)。唯一
 无需确认的 bulk-delete 例外是 exact recognized pre-versioned schema。该事务会
 删除所有旧 memory row，创建 schema `1.0`，不创建 backup，并输出指定 reset notice。
 未知或不兼容 schema 会在不修改数据的情况下拒绝。没有面向用户的 reset command。
+
+正常升级保留兼容的 schema-1.0 core 数据及完整 fingerprint。v0.0.10 binary
+仍可使用该 core store，但没有 receipt 或 activity 功能。退回旧 binary 不会恢复
+数据库备份。
 
 ## 对照
 

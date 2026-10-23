@@ -6,21 +6,25 @@ memocap is a local-first SQLite memory sidecar for OpenCode. It stores explicit
 memories in repository, attached-domain, or universal placements, then recalls
 them through one ordered visible stack.
 
-OpenCode is the only officially supported integration. The plugin invokes `memocap` as its sidecar and uses the global CLI. Database lifecycle behavior is defined by
+OpenCode is the only officially supported integration. The plugin invokes its
+package's absolute bundled CLI launcher and verifies the native version; it does
+not resolve an unrelated `memocap` from global PATH. Database lifecycle behavior is defined by
 the [schema versioning contract](docs/SCHEMA-VERSIONING.md). Deployment and
 remote operation are documented in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Install
 
-Install the global CLI first, then register the OpenCode plugin:
+Install the v0.1.0 CLI, OpenCode plugin, and runtime skill for your user:
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.0.10
-opencode plugin @lyy-gh/memocap
+npx --yes --package @lyy-gh/memocap@0.1.0 memocap-setup install --global --yes --json
 ```
 
-The global CLI must be on PATH (`PATH`). The plugin invokes `memocap` as its sidecar,
-does not open another store, and does not provide a separate host integration.
+Requires Node.js 22.20 or later, npm/npx, Git, and OpenCode 1.19.3. The setup
+command does not install or upgrade OpenCode. See [the installation guide](docs/INSTALL.md)
+for project installs, manual setup, checks, updates, recovery, and data handling.
+Agents should follow [the agent guide](docs/INSTALL-AGENT.md) for authorized
+non-interactive installation and updates.
 
 ## Command matrix
 
@@ -28,12 +32,19 @@ The following matrix is the current CLI surface. Placement selectors are
 mutually exclusive. `<PLACEMENT>` is `repository:<64 lowercase hex>`,
 `domain:<DOMAIN>`, or `universal`.
 
+Global `--repo <PATH>` selects a concrete repository instead of the working
+directory; repeat it only for recall, up to eight targets. Writes have one
+target. Global `--json` returns a format-1 receipt for automation; it is not
+supported by `serve` or `ui`. Package `0.1.0`, core schema `1.0`, and receipt
+format `1` are independent identities.
+
 ```text
 memocap remember [--type <TYPE>] [--tags <TAGS>] [--force] [--id <ID>] [--domain <DOMAIN> | --universal] [--topic <TOPIC>] <CONTENT>
-memocap recall [--limit <LIMIT>] [--type <TYPE>] [--max-chars <MAX_CHARS>] [--domain <DOMAIN> | --universal] <QUERY>
-memocap list [--limit <LIMIT>] [--domain <DOMAIN> | --universal]
+memocap recall [--match all|any] [--limit <LIMIT>] [--type <TYPE>] [--max-chars <MAX_CHARS>] [--domain <DOMAIN> | --universal] <QUERY>
+memocap list [--limit <LIMIT>] [--offset <OFFSET>] [--placement <PLACEMENT> | --domain <DOMAIN> | --universal]
 memocap forget [--domain <DOMAIN> | --universal] <ID>
 memocap scope show
+memocap scope list --all
 memocap scope domain create <DOMAIN>
 memocap scope domain attach <DOMAIN> [--before <DOMAIN>]
 memocap scope domain detach <DOMAIN>
@@ -42,9 +53,13 @@ memocap scope domain delete <DOMAIN>
 memocap scope copy --id <ID> --from <PLACEMENT> --to <PLACEMENT> [--operation-id <OPERATION_ID>] [--note <NOTE>]
 memocap scope move --id <ID> --from <PLACEMENT> --to <PLACEMENT> --yes [--operation-id <OPERATION_ID>] [--note <NOTE>]
 memocap operation status --recovery <RECOVERY>
-memocap status
+memocap status [--read-only]
+memocap activity list [--writes] [--limit <LIMIT>] [--offset <OFFSET>] [--repository <ID>] [--session <ID>] [--operation <ID>]
+memocap activity show <OPERATION_ID>
+memocap activity prepare
 memocap serve [--bind <BIND>]
 memocap ui
+memocap-setup <install|check|update|doctor|uninstall> [--global | --project <PATH>] [--to <VERSION>] [--dry-run] [--yes] [--json]
 ```
 
 `scope domain create` registers a reusable domain ID. `attach` binds that
@@ -59,13 +74,42 @@ and `list` without a selector use the visible stack. A selector limits them to
 one exact domain or universal placement. `forget` always targets one exact
 placement, with the repository as its default.
 
-Removed surfaces are removed, not deprecated. The removed CLI surface includes
-`memocap install`, `memocap uninstall`, `--global`, and legacy global or scope
-syntax. The removed TUI surface includes write, delete, and legacy menu actions.
-The TUI now exposes only `Status`, `List visible memories`, and `Exit`. Codex,
-Claude Code, and Pi host adapters and host path state are removed. Legacy
-unversioned HTTP routes are removed. They are not compatibility or deprecation
-paths. Legacy unversioned HTTP routes are removed.
+Installation uses the separate `memocap-setup` executable; its `--global` selects
+integration scope, not universal memory. Old `memocap install/uninstall`, legacy
+scope syntax, other host adapters, TUI write/delete actions, and unversioned
+HTTP routes remain removed.
+
+## Receipts, inventory, and activity
+
+Recall defaults to `--match all`; `any` matches at least one normalized term.
+For multiple explicit targets, topic shadowing is applied per repository before
+the union receives one result and character budget. Receipts expose targets,
+searched placements, query terms, matched/returned IDs, truncation, errors, and
+activity outcome. A successful current-request plugin receipt, including a valid
+empty or cached result, satisfies recall-first without repeating the same query.
+
+Use `scope list --all` only for an intentional full inventory, then
+`list --placement <PLACEMENT> --limit 20 --offset 0` for exact paged rows.
+`status --read-only --json` checks core and activity compatibility without
+logical writes: it does not write data or schema, initialize or migrate core,
+prune history, or record activity. SQLite `READ_ONLY` connections may still
+coordinate WAL/SHM sidecars; ordinary WAL inspection needs no owner snapshot.
+`activity prepare` explicitly prepares only local auxiliary storage; remote
+preparation belongs to the server administrator. See the
+[schema versioning contract](docs/SCHEMA-VERSIONING.md) for the full boundary.
+
+Activity is retained operational metadata in `<core filename>.activity.sqlite`,
+not a complete audit log. Recall/injection retention is 30 days and 10,000 events;
+write metadata is capped at 1,000 events. Gaps can follow expiry, pruning, or
+recording failure. A successful core write stays successful if activity fails;
+report its warning and never replay the write to repair history.
+
+The plugin exposes `memocap_recall`, `memocap_remember`, and `memocap_scope`
+tools. `/memory status`, `/memory recall`, `/memory scope <PATH...>`,
+`/memory scopes`, `/memory list`, `/memory recent`, and `/memory why` make the
+session's target and recall receipt inspectable. Prepared input is not proof of
+model understanding or adoption. See the [runtime skill](skills/memocap/SKILL.md)
+for permission and explicit target-switching policy.
 
 ## Scope and visible stack
 
@@ -86,8 +130,6 @@ The default visible stack is ordered as follows:
 1. Current repository.
 2. Attached domains, in their persisted attachment order.
 3. Universal memory.
-
-The stack is repository, then attached domains in persisted order, then universal.
 
 Recall applies topic shadowing before its limit and character budget. A
 repository memory with the same non-empty normalized topic shadows matching
@@ -145,8 +187,9 @@ Remote clients must use an operator-controlled TLS-terminating reverse proxy or
 an equivalent trusted encrypted network boundary; set `MEMOCAP_ADDR` to its
 `https://` endpoint. Do not publish the raw HTTP port on all host interfaces.
 
-Remote `scope show` reads `/v1/status` and displays the remote repository's
-attached domains and visible-stack counts. See [DEPLOYMENT.md](docs/DEPLOYMENT.md)
+JSON operations first negotiate `/v1/capabilities`, then use `/v1/receipt`;
+unsupported servers fail before a new-semantics operation. Existing `/v1/status`
+remains available for legacy clients. See [DEPLOYMENT.md](docs/DEPLOYMENT.md)
 for the route list, trust boundary, Compose setup, and recovery procedure.
 Remote requests carry a valid remote scope ID, and the server strictly validates
 that ID.
@@ -173,12 +216,16 @@ written. Authorization is only the remote bearer-token gate described above.
 
 ## Schema and data loss
 
-Read `SCHEMA-VERSIONING.md` before opening a store
+Read [SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md) before opening a store
 created by an earlier build. The sole no-confirmation bulk-delete exception is
 an exact recognized pre-versioned schema. Its transaction deletes all old
 memory rows, creates schema `1.0`, makes no backup, and prints the required
 reset notice. Unknown or incompatible schemas refuse without mutation. There is
 no user-facing reset command.
+
+A normal upgrade retains compatible schema-1.0 core data and its complete
+fingerprint. The v0.0.10 binary can still use that core store; it does not gain
+receipts or activity. Returning to an older binary does not restore a backup.
 
 ## Compare
 
