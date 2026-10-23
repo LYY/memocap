@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { fixture, receipt, memory, user } = require('./plugin-fixture.cjs');
+const path = require('node:path');
+const { fixture, receipt, memory, user, repoPath } = require('./plugin-fixture.cjs');
 
 async function host(options = {}) {
   const base = fixture();
@@ -30,7 +31,7 @@ async function host(options = {}) {
   const tools = createTools(operations);
   const commands = createCommands(operations, runtime);
   const askCalls = [];
-  const context = { sessionID: 'A', messageID: 'tool-msg', directory: '/repo/A', worktree: '/repo/A',
+  const context = { sessionID: 'A', messageID: 'tool-msg', directory: repoPath('A'), worktree: repoPath('A'),
     abort: new AbortController().signal, ask: async (permission) => { askCalls.push(permission); }, metadata() {} };
   return { ...base, runtime, tools, commands, context, rows, askCalls, fail: (path) => { failPath = path; },
     degrade: () => { auxiliaryFailure = true; } };
@@ -39,53 +40,53 @@ async function host(options = {}) {
 test('SDK scope tool awaits permission before any sidecar and commits only after all target recalls succeed', async () => {
   const current = await host();
   current.context.ask = async () => { assert.equal(current.calls.length, 0); throw new Error('denied'); };
-  const denied = JSON.parse((await current.tools.memocap_scope.execute({ paths: ['/repo/B'] }, current.context)).output);
+  const denied = JSON.parse((await current.tools.memocap_scope.execute({ paths: [repoPath('B')] }, current.context)).output);
   assert.equal(denied.status, 'denied');
   assert.equal(current.calls.length, 0);
   current.context.ask = async () => {};
   const message = user();
   await current.runtime.capture({ sessionID: 'A' }, { message: message.info, parts: message.parts });
-  const switched = JSON.parse((await current.tools.memocap_scope.execute({ paths: ['/repo/B', '/repo/C'] }, current.context)).output);
+  const switched = JSON.parse((await current.tools.memocap_scope.execute({ paths: [repoPath('B'), repoPath('C')] }, current.context)).output);
   assert.equal(switched.status, 'ok');
-  assert.deepEqual((await current.runtime.context('A')).targets, ['/repo/B', '/repo/C']);
-  current.fail('/repo/missing');
-  const failed = JSON.parse((await current.tools.memocap_scope.execute({ paths: ['/repo/A', '/repo/missing'] }, current.context)).output);
+  assert.deepEqual((await current.runtime.context('A')).targets, [repoPath('B'), repoPath('C')]);
+  current.fail(repoPath('missing'));
+  const failed = JSON.parse((await current.tools.memocap_scope.execute({ paths: [repoPath('A'), repoPath('missing')] }, current.context)).output);
   assert.equal(failed.status, 'failed');
-  assert.deepEqual((await current.runtime.context('A')).targets, ['/repo/B', '/repo/C']);
+  assert.deepEqual((await current.runtime.context('A')).targets, [repoPath('B'), repoPath('C')]);
 });
 
 test('same query on new targets refreshes and auxiliary warnings keep successful scope', async () => {
   const current = await host();
   current.degrade();
-  for (const path of ['/repo/B', '/repo/C']) {
+  for (const path of [repoPath('B'), repoPath('C')]) {
     const answer = JSON.parse((await current.tools.memocap_scope.execute({ paths: [path], query: 'release' }, current.context)).output);
     assert.equal(answer.status, 'ok');
     assert.equal(answer.activity_status, 'failed');
     assert.equal(typeof answer.warning, 'string');
   }
   assert.equal(current.calls.filter(({ argv }) => argv[0] === 'recall').length, 2);
-  assert.deepEqual((await current.runtime.context('A')).targets, ['/repo/C']);
+  assert.deepEqual((await current.runtime.context('A')).targets, [repoPath('C')]);
 });
 
 test('manual scope seeds references even when automatic recall is disabled', async () => {
   const current = await host({ automatic: false });
   const message = user();
   await current.runtime.capture({ sessionID: 'A' }, { message: message.info, parts: message.parts });
-  await current.tools.memocap_scope.execute({ paths: ['/repo/B'], query: 'other' }, current.context);
+  await current.tools.memocap_scope.execute({ paths: [repoPath('B')], query: 'other' }, current.context);
   await current.runtime.transform({}, { messages: [message] });
   assert.equal(current.calls.filter(({ argv }) => argv[0] === 'recall').length, 1);
-  assert.deepEqual(message.parts.at(-1).metadata.memocap.targets, ['/repo/B']);
+  assert.deepEqual(message.parts.at(-1).metadata.memocap.targets, [repoPath('B')]);
   assert.deepEqual(message.parts.at(-1).metadata.memocap.query_terms, ['other']);
 });
 
 test('remember uses one explicit target, structured fields and one write followed by independent readback', async () => {
   const current = await host();
-  await current.tools.memocap_scope.execute({ paths: ['/repo/A', '/repo/B'], query: 'release' }, current.context);
+  await current.tools.memocap_scope.execute({ paths: [repoPath('A'), repoPath('B')], query: 'release' }, current.context);
   const noPlacement = JSON.parse((await current.tools.memocap_remember.execute({ content: 'unsafe fanout' }, current.context)).output);
   assert.equal(noPlacement.status, 'failed');
   assert.equal(current.rows.length, 0);
   const content = 'quotes " $(touch forbidden)\nnext line';
-  const saved = JSON.parse((await current.tools.memocap_remember.execute({ content, repository: '/repo/A',
+  const saved = JSON.parse((await current.tools.memocap_remember.execute({ content, repository: repoPath('A'),
     type: 'decision', tags: ['release', 'cli'], topic: 'release-order' }, current.context)).output);
   assert.equal(saved.status, 'inserted');
   assert.equal(saved.readback.status, 'ok');
@@ -137,12 +138,12 @@ test('command scope and recall share session targets while remember remains a pe
   const current = await host();
   await current.commands.config({});
   const output = { parts: [] };
-  await current.commands.execute({ command: 'memory', sessionID: 'A', arguments: 'scope "/repo/B"' }, output);
-  assert.deepEqual((await current.runtime.context('A')).targets, ['/repo/B']);
+  await current.commands.execute({ command: 'memory', sessionID: 'A', arguments: `scope "${repoPath('B')}"` }, output);
+  assert.deepEqual((await current.runtime.context('A')).targets, [repoPath('B')]);
   const query = 'literal "quote" $(anything)\nsecond';
   await current.commands.execute({ command: 'memory', sessionID: 'A', arguments: `recall ${query}` }, output);
   const recall = current.calls.filter(({ argv }) => argv[0] === 'recall').at(-1);
-  assert.equal(recall.argv[recall.argv.indexOf('--repo') + 1], '/repo/B');
+  assert.equal(recall.argv[recall.argv.indexOf('--repo') + 1], repoPath('B'));
   await current.commands.execute({ command: 'memory', sessionID: 'A', arguments: `remember ${query}` }, output);
   const requested = JSON.parse(output.parts[0].text);
   assert.equal(requested.status, 'not_run');
@@ -155,27 +156,29 @@ test('relative tool targets use the actual session directory and freeze approval
   for (const [name, args] of [['memocap_scope', { paths: ['child'], query: 'release' }],
     ['memocap_remember', { repository: 'child', content: 'release decision' }]]) {
     const current = await host();
-    current.input.client.session.get = async () => ({ data: { directory: '/session/B' } });
-    current.context.directory = '/host/A';
+    const sessionDirectory = path.resolve('/session/B');
+    const approvedChild = path.join(sessionDirectory, 'child');
+    current.input.client.session.get = async () => ({ data: { directory: sessionDirectory } });
+    current.context.directory = path.resolve('/host/A');
     current.context.ask = async (permission) => {
       assert.equal(current.calls.length, 0);
-      assert.deepEqual(permission.patterns, ['/session/B/child']);
+      assert.deepEqual(permission.patterns, [approvedChild]);
       const state = await current.runtime.context('A');
-      state.targets = ['/unexpected'];
-      if (args.paths) args.paths[0] = '/mutated';
-      else args.repository = '/mutated';
+      state.targets = [path.resolve('/unexpected')];
+      if (args.paths) args.paths[0] = path.resolve('/mutated');
+      else args.repository = path.resolve('/mutated');
     };
     const answer = JSON.parse((await current.tools[name].execute(args, current.context)).output);
     assert.ok(['ok', 'inserted'].includes(answer.status), JSON.stringify(answer));
     for (const { argv } of current.calls) {
       const paths = argv.flatMap((arg, index) => arg === '--repo' ? [argv[index + 1]] : []);
-      assert.deepEqual(paths, ['/session/B/child']);
+      assert.deepEqual(paths, [approvedChild]);
     }
   }
 });
 
 test('permission paths containing wildcard metacharacters never widen approval or launch', async () => {
-  for (const repository of ['/repo/*', '/repo/a?']) {
+  for (const repository of [repoPath('*'), repoPath('a?')]) {
     const current = await host();
     const answer = JSON.parse((await current.tools.memocap_remember.execute({ content: 'decision', repository }, current.context)).output);
     assert.equal(answer.status, 'failed');
@@ -212,7 +215,7 @@ test('all tool and command CLI requests carry the current caller before position
   const current = await host();
   const message = user('A', 'old-user-turn');
   await current.runtime.capture({ sessionID: 'A' }, { message: message.info, parts: message.parts });
-  await current.tools.memocap_scope.execute({ paths: ['/repo/A'], query: 'release' }, current.context);
+  await current.tools.memocap_scope.execute({ paths: [repoPath('A')], query: 'release' }, current.context);
   await current.tools.memocap_remember.execute({ content: '--caller-json literal $(not executed)' }, current.context);
   for (const { argv } of current.calls) {
     const index = argv.indexOf('--caller-json');

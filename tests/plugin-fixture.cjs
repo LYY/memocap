@@ -1,10 +1,13 @@
 const { version } = require('../package.json');
+const path = require('node:path');
+
+const repoPath = (...segments) => path.resolve('/repo', ...segments);
 
 function receipt(operation, overrides = {}) {
   return {
     format_version: 1, package_version: version, operation_id: '00000000-0000-0000-0000-000000000311',
     operation, status: 'ok', backend: 'local', origin: 'cli',
-    targets: [{ canonical_path: '/repo/A', repository_id: 'repository:A', identity_source: 'directory', placements: [] }],
+    targets: [{ canonical_path: repoPath('A'), repository_id: 'repository:A', identity_source: 'directory', placements: [] }],
     results: [], returned_ids: [], activity_status: 'recorded', ...overrides,
   };
 }
@@ -23,16 +26,16 @@ function user(sessionID = 'A', id = 'msg-1', text = 'release convention') {
 function fixture() {
   const calls = [];
   const notices = [];
-  const directories = { A: '/repo/A', B: '/repo/B', child: '/repo/child' };
-  const input = { directory: '/repo/A', worktree: '/repo/A', project: { id: 'project' }, client: {
-    session: { get: async ({ path }) => ({ data: { id: path.id, directory: directories[path.id] ?? '/repo/A' } }) },
+  const directories = { A: repoPath('A'), B: repoPath('B'), child: repoPath('child') };
+  const input = { directory: directories.A, worktree: directories.A, project: { id: 'project' }, client: {
+    session: { get: async ({ path }) => ({ data: { id: path.id, directory: directories[path.id] ?? directories.A } }) },
     tui: { showToast: async (notice) => { notices.push(notice); } },
   } };
   const run = async (argv, options) => {
     calls.push({ argv, options });
     const paths = argv.flatMap((arg, index) => arg === '--repo' ? [argv[index + 1]] : []);
-    return { receipt: receipt(argv[0], { targets: paths.map((path) => ({ canonical_path: path,
-      repository_id: `repository:${path.split('/').at(-1)}`, identity_source: 'directory', placements: [] })),
+    return { receipt: receipt(argv[0], { targets: paths.map((directory) => ({ canonical_path: directory,
+      repository_id: `repository:${path.basename(directory)}`, identity_source: 'directory', placements: [] })),
       ...(argv[0] === 'recall' ? { results: [memory()], returned_ids: [1] } : {}) }) };
   };
   return { calls, notices, input, run };
@@ -83,4 +86,4 @@ process.stdout.write(JSON.stringify(envelope));
   };
 }
 
-module.exports = { receipt, memory, user, fixture, sandbox };
+module.exports = { receipt, memory, user, fixture, sandbox, repoPath };

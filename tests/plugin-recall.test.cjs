@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { fixture, receipt, memory, user } = require('./plugin-fixture.cjs');
+const { fixture, receipt, memory, user, repoPath } = require('./plugin-fixture.cjs');
 const load = () => import('../plugin/recall.js');
 
 async function runtime(options = {}, run) {
@@ -67,7 +67,7 @@ test('sessions and child targets remain isolated and new real user turns invalid
     await host.runtime.transform({}, { messages: [message] });
   }
   const recalls = host.calls.filter(({ argv }) => argv[0] === 'recall');
-  assert.deepEqual(recalls.map(({ argv }) => argv[argv.indexOf('--repo') + 1]), ['/repo/A', '/repo/B', '/repo/child', '/repo/A']);
+  assert.deepEqual(recalls.map(({ argv }) => argv[argv.indexOf('--repo') + 1]), [repoPath('A'), repoPath('B'), repoPath('child'), repoPath('A')]);
 });
 
 test('query filters synthetic input and bounds multilingual terms and reference characters', async () => {
