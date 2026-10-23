@@ -5,7 +5,7 @@ import { inspectCache } from "./cache.mjs";
 import { readJSON } from "./files.mjs";
 import { inspectHost } from "./host.mjs";
 import { pnpmRoot } from "./pnpm.mjs";
-import { checked, executable } from "./process.mjs";
+import { checked, executable, windowsShimScript } from "./process.mjs";
 
 export async function resolveVersion(options, runtime, runnerVersion) {
   if (options.to) return options.to;
@@ -27,7 +27,9 @@ function installedExecutable(runtime, owner) {
   for (const directory of directories) {
     if (!directory) continue;
     const candidate = executable("memocap", { ...runtime.env, PATH: directory });
-    if (candidate && fs.realpathSync(candidate) !== runnerLauncher) return candidate;
+    if (!candidate) continue;
+    const script = /\.(cmd|bat)$/i.test(candidate) ? windowsShimScript(candidate) : candidate;
+    if (!script || fs.realpathSync(script) !== runnerLauncher) return candidate;
   }
   return null;
 }

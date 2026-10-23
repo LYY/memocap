@@ -10,9 +10,14 @@ function runnerPath(setup) {
   const launcher = path.join(setup.packageRoot, "bin/cli.cjs");
   fs.mkdirSync(path.dirname(launcher), { recursive: true });
   fs.writeFileSync(launcher, "runner launcher\n", { mode: 0o755 });
-  const directory = path.join(setup.root, "npx bin");
-  fs.mkdirSync(directory);
-  fs.symlinkSync(launcher, path.join(directory, "memocap"));
+  const directory = path.join(setup.root, "npx cache/node_modules/.bin");
+  fs.mkdirSync(directory, { recursive: true });
+  if (process.platform === "win32") {
+    const scope = path.join(directory, "../@lyy-gh");
+    fs.mkdirSync(scope);
+    fs.symlinkSync(setup.packageRoot, path.join(scope, "memocap"), "junction");
+    fs.writeFileSync(path.join(directory, "memocap.cmd"), '@"node" "%~dp0\\..\\@lyy-gh\\memocap\\bin\\cli.cjs" %*\r\n', { mode: 0o755 });
+  } else fs.symlinkSync(launcher, path.join(directory, "memocap"));
   setup.env.PATH = `${directory}${path.delimiter}${setup.env.PATH}`;
 }
 
@@ -25,20 +30,32 @@ test("npx runner's bundled CLI is not an unowned global installation", async (co
   assert.equal(cli.executable_path, null);
 });
 
+test("a Windows npx cache shim is excluded by its package launcher identity", async (context) => {
+  const setup = fixture(context);
+  const { discoverCLI } = await import("../scripts/setup/packages.mjs");
+  const platform = Object.getOwnPropertyDescriptor(process, "platform");
+  Object.defineProperty(process, "platform", { value: "win32" });
+  try {
+    runnerPath(setup);
+    const cli = await discoverCLI(setup.runtime, {});
+    assert.equal(cli.executable_path, null);
+  } finally { Object.defineProperty(process, "platform", platform); }
+});
+
 test("npx runner does not shadow the package-manager-owned global executable", async (context) => {
   const setup = fixture(context);
   setup.installCLI("0.1.0");
   runnerPath(setup);
   const { discoverCLI } = await import("../scripts/setup/packages.mjs");
   const cli = await discoverCLI(setup.runtime, {});
-  assert.equal(cli.executable_path, path.join(setup.prefix, "bin/memocap"));
+  assert.equal(cli.executable_path, setup.cliPath);
 });
 
 test("ignoring a runner does not hide an unrelated unowned executable", async (context) => {
   const setup = fixture(context);
   runnerPath(setup);
   fs.mkdirSync(path.join(setup.prefix, "bin"), { recursive: true });
-  fs.writeFileSync(path.join(setup.prefix, "bin/memocap"), "unowned\n", { mode: 0o755 });
+  fs.writeFileSync(setup.cliPath, "unowned\n", { mode: 0o755 });
   const { discoverCLI } = await import("../scripts/setup/packages.mjs");
   await assert.rejects(discoverCLI(setup.runtime, {}), { code: "unowned_cli" });
 });

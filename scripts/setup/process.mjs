@@ -4,14 +4,32 @@ import { spawn } from "node:child_process";
 import { SetupError } from "./arguments.mjs";
 
 export function executable(name, env) {
-  const extensions = process.platform === "win32" ? ["", ".exe", ".cmd", ".bat"] : [""];
-  for (const directory of (env.PATH || env.Path || "").split(path.delimiter)) {
+  const extensions = process.platform === "win32" ? (/\.(exe|cmd|bat)$/i.test(name) ? [""] : [".exe", ".cmd", ".bat"]) : [""];
+  const pathKey = process.platform === "win32" ? Object.keys(env).sort().find((key) => key.toUpperCase() === "PATH") : "PATH";
+  for (const directory of (env[pathKey] || "").split(path.delimiter)) {
     if (!directory) continue;
     for (const extension of extensions) {
       const filename = path.join(directory, name + extension);
       try { fs.accessSync(filename, fs.constants.X_OK); if (fs.statSync(filename).isFile()) return filename; }
       catch (error) { if (!["ENOENT", "EACCES", "ENOTDIR"].includes(error.code)) throw error; }
     }
+  }
+  return null;
+}
+
+export function windowsShimScript(program) {
+  const directory = path.dirname(program);
+  const stem = path.basename(program, path.extname(program)).toLowerCase();
+  const modules = path.basename(directory) === ".bin" ? path.dirname(directory) : path.join(directory, "node_modules");
+  const scripts = {
+    npm: [path.join(modules, "npm/bin/npm-cli.js")],
+    npx: [path.join(modules, "npm/bin/npx-cli.js")],
+    memocap: [path.join(modules, "@lyy-gh/memocap/bin/cli.cjs")],
+    pnpm: [path.join(modules, "pnpm/bin/pnpm.cjs"), path.join(directory, "pnpm.cjs")],
+  };
+  for (const filename of scripts[stem] || []) {
+    try { if (fs.statSync(filename).isFile()) return filename; }
+    catch (error) { if (!["ENOENT", "ENOTDIR"].includes(error.code)) throw error; }
   }
   return null;
 }
@@ -34,14 +52,10 @@ export async function runProcess(command, args, options = {}) {
   let program = command;
   let argumentsList = args;
   if (process.platform === "win32") {
-    program = path.isAbsolute(command) ? command : executable(command, options.env || process.env);
+    program = path.isAbsolute(command) ? command : executable(command, env);
     if (!program) return { code: 127, stdout: "", stderr: `Executable not found: ${command}` };
     if (/\.(cmd|bat)$/i.test(program)) {
-      const directory = path.dirname(program);
-      const stem = path.basename(program, path.extname(program));
-      const scripts = stem === "memocap" ? [path.join(directory, "node_modules/@lyy-gh/memocap/bin/cli.cjs")]
-        : [path.join(directory, `node_modules/${stem === "npx" ? "npm" : stem}/bin/${stem}-cli.js`), path.join(directory, `${stem}.cjs`), path.join(directory, "node_modules/pnpm/bin/pnpm.cjs")];
-      const script = scripts.find((filename) => fs.existsSync(filename));
+      const script = windowsShimScript(program);
       if (!script) return { code: 126, stdout: "", stderr: `Cannot safely dispatch Windows shim: ${program}` };
       program = process.execPath;
       argumentsList = [script, ...args];

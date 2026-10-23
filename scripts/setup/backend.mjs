@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { SetupError } from "./arguments.mjs";
+import { windowsShimScript } from "./process.mjs";
 
 const capabilities = ["receipt_v1", "recall_match", "multi_target", "inventory", "activity", "read_only_status"];
 
@@ -9,7 +10,8 @@ function inspectionExecutable(context) {
   if (!cli.executable_path) return null;
   const launcher = path.join(cli.package_root, "bin/cli.cjs");
   if (fs.existsSync(launcher)) {
-    if (!/\.(cmd|bat)$/i.test(cli.executable_path) && fs.realpathSync(cli.executable_path) !== fs.realpathSync(launcher)) {
+    const script = /\.(cmd|bat)$/i.test(cli.executable_path) ? windowsShimScript(cli.executable_path) : cli.executable_path;
+    if (!script || fs.realpathSync(script) !== fs.realpathSync(launcher)) {
       throw new SetupError("cli_path_mismatch", "PATH executable is not the installed package launcher");
     }
     return cli.cache.status === "verified" ? cli.cache.binary : null;

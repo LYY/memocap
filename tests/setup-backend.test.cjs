@@ -76,7 +76,7 @@ test("install prepares auxiliary only once then reads status and reports no runt
   assert.equal(report.backend.memory_status, "not_initialized");
   assert.equal(fs.existsSync(setup.env.MEMOCAP_DB), false);
   assert.equal(setup.calls.filter(({ args }) => args.join(" ") === "activity prepare --json").length, 1);
-  assert.equal(setup.calls.filter(({ command }) => command === path.join(setup.prefix, "bin/memocap")).at(-1).args[0], "status");
+  assert.equal(setup.calls.filter(({ command }) => command === setup.cliPath).at(-1).args[0], "status");
   const before = tree(setup.home);
   await setup.setup(["doctor"]);
   assert.deepEqual(tree(setup.home), before);
@@ -165,7 +165,7 @@ for (const mode of ["lost", "failed"]) test(`prepare ${mode} response is reconci
   const checkpoint = report.steps.find(({ component }) => component === "backend");
   assert.equal(checkpoint.status, mode === "lost" ? "changed" : "outcome_unknown");
   assert.equal(setup.calls.filter(({ args }) => args[0] === "activity").length, 1);
-  assert.equal(setup.calls.filter(({ command }) => command === path.join(setup.prefix, "bin/memocap")).at(-1).args[0], "status");
+  assert.equal(setup.calls.filter(({ command }) => command === setup.cliPath).at(-1).args[0], "status");
 });
 
 test("readonly inspection refuses a PATH copy instead of warming an official launcher cache", async (context) => {
@@ -176,4 +176,16 @@ test("readonly inspection refuses a PATH copy instead of warming an official lau
   assert.equal(report.exit_code, 1);
   assert.equal(report.error.code, "cli_path_mismatch");
   assert.equal(setup.calls.some(({ command }) => path.isAbsolute(command)), false);
+});
+
+test("readonly inspection refuses a Windows shim outside the installed package", async (context) => {
+  const setup = backendFixture(context);
+  const { backendStatus } = await import("../scripts/setup/backend.mjs");
+  fs.mkdirSync(path.join(setup.installed, "bin"));
+  fs.writeFileSync(path.join(setup.installed, "bin/cli.cjs"), "official launcher fixture");
+  const shim = path.join(setup.prefix, "bin/memocap.cmd");
+  fs.writeFileSync(shim, "@echo off\r\n");
+  const report = { shared_cli: { package_root: setup.installed, executable_path: shim, cache: { status: "missing" } } };
+  await assert.rejects(backendStatus({ report, runtime: setup.runtime }), { code: "cli_path_mismatch" });
+  assert.equal(setup.calls.length, 0);
 });
