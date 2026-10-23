@@ -23,7 +23,7 @@ test("adopting an already installed exact CLI records its actual executable rece
   const report = await f.setup(["install", "--yes"]);
   const manifest = JSON.parse(fs.readFileSync(report.manifest_path));
   assert.equal(manifest.cli?.version, "0.1.0");
-  assert.equal(manifest.cli.executable_path, path.join(f.prefix, "bin/memocap"));
+  assert.equal(manifest.cli.executable_path, f.cliPath);
   assert.equal(manifest.cli.executable_version, "0.1.0");
 });
 
@@ -31,7 +31,7 @@ test("macOS managed preference locations are part of read-only conflict detectio
   const config = await import("../scripts/setup/config.mjs");
   const locations = config.managedConfigFiles?.({ platform: "darwin", env: {} }) || [];
   assert.equal(locations.includes("/Library/Managed Preferences/ai.opencode.managed.plist"), true);
-  assert.equal(locations.includes(`/Library/Managed Preferences/${os.userInfo().username}/ai.opencode.managed.plist`), true);
+  assert.equal(locations.includes(path.join("/Library/Managed Preferences", os.userInfo().username, "ai.opencode.managed.plist")), true);
 });
 
 test("a project symlink to external canonical contents cannot be treated as an absent skill", async (context) => {

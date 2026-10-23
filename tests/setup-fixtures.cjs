@@ -20,7 +20,7 @@ function fixture(context) {
   const host = path.join(root, "host");
   fs.mkdirSync(path.join(host, "bin"), { recursive: true });
   fs.writeFileSync(path.join(host, "package.json"), JSON.stringify({ name: "opencode-ai", version: "1.19.3" }));
-  fs.writeFileSync(path.join(host, "bin/opencode"), "fixture host\n", { mode: 0o755 });
+  fs.writeFileSync(path.join(host, process.platform === "win32" ? "bin/opencode.cmd" : "bin/opencode"), "fixture host\n", { mode: 0o755 });
   const env = {
     HOME: home, USERPROFILE: home, PATH: [path.join(prefix, "bin"), path.join(host, "bin")].join(path.delimiter),
     XDG_CONFIG_HOME: path.join(home, "config"), XDG_STATE_HOME: path.join(home, "state"),
@@ -28,6 +28,8 @@ function fixture(context) {
   };
   const calls = [];
   const installed = path.join(prefix, "lib/node_modules/@lyy-gh/memocap");
+  const cliScript = path.join(prefix, "bin/memocap");
+  const cliPath = process.platform === "win32" ? `${cliScript}.cmd` : cliScript;
   const config = path.join(env.XDG_CONFIG_HOME, "opencode/opencode.jsonc");
   const state = { stable: "0.1.0", fail: null, afterCommand: null, agents: ["OpenCode"], manager: "npm" };
   function installCLI(version) {
@@ -35,6 +37,7 @@ function fixture(context) {
     fs.writeFileSync(path.join(installed, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version }));
     fs.cpSync(path.join(packageRoot, "skills"), path.join(installed, "skills"), { recursive: true });
     fs.mkdirSync(path.join(prefix, "bin"), { recursive: true });
+    if (cliPath !== cliScript) fs.writeFileSync(cliPath, "@echo off\r\n", { mode: 0o755 });
     fs.writeFileSync(path.join(prefix, "bin/memocap"), `#!${process.execPath}
 const fs = require('node:fs');
 const path = require('node:path');
@@ -79,6 +82,7 @@ console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEM
       if (["uninstall", "remove"].includes(args[0])) {
         fs.rmSync(installed, { recursive: true, force: true });
         fs.rmSync(path.join(prefix, "bin/memocap"), { force: true });
+        if (cliPath !== cliScript) fs.rmSync(cliPath, { force: true });
         return ok();
       }
     }
@@ -109,7 +113,8 @@ console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEM
       }
     }
     if (path.isAbsolute(command)) {
-      const execution = spawnSync(command, args, { encoding: "utf8", env: { ...env, ...options.env } });
+      const execution = spawnSync(process.execPath, [command === cliPath ? cliScript : command, ...args], { encoding: "utf8", env: { ...env, ...options.env } });
+      if (execution.error) throw execution.error;
       return { code: execution.status ?? 1, stdout: execution.stdout || "", stderr: execution.stderr || "" };
     }
     return { code: 1, stdout: "", stderr: `unsupported fixture process ${command} ${args.join(" ")}` };
@@ -119,7 +124,7 @@ console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEM
     const { runSetup } = await import("../scripts/setup/core.mjs");
     return runSetup(args, runtime);
   }
-  return { root, home, prefix, project, packageRoot, config, env, calls, state, installed, installCLI, skillPaths, runtime, setup };
+  return { root, home, prefix, project, packageRoot, config, env, calls, state, installed, cliPath, cliScript, installCLI, skillPaths, runtime, setup };
 }
 
 module.exports = { fixture };
