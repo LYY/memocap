@@ -168,14 +168,27 @@ test("backup failure never replaces the original config and permits a scoped ret
   const f = fixture(context);
   fs.mkdirSync(path.dirname(f.config), { recursive: true });
   fs.writeFileSync(f.config, "{}\n");
-  fs.chmodSync(path.dirname(f.config), 0o500);
+  const writeFileSync = fs.writeFileSync;
+  let backupWriteFailed = false;
+  context.mock.method(fs, "writeFileSync", (filename, ...args) => {
+    if (!backupWriteFailed && typeof filename === "string" && filename.startsWith(`${f.config}.memocap-before-`)) {
+      backupWriteFailed = true;
+      const error = new Error("injected config backup write failure");
+      error.code = "EACCES";
+      throw error;
+    }
+    return writeFileSync.call(fs, filename, ...args);
+  });
   let partial;
   try { partial = await f.setup(["install", "--yes"]); }
-  finally { fs.chmodSync(path.dirname(f.config), 0o700); }
+  finally { context.mock.restoreAll(); }
   assert.equal(partial.exit_code, 1);
+  assert.equal(partial.error.code, "EACCES");
   assert.equal(fs.readFileSync(f.config, "utf8"), "{}\n");
   const repaired = await f.setup(["install", "--yes"]);
   assert.equal(repaired.exit_code, 0, JSON.stringify(repaired));
+  assert.equal(repaired.scopes[0].config, f.config);
+  assert.deepEqual(JSON.parse(fs.readFileSync(f.config, "utf8")).plugin, ["@lyy-gh/memocap@0.1.0"]);
 });
 
 test("a failed binary verification reports the package actually installed and a partial mutation", async (context) => {
