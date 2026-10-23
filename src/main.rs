@@ -12,6 +12,13 @@ mod commands;
     about = "Local-first SQLite memory for OpenCode"
 )]
 struct Cli {
+    #[arg(long, global = true)]
+    json: bool,
+    #[arg(long, global = true)]
+    caller_json: Option<memocap::operation::Caller>,
+    /// Select a local repository directory; repeat only for recall (up to 8).
+    #[arg(long, global = true)]
+    repo: Vec<std::path::PathBuf>,
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -44,6 +51,8 @@ pub(crate) enum Command {
     /// Search memory using SQLite full-text search.
     Recall {
         query: String,
+        #[arg(long, value_enum, default_value_t = memocap::store::MatchMode::All)]
+        r#match: memocap::store::MatchMode,
         #[arg(long, default_value_t = memocap::store::DEFAULT_RECALL_LIMIT)]
         limit: usize,
         #[arg(long)]
@@ -61,6 +70,10 @@ pub(crate) enum Command {
     List {
         #[arg(long, default_value_t = 20)]
         limit: usize,
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
+        #[arg(long, conflicts_with_all = ["domain", "universal"])]
+        placement: Option<scope::PlacementId>,
         /// Show only an attached domain.
         #[arg(long, conflicts_with = "universal")]
         domain: Option<scope::DomainId>,
@@ -89,7 +102,15 @@ pub(crate) enum Command {
         command: OperationCommand,
     },
     /// Print database and placement status.
-    Status,
+    Status {
+        #[arg(long)]
+        read_only: bool,
+    },
+    /// Query retained operation metadata.
+    Activity {
+        #[command(subcommand)]
+        command: ActivityCommand,
+    },
     /// Serve the same SQLite over HTTP. Token required.
     Serve {
         #[arg(long, default_value = "127.0.0.1:8787")]
@@ -101,6 +122,11 @@ pub(crate) enum Command {
 
 #[derive(Subcommand)]
 pub(crate) enum ScopeCommand {
+    /// Inspect every placement using core database counts.
+    List {
+        #[arg(long, required = true)]
+        all: bool,
+    },
     /// Show the current repository and its attached domains.
     Show,
     /// Copy one memory between exact local placements.
@@ -170,6 +196,45 @@ pub(crate) enum OperationCommand {
     },
 }
 
+#[derive(Subcommand)]
+pub(crate) enum ActivityCommand {
+    List {
+        #[arg(long)]
+        writes: bool,
+        #[arg(long, default_value_t = 20)]
+        limit: u32,
+        #[arg(long, default_value_t = 0)]
+        offset: u32,
+        #[arg(long)]
+        repository: Option<scope::RepositoryId>,
+        #[arg(long)]
+        session: Option<String>,
+        #[arg(long)]
+        operation: Option<scope::OperationId>,
+    },
+    Show {
+        id: scope::OperationId,
+    },
+    #[command(hide = true)]
+    Record {
+        #[arg(long)]
+        payload: String,
+    },
+    Prepare,
+}
+
 fn main() -> Result<()> {
-    commands::run(Cli::parse().command.unwrap_or(Command::Ui))
+    let json = std::env::args_os().any(|argument| argument == "--json");
+    let mut cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(error) => {
+            if json && error.exit_code() != 0 {
+                let mut receipt = memocap::receipt::Receipt::new("parse");
+                receipt.fail("invalid_arguments", error.to_string());
+                println!("{}", serde_json::to_string(&receipt)?);
+            }
+            error.exit();
+        }
+    };
+    commands::run(cli.command.take().unwrap_or(Command::Ui), &cli)
 }

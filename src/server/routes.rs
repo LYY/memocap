@@ -7,10 +7,29 @@ use crate::{
 
 use super::{error, json, request::Request, Outgoing};
 
-pub fn execute(connection: &mut Connection, request: Request) -> Outgoing {
+pub fn execute(
+    connection: &mut Connection,
+    request: Request,
+    database: &std::path::Path,
+) -> Outgoing {
+    let request = match request {
+        Request::Recall(query) => return super::recall::execute(database, query),
+        request => request,
+    };
+    let activity = super::committed::prepare(connection, &request);
+    let outgoing = execute_core(connection, request);
+    if let Some(pending) = activity {
+        if outgoing.status == 200 {
+            super::committed::record(database, pending, &outgoing);
+        }
+    }
+    outgoing
+}
+
+fn execute_core(connection: &mut Connection, request: Request) -> Outgoing {
     match request {
         Request::Remember(request) => remember(connection, request),
-        Request::Recall(request) => recall(connection, request),
+        Request::Recall(_) => unreachable!(),
         Request::List(request) => list(connection, request),
         Request::Forget(request) => forget(connection, request),
         Request::Domain(request) => domain(connection, request),
@@ -47,24 +66,6 @@ fn remember(connection: &Connection, request: super::request::Remember) -> Outgo
                 error(400, "invalid_request")
             }
         }
-    }
-}
-
-fn recall(connection: &Connection, request: super::request::Recall) -> Outgoing {
-    let sources = match sources(connection, &request.repository, request.placement.as_ref()) {
-        Ok(sources) => sources,
-        Err(_) => return error(400, "invalid_request"),
-    };
-    match store::recall_visible(
-        connection,
-        &sources,
-        &request.query,
-        request.limit,
-        request.kind.as_deref(),
-        request.max_chars,
-    ) {
-        Ok(memories) => json(200, serde_json::json!({"memories": memories})),
-        Err(_) => error(400, "invalid_request"),
     }
 }
 

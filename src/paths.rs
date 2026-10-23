@@ -9,6 +9,11 @@ pub struct Paths {
 
 impl Paths {
     pub fn discover() -> Result<Self> {
+        if let Some(database) = env::var_os("MEMOCAP_DB").filter(|path| !path.is_empty()) {
+            return Ok(Self {
+                database: PathBuf::from(database),
+            });
+        }
         let home = env::var_os("MEMOCAP_HOME")
             .filter(|value| !value.is_empty())
             .map(PathBuf::from)

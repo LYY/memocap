@@ -6,7 +6,9 @@ use serde::Deserialize;
 
 mod client;
 mod domains;
+mod receipts;
 mod recovery;
+pub use receipts::execute_receipt;
 
 pub use client::{forget, list, recall, remember, status};
 pub use domains::{attach_domain, create_domain, delete_domain, detach_domain, domains};

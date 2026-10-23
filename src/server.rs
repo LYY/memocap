@@ -4,6 +4,8 @@ use std::path::Path;
 use anyhow::Result;
 use tiny_http::{Header, Method, Response, Server, StatusCode};
 
+mod committed;
+mod recall;
 mod request;
 mod routes;
 
@@ -39,6 +41,34 @@ pub fn handle(database: &Path, expected_token: &str, incoming: &Incoming) -> Out
     if !token_ok(expected_token, incoming.token.as_deref()) {
         return error(401, "unauthorized");
     }
+    if incoming.method == "POST" && incoming.path == "/v1/capabilities" {
+        if serde_json::from_str::<std::collections::BTreeMap<String, serde_json::Value>>(
+            &incoming.body,
+        )
+        .is_err()
+        {
+            return error(400, "invalid_request");
+        }
+        return json(
+            200,
+            serde_json::json!({"format_version":1, "package_version":env!("CARGO_PKG_VERSION"), "capabilities":crate::inspection::CAPABILITIES}),
+        );
+    }
+    if incoming.method == "POST" && incoming.path == "/v1/receipt" {
+        let request = match serde_json::from_str::<crate::operation::Request>(&incoming.body) {
+            Ok(request) => request,
+            Err(_) => {
+                let mut receipt = crate::receipt::Receipt::new("command");
+                receipt.backend = "remote".into();
+                receipt.origin = "server".into();
+                receipt.fail("invalid_request", "invalid receipt request".into());
+                return json(400, receipt);
+            }
+        };
+        let receipt =
+            crate::operation::execute(database, &request, crate::activity::ActivityBackend::Remote);
+        return json(if receipt.succeeded() { 200 } else { 400 }, receipt);
+    }
     let request = match request::parse(incoming) {
         Ok(request) => request,
         Err(request::ParseError::NotFound) => return error(404, "not_found"),
@@ -48,7 +78,7 @@ pub fn handle(database: &Path, expected_token: &str, incoming: &Incoming) -> Out
         Ok(connection) => connection,
         Err(_) => return error(500, "internal"),
     };
-    routes::execute(&mut connection, request)
+    routes::execute(&mut connection, request, database)
 }
 
 pub fn dispatch(

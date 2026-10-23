@@ -9,6 +9,9 @@ use std::{
 use memocap::scope::{self, DomainId, OperationId, PlacementId, RepositoryId, ResolutionSource};
 use sha2::{Digest, Sha256};
 
+#[path = "scope/readonly.rs"]
+mod readonly;
+
 static GIT_ENVIRONMENT: Mutex<()> = Mutex::new(());
 
 struct Repository {

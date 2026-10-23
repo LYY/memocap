@@ -9,6 +9,9 @@ use anyhow::{anyhow, bail, Result};
 use sha2::{Digest, Sha256};
 use url::Url;
 
+mod readonly;
+pub use readonly::resolve_readonly;
+
 #[cfg(unix)]
 use std::os::unix::ffi::OsStrExt;
 
@@ -328,16 +331,7 @@ pub fn resolve(cwd: &Path) -> Result<ResolvedScope> {
 }
 
 fn derive_scope(cwd: &Path, common_dir: &Path, remove_legacy_scope: bool) -> Result<ResolvedScope> {
-    let (repository, source) = match remote_identity(cwd)? {
-        Some(identity) => (
-            repository_from_identity("remote", &identity),
-            ResolutionSource::Remote,
-        ),
-        None => (
-            repository_from_path("git-common-dir", common_dir)?,
-            ResolutionSource::GitCommonDir,
-        ),
-    };
+    let (repository, source) = readonly::derived_repository(cwd, common_dir)?;
     persist_repository(cwd, &repository)?;
     if remove_legacy_scope {
         remove_legacy_scope_config(cwd)?;

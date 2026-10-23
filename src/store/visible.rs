@@ -6,7 +6,13 @@ use crate::scope::{PlacementId, RepositoryId};
 use super::{sqlite_limit, Memory};
 
 mod query;
+mod recall;
 mod shadow;
+
+pub use recall::{
+    merge_recalled, recall_targets, recall_visible_with_options, MatchMode, RecallApplicability,
+    RecallOptions, RecallTarget, TargetRecall, TargetedMemory,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VisibleSource {
@@ -14,7 +20,7 @@ pub struct VisibleSource {
 }
 
 impl VisibleSource {
-    fn placement(&self) -> &PlacementId {
+    pub fn placement(&self) -> &PlacementId {
         &self.placement
     }
 }
@@ -93,13 +99,17 @@ pub fn recall_visible(
     kind: Option<&str>,
     max_chars: Option<usize>,
 ) -> Result<Vec<InventoryMemory>> {
-    sqlite_limit(limit)?;
-    let mut visible = recall_inventory(connection, sources, query, kind)?
-        .into_iter()
-        .filter(|entry| entry.visibility.is_visible())
-        .collect::<Vec<_>>();
-    visible.truncate(limit);
-    Ok(take_char_budget(visible, max_chars))
+    recall_visible_with_options(
+        connection,
+        sources,
+        RecallOptions {
+            query,
+            limit,
+            kind,
+            max_chars,
+            match_mode: MatchMode::All,
+        },
+    )
 }
 
 pub fn list_inventory(
@@ -161,14 +171,16 @@ pub fn visible_status(
 fn recall_inventory(
     connection: &Connection,
     sources: &[VisibleSource],
-    query: &str,
-    kind: Option<&str>,
+    options: RecallOptions<'_>,
 ) -> Result<Vec<InventoryMemory>> {
-    let prepared = super::fts_query(query);
+    let prepared = recall::fts_query(options.query, options.match_mode);
     if prepared.is_empty() {
         return Ok(Vec::new());
     }
-    let kind = kind.map(str::trim).filter(|value| !value.is_empty());
+    let kind = options
+        .kind
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
     let topics = shadow::shadow_topics(connection, sources)?;
     let mut inventory = Vec::new();
     for (source_order, source) in sources.iter().enumerate() {
