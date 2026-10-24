@@ -1,5 +1,39 @@
 # Changelog
 
+## @lyy-gh/memocap 0.2.0 (2026-10-24)
+
+Implemented outcomes for package target `0.2.0` and Git tag target `v0.2.0`.
+Publication and registry provenance verification are separate release gates;
+this entry does not claim either has completed.
+
+- Core memories, activity events, and repository hints now share one main
+  SQLite database at schema `2.0`. The exact registered `1.0` schema bridges
+  atomically without rebuilding core tables or changing memory IDs and
+  placements. Pre-versioned, malformed, unknown, or unsupported schemas refuse
+  without reset.
+- Compatible higher `2.n` schemas preserve supported unknown tables, columns,
+  indexes, and triggers within the documented bounded compatibility rules.
+- `status --read-only` reports a missing database as `not_initialized`, schema
+  `1.0` as `upgrade_needed`, and compatible `2.n` with its actual version.
+  Ordinary memory `list` uses a read-write open and can initialize or bridge;
+  `activity list/show` remain read-only and do not prepare the main database.
+- Local `activity prepare` creates the main schema or bridges exact `1.0`, then
+  prepares retained activity and may prune it. Authorized setup install/update
+  prepares a missing or legacy local database and verifies it by readback;
+  check, doctor, and dry-run do not prepare. Doctor is ready only at
+  `static_ready`, while runtime remains `not_run` until verified in a new
+  OpenCode session.
+- Existing `.activity.sqlite` files are left untouched and their history is
+  not imported. Any personal discard is a separate authorized choice after old
+  writers are quiescent. Activity failures remain warnings after a successful
+  core write; never replay that write to fill history.
+- The v0.1.0 and v0.0.10 binaries cannot open schema `2.0`. Back up with
+  SQLite's backup API or another WAL-aware method before bridging; a software
+  downgrade is not data restoration, and an older backup must not overwrite
+  newer data. During higher-target preflight, v0.1.0 reports `upgrade_needed`
+  for schema `1.0`; local v0.0.10 inspection is `inspection_deferred`, not a
+  success or readiness result.
+
 ## @lyy-gh/memocap 0.1.0 (2026-10-23)
 
 Implemented outcomes for package target `0.1.0` and Git tag target `v0.1.0`.

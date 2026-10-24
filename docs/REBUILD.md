@@ -1,15 +1,18 @@
-# memocap 当前重开发基线
+# memocap v0.1.0 重开发基线（历史）
 
-这是当前实现规格，不是历史原型说明。OpenCode 是唯一官方支持的集成。先读
+本文记录 v0.1.0 当时的实现基线，不是当前 schema 2.0 规格。当前数据库生命周期见
+[Schema Versioning Contract](SCHEMA-VERSIONING.md)；OpenCode 是唯一官方支持的集成。先读
 [README](../README.md)、[DEPLOYMENT](DEPLOYMENT.md) 和
-[Schema Versioning Contract](SCHEMA-VERSIONING.md)。本文只描述当前
+[Schema Versioning Contract](SCHEMA-VERSIONING.md)。本文只描述当时
 v0.1.0 的 domain-aware、可观测 memory 行为。Package `0.1.0`、tag `v0.1.0`、
 core schema `1.0` 和 receipt format `1` 分别管理，不同步递增。
 
-## 当前安装和边界
+## v0.1.0 安装和边界（历史）
 
-按[安装指南](INSTALL.md)使用固定版本 setup runner，或按
-[Agent 指南](INSTALL-AGENT.md)执行已获授权的安装/更新：
+按 v0.1.0 [安装指南](https://github.com/LYY/memocap/blob/v0.1.0/docs/INSTALL.md)
+使用固定版本 setup runner，或按 v0.1.0
+[Agent 指南](https://github.com/LYY/memocap/blob/v0.1.0/docs/INSTALL-AGENT.md)
+执行已获授权的安装/更新：
 
 ```bash
 npx --yes --package @lyy-gh/memocap@0.1.0 memocap-setup install --global --yes --json

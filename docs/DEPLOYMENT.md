@@ -1,8 +1,9 @@
 # Deployment and Operations
 
-This guide describes the v0.1.0 operator contract for a domain-aware memocap
-server. The server owns the core SQLite database and its separate operational
-activity database. It is not a multi-tenant service.
+This guide describes the operator contract implemented for package 0.2.0; it
+does not claim that the package has been published. The server owns one main
+SQLite database for core memories, activity, and repository metadata. It is not
+a multi-tenant service.
 
 ## Trust boundary
 
@@ -49,15 +50,14 @@ docker compose ps
 ```
 
 The token is required before the container starts. Keep it out of committed
-files and shell history where practical. The volume is the database boundary:
-back it up using your normal volume or filesystem procedure before destructive
-maintenance. memocap itself does not create an automatic backup for the
-recognized-old-schema reset.
+files and shell history where practical. The volume is the database boundary.
+Before a schema bridge, back up the main database with SQLite's backup API or
+another WAL-aware method and verify the backup. memocap does not create an
+automatic backup; a raw file copy while WAL is active can omit committed data.
 
-For a local client, install the CLI and select the server explicitly:
+For an already-installed local client, select the server explicitly:
 
 ```sh
-pnpm add -g @lyy-gh/memocap@0.1.0
 export MEMOCAP_ADDR=http://127.0.0.1:8787
 export MEMOCAP_TOKEN='replace-with-a-long-random-token'
 memocap scope show
@@ -168,7 +168,7 @@ The server exposes these authenticated `POST` routes under `/v1`:
 
 | Route | Purpose |
 | --- | --- |
-| `/v1/capabilities` | Negotiate receipt, match mode, multi-target, inventory, activity, and read-only-status support before a new-semantics operation. |
+| `/v1/capabilities` | Negotiate receipt, match mode, multi-target, inventory, activity, read-only-status, single-database, and schema-2-compatibility support before a new-semantics operation. |
 | `/v1/receipt` | Execute typed operations and return one format-1 receipt, including core outcome and independent activity outcome. |
 | `/v1/memories/remember` | Store one memory at an exact placement. |
 | `/v1/memories/recall` | Recall effective memories from the visible stack or one selected placement. |
@@ -188,12 +188,13 @@ Legacy unversioned routes such as `/remember`, `/recall`, `/list`, `/forget`,
 and `/status` are removed, not deprecated. There is no route fallback and no
 remote-to-local fallback.
 
-The v0.1.0 JSON CLI and plugin negotiate capabilities before sending observable
-operations. An older server that lacks them fails explicitly; clients do not
-retry through legacy routes. Existing versioned routes above remain available
-for older clients and record native committed writes/recalls on the server.
-Only the server opens the remote core and activity stores. Client filesystem
-paths are display hints, never authority over server filesystem access.
+The CLI and plugin represented by this branch negotiate capabilities before
+sending observable operations. Missing required capabilities fail explicitly;
+clients do not retry through legacy routes. The `single_database` and
+`schema_2_compatible` capabilities describe binary support, not database
+readiness. Use read-only status on the server to inspect its actual main
+database. Only the server opens the remote database. Client filesystem paths
+are display hints, never authority over server filesystem access.
 
 ## Inventory and retained activity
 
@@ -213,20 +214,24 @@ memocap activity list --writes --limit 20 --offset 0 --json
 memocap activity show '<OPERATION_UUID>' --json
 ```
 
-The auxiliary path appends `.activity.sqlite` to the core filename and resides
-in the same persistent volume. It stores metadata and repository display hints,
-not full prompts or memory content. Recall/injection events are bounded to 30
-days and 10,000 entries; write metadata to 1,000 entries. Expiry, pruning,
-recording failure, or a crash after commit can leave gaps. A missing retained
-operation is `not_found_or_expired`, not proof that a write never happened.
+Activity events and repository display hints share the main database and
+persistent volume with core memories. Events store operational metadata, not
+full prompts or memory content. Recall/injection events are bounded to 30 days
+and 10,000 entries; write metadata to 1,000 entries. Expiry, pruning, recording
+failure, or a crash after commit can leave gaps. A missing retained operation is
+`not_found_or_expired`, not proof that a write never happened.
 
-For missing auxiliary storage, a server administrator can run
-`memocap activity prepare --json` locally with `MEMOCAP_ADDR` unset and the
-server's `MEMOCAP_DB`; inspect afterward with `status --read-only --json`.
-Preparation never initializes the core. Remote preparation is refused, and
-unknown/corrupt auxiliary stores are not automatically reset. If recording fails
-after a successful core write, preserve its success and report the activity
-warning; never repeat the write to obtain a history entry.
+An old `.activity.sqlite` file is left untouched by generic preparation; its
+history is not imported. An owner-directed cleanup, if chosen, is separate from
+upgrade and must wait until old writers are quiesced. To prepare a new or
+existing server database, an administrator runs the local
+`memocap activity prepare --json` command with `MEMOCAP_ADDR` unset and the
+server's `MEMOCAP_DB`. This prepares the whole main schema: it creates a missing
+schema or bridges the registered schema `1.0`, and may prune retained activity.
+Inspect afterward with `memocap status --read-only --json`. Remote preparation
+is refused. If recording fails after a successful core write, preserve its
+success and report the activity warning; never repeat the write to obtain a
+history entry.
 
 ## Response-loss recovery
 
@@ -266,20 +271,16 @@ Write, delete, and legacy host actions are removed from the TUI, not deprecated.
 ## Schema and recovery maintenance
 
 Schema policy is authoritative in [SCHEMA-VERSIONING.md](SCHEMA-VERSIONING.md).
-The current schema is `1.0`. The only no-confirmation bulk-delete exception is
-an exact recognized pre-versioned database. It resets transactionally to schema
-`1.0`, deletes all old memory rows, creates no backup, and emits the required
-reset notice. A merely similar, malformed, higher-minor, or different-major
-database refuses without mutation. There is no standalone reset command.
+The current branch baseline is schema `2.0` in the main database. Read-only
+status reports an exact legacy `1.0` database as `upgrade_needed` without
+migrating it. A read-write open or explicit local preparation applies only the
+registered `1.0` to `2.0` bridge. Pre-versioned, malformed, unknown, or
+unsupported schemas are refused without reset. Higher `2.n` schemas are
+accepted only within the documented same-major compatibility bounds.
 
-Before maintenance, record the volume snapshot or backup required by your
-deployment policy. For ordinary deletion, use the exact `forget` placement and
-ID. For a transfer, record its operation ID and recovery handle in the operator
-log.
-
-Package `0.1.0` leaves the complete core-1.0 fingerprint unchanged. A compatible
-v0.0.10 binary can still use the core data, but cannot provide new receipts or
-activity features. Software upgrade/downgrade retains data; it is not backup
-restoration. Use SQLite's backup API or another WAL-aware backup method for the
-core and any retained auxiliary history you need. A raw file copy while WAL is
-active can omit committed data.
+Before bridging, use SQLite's backup API or another WAL-aware backup method.
+Neither strict `0.0.10` nor `0.1.0` binaries can open schema `2.0`; switching to
+an older binary is not a downgrade or backup restore. Never overwrite newer
+schema `2.0` data with an older backup. For ordinary deletion, use the exact
+`forget` placement and ID. For a transfer, record its operation ID and recovery
+handle in the operator log.

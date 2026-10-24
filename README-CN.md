@@ -12,10 +12,10 @@ OpenCode 是唯一官方支持的集成。插件通过包内绝对路径的 CLI 
 
 ## 安装
 
-为当前用户安装 v0.1.0 CLI、OpenCode 插件和运行时 skill：
+为当前用户安装 v0.2.0 CLI、OpenCode 插件和运行时 skill：
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.1.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup install --global --yes --json
 ```
 
 需要 Node.js 22.20 或更高版本、npm/npx、Git 和 OpenCode 1.19.3。安装器不会
@@ -29,7 +29,7 @@ Agent 进行已获授权的非交互安装或更新时，按[Agent 指南](docs/
 
 全局 `--repo <PATH>` 显式选择真实仓库路径；只有 recall 可重复指定，最多八个目标。
 写操作始终只有一个目标。全局 `--json` 返回 format-1 receipt，供自动化使用；
-`serve` 和 `ui` 不支持它。package `0.1.0`、core schema `1.0`、receipt format
+`serve` 和 `ui` 不支持它。package `0.2.0`、core schema `2.0`、receipt format
 `1` 是独立版本。
 
 ```text
@@ -81,15 +81,20 @@ activity 状态。本次请求已有有效插件 receipt（包括空结果或有
 只有明确要求完整库存时才用 `scope list --all`，再用
 `list --placement <PLACEMENT> --limit 20 --offset 0` 分页查看精确 placement。
 `status --read-only --json` 检查 core 和 activity 兼容性，不产生逻辑写入：不写入
-数据或 schema、不初始化或迁移 core、不裁剪历史，也不记录 activity。SQLite
+数据或 schema、不初始化或迁移主数据库、不裁剪历史，也不记录 activity。普通记忆命令
+（例如 `memocap list`）使用 read-write open，可能初始化缺失数据库，或将 schema `1.0`
+桥接到 `2.0`。`activity list/show` 使用 read-only 访问，不会准备数据库。SQLite
 `READ_ONLY` 连接仍可能协调 WAL/SHM sidecar；普通 WAL 检查不需要 owner snapshot。
-`activity prepare` 只显式准备本地附属存储，远程准备由服务器管理员负责。完整边界见
+`activity prepare` 显式准备本地主数据库，创建 schema `2.0` 或桥接精确注册的 `1.0`；
+准备过程可能裁剪保留的 activity。远程准备由服务器管理员负责。完整边界见
 [schema versioning contract](docs/SCHEMA-VERSIONING.md)。
 
-Activity 在 `<core filename>.activity.sqlite` 中保存有限运维元数据，不是完整审计。
+Activity 和 repository hint 在主 SQLite 数据库中保存有限运维元数据，不是完整审计。
 Recall/injection 最长保留 30 天、最多 10,000 条；write 元数据最多 1,000 条。
 过期、裁剪或记录失败可能留下缺口。Core 写入成功后 activity 失败仍是写入成功，
-应报告 warning，不能重放写入来修复历史。
+应报告 warning，不能重放写入来修复历史。旧 `<core filename>.activity.sqlite` 文件不会被
+自动打开、导入、改写或删除，其中的历史不会出现在新查询中。静止旧 writer 后的个人丢弃
+必须是另行授权的选择。
 
 插件提供 `memocap_recall`、`memocap_remember`、`memocap_scope` tools。
 `/memory status`、`/memory recall`、`/memory scope <PATH...>`、`/memory scopes`、
@@ -188,14 +193,11 @@ Namespace selection 还是另一层：`--domain`、`--universal` 和默认 visib
 
 ## Schema 和 data loss
 
-打开旧版本数据库前先读[SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md)。唯一
-无需确认的 bulk-delete 例外是 exact recognized pre-versioned schema。该事务会
-删除所有旧 memory row，创建 schema `1.0`，不创建 backup，并输出指定 reset notice。
-未知或不兼容 schema 会在不修改数据的情况下拒绝。没有面向用户的 reset command。
-
-正常升级保留兼容的 schema-1.0 core 数据及完整 fingerprint。v0.0.10 binary
-仍可使用该 core store，但没有 receipt 或 activity 功能。退回旧 binary 不会恢复
-数据库备份。
+打开旧版本数据库前先读[SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md)。精确注册的
+schema `1.0` 会桥接到 `2.0`，不重建 core 表，也不改变 memory ID 和 placement。
+预版本、未知、畸形或不支持的 schema 会被拒绝，不会 reset。升级旧库前，使用 SQLite
+backup API 或其他 WAL-aware 方法备份。v0.1.0 和 v0.0.10 binary 都无法打开 schema `2.0`；
+切换软件版本不等于恢复数据。不要用旧备份覆盖更新的 schema `2.0` 数据。
 
 ## 对照
 

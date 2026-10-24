@@ -1,6 +1,6 @@
 # Install and Update
 
-This guide describes the v0.1.0 release. Keep the CLI, OpenCode plugin, and
+This guide covers package target v0.2.0. Keep the CLI, OpenCode plugin, and
 runtime skill on the same release unless you are following an explicit recovery
 procedure.
 
@@ -26,24 +26,27 @@ remains `not_run`.
 ## Global install
 
 This installs the user-level CLI and OpenCode integration. The command is pinned
-to v0.1.0 and does not select a memory placement:
+to v0.2.0 and does not select a memory placement:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.1.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup install --global --yes --json
 ```
 
 The installer reports the CLI, plugin, skill, and configuration result for each
-step. It does not change the core memory database. Network access is needed for
-the pinned npm package and tagged skill. When npx launches the setup command,
-npx may fetch the runner package and update its own cache before the setup core
-starts.
+step. After prerequisites and authorization, install/update prepares a missing
+or exact schema `1.0` local main database, then verifies it by readback.
+Preparation may prune retained activity. Before bridging a legacy database,
+make a WAL-aware backup as described below. Network access is needed for the
+pinned npm package and tagged skill. When npx launches
+the setup command, npx may fetch the runner package and update its own cache
+before the setup core starts.
 
 ## Project install
 
 Pass the full project path explicitly. Quote paths that contain spaces:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.1.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
 ```
 
 This configures the project integration and project skill. The user-level CLI
@@ -61,10 +64,10 @@ install only the skill from the matching release tag. Choose one scope:
 
 ```sh
 # Global skill
-npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.1.0 --skill memocap --agent opencode --global --yes
+npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.2.0 --skill memocap --agent opencode --global --yes
 
 # Project skill, run from the project directory
-npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.1.0 --skill memocap --agent opencode --yes
+npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.2.0 --skill memocap --agent opencode --yes
 ```
 
 The `skills` CLI manages its shared canonical skill and agent links. Do not
@@ -80,14 +83,20 @@ managed installation, pin the CLI and plugin to the same release, then install
 the matching skill:
 
 ```sh
-npm install --global @lyy-gh/memocap@0.1.0
+npm install --global @lyy-gh/memocap@0.2.0
 ```
 
 If you use pnpm for this global CLI, keep the same package-manager owner:
 
 ```sh
-pnpm add --global @lyy-gh/memocap@0.1.0
+pnpm add --global @lyy-gh/memocap@0.2.0
 ```
+
+Setup can adopt an existing manual integration only when the installed package,
+plugin, and skill source and ownership can be verified. Adoption of a proven
+v0.1.0 integration was validated with a global pnpm 12 CLI and a release skill
+and plugin without setup ownership metadata. Unproven or conflicting state is
+reported, not overwritten.
 
 Add the plugin package to the intended OpenCode v1 config. OpenCode accepts JSON
 and JSONC, and the v1 config key is `plugin`. See the
@@ -96,7 +105,7 @@ and JSONC, and the v1 config key is `plugin`. See the
 ```jsonc
 {
   "plugin": [
-    "@lyy-gh/memocap@0.1.0"
+    "@lyy-gh/memocap@0.2.0"
   ]
 }
 ```
@@ -133,21 +142,24 @@ For an authorized update, copy the exact `resolved_version` from that check.
 Review the exact-target dry-run, then execute the same target with `--yes`:
 
 ```sh
-memocap-setup update --to 0.1.0 --global --dry-run --json
-memocap-setup update --to 0.1.0 --global --yes --json
+memocap-setup update --to 0.2.0 --global --dry-run --json
+memocap-setup update --to 0.2.0 --global --yes --json
 ```
 
-Replace `0.1.0` in both commands with the version returned by `check`. Do not
-resolve `latest` again between the plan and execution. The setup command does
-not prompt interactively when `--yes` is absent.
+Use the exact `resolved_version` returned by `check` in both commands; the
+examples pin the v0.2.0 target. Do not resolve `latest` again between the plan
+and execution. The setup command does not prompt interactively when `--yes` is
+absent. `check` is informational: read its `readiness` field, not only its
+successful command exit, to determine whether the database is ready.
 
 When an authorized update runs from a different package version, setup starts an
 exact-target `@lyy-gh/memocap@<resolved_version>` worker and verifies the worker
 and report versions. It does not fall back to another worker version.
 
-The setup core's dry-run does not fetch update payloads or write config, skill,
-manifest, or database state. If npx starts the core, it may still fetch the
-runner package and update its own cache first.
+The setup core's dry-run does not fetch the target worker or write config,
+skill, manifest, or database state. If npx starts the core, it may still fetch
+the explicitly pinned runner package and update its own cache first. Check,
+doctor, and dry-run never prepare, migrate, or prune the database.
 
 Use `--project "/absolute/path/to/repo"` instead of `--global` for a project
 integration. `--yes` confirms only the explicitly selected update scope. It
@@ -161,15 +173,20 @@ replacing unrelated user state.
 
 ### Upgrade from v0.0.10
 
-The v0.0.10 CLI does not include the setup command. Bootstrap the pinned v0.1.0
-runner and update through that release's setup logic:
+The v0.0.10 CLI does not include the setup command or the new read-only status
+interface. Its higher-target preflight reports `inspection_deferred` only; this
+is not a successful readiness result. Bootstrap the exact v0.2.0 runner with
+the authorized update, then inspect and prepare through the target setup logic.
+Before running it against a database that may be schema `1.0`, make a WAL-aware
+backup:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.1.0 memocap-setup update --to 0.1.0 --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup update --to 0.2.0 --global --yes --json
 ```
 
-Use `--project "/absolute/path/to/repo"` for a project integration. This is a
-v0.1.0 release command, not a command available from v0.0.10 alone.
+Use `--project "/absolute/path/to/repo"` for a project integration. The target
+installer reports schema `1.0` as `upgrade_needed`, prepares the local main
+database, and verifies the result.
 
 ## What changes
 
@@ -194,25 +211,36 @@ before updating.
 
 ## Data and compatibility
 
-The v0.1.0 CLI keeps the core SQLite schema at `1.0` with its existing complete
-schema fingerprint. A normal software upgrade or downgrade does not restore a
-database backup. A v0.0.10 CLI can still use the compatible core store, but it
-does not provide v0.1.0 plugin behavior, structured receipts, or activity
-features.
+Package `0.2.0`, schema `2.0`, and receipt format `1` are independent
+identities. The exact registered schema `1.0` bridges atomically to `2.0`,
+preserving core rows and IDs, placements, domains and attachments, provenance,
+the operation ledger, and FTS. Missing main databases are prepared at schema
+`2.0`. Pre-versioned, malformed, unknown, or unsupported schemas are refused
+without reset. See [SCHEMA-VERSIONING.md](SCHEMA-VERSIONING.md) for the bounded
+same-major compatibility contract.
 
-Operational activity is stored separately in `<core filename>.activity.sqlite`,
-normally `~/.memocap/memocap.db.activity.sqlite`. It holds bounded operational
-history and repository display hints, not a complete audit log. Recall/injection
-history is limited to 30 days and 10,000 events; write metadata is capped at
-1,000 events. Pruning, expiry, and recording failures can leave gaps. If activity storage
-fails after the core memory write succeeds, report the memory write as successful
-with an activity warning. Do not repeat `remember` to repair activity history.
+Activity and repository hints now share the main SQLite database. Activity is
+bounded operational history, not a complete audit log. Recall/injection history
+is limited to 30 days and 10,000 events; write metadata is capped at 1,000
+events. Pruning, expiry, and recording failures can leave gaps. If activity
+storage fails after a core memory write succeeds, report the memory write as
+successful with an activity warning. Do not repeat `remember` to repair activity
+history. An existing `<core filename>.activity.sqlite` file is not opened,
+imported, rewritten, or deleted by generic preparation, and its history is not
+available through the new database. Any later discard is a separate,
+user-authorized choice after old writers are quiescent.
 
-Before an optional data backup, use SQLite's backup API or another
+To prepare a local database outside setup, first make a WAL-aware backup if its
+schema may be `1.0`, then run `memocap activity prepare --json` with remote mode
+unset. It creates schema `2.0` or bridges exact schema `1.0`, then prepares
+activity retention and may prune old events. A remote client cannot prepare the
+server database; its administrator must run the command locally.
+
+Before bridging a legacy database, use SQLite's backup API or another
 WAL-aware procedure. A raw copy can omit committed data while the database uses
 WAL. Restoring data is a separate, destructive action and requires an explicit
-choice of backup and target. Software rollback alone does not restore or remove
-the activity database.
+choice of backup and target. Software rollback alone does not restore database
+state.
 
 ## Verify
 
@@ -223,28 +251,30 @@ memocap-setup doctor --global --json
 ```
 
 For a project installation, pass its explicit path with `--project`. Static
-readiness checks installed files, versions, config, skill discovery, and core
-schema compatibility and auxiliary activity availability. It does not prove that an OpenCode session loaded the new
-plugin or that a model received recalled memory.
+readiness checks installed files, versions, config, skill discovery, and main
+database compatibility and activity availability. It does not prove that an
+OpenCode session loaded the new plugin or that a model received recalled memory.
 
 Read the actual `status`, `readiness`, and `runtime` fields:
 
 | Readiness | Meaning |
 | --- | --- |
-| `installation_ready` | Components match and activity is ready; core memory has not been initialized. |
-| `static_ready` | Components match, core schema is compatible, and activity is ready. |
-| `incomplete` | Required components or backend inspection are incomplete or versions differ. |
-| `activity_not_initialized` | Auxiliary storage is absent; a remote server administrator must prepare it. |
-| `activity_degraded` | Auxiliary inspection failed; investigate without replaying successful core writes. |
+| `static_ready` | Components match, the main database is compatible, and activity is ready. A fresh install reaches this after schema `2.0` preparation and readback. |
+| `not_initialized` | The main database is missing and is not ready. Authorized local install/update can prepare it; remote preparation belongs to the server administrator. |
+| `upgrade_needed` | The exact registered schema `1.0` needs the explicit local bridge. Back up first; remote preparation belongs to the server administrator. |
+| `activity_not_initialized` or `activity_degraded` | Activity is not ready. Treat warnings separately from core success and never replay a successful write. |
+| `incomplete` | Inspection or required component/update state is incomplete. |
+| `inspection_deferred` | Higher-target preflight of the known local v0.0.10 producer only. It is not success or readiness; install the target and read back its result. |
 
-Doctor exits zero for `installation_ready` or `static_ready`, and nonzero for
-an incomplete/degraded installation. Its database inspection makes no logical
-writes: it does not change core or activity data/schema, initialize or reset
-core data, migrate schema, prune history, or record activity. It also never warms
-the binary cache, prepares activity, or runs a model request. Authorized local
-install/update can prepare auxiliary storage explicitly while keeping core data
-unchanged. `runtime.status` remains `not_run`: runtime QA has not happened, which
-is separate from installation failure. SQLite `READ_ONLY` connections may still
+Doctor exits zero only for `static_ready`; all other readiness values, including
+`not_initialized`, `upgrade_needed`, `activity_degraded`, `incomplete`, and
+`inspection_deferred`, are not ready. Check and doctor make no logical database
+writes; they do not initialize, bridge, prune, or record activity. Dry-run also
+does not prepare the database. An authorized local install/update explicitly
+prepares a missing or exact legacy main database, then reads it back and requires
+both core and activity to be ready. Remote clients cannot prepare the server's
+database. `runtime.status` remains `not_run` until a new OpenCode session
+verifies status and a real recall. SQLite `READ_ONLY` connections may still
 coordinate WAL/SHM sidecars. Ordinary inspection of a WAL-backed database works
 without an owner-generated snapshot; this does not promise zero filesystem-level
 activity from SQLite's normal WAL handling.
@@ -277,8 +307,8 @@ with a shell command.
 ## Uninstall
 
 Uninstall removes only integration state the installer can prove it owns and
-that has not been changed by the user. It keeps the core database, activity
-database, backups, unrelated plugin entries, shared skills, and other agents'
+that has not been changed by the user. It keeps the main database (including
+activity), backups, unrelated plugin entries, shared skills, and other agents'
 installations. The global CLI is kept unless `--remove-cli` is explicitly
 requested. If another integration refers to that CLI, the installer reports
 the reference and leaves it in place.
@@ -299,17 +329,17 @@ The same pinned commands work from PowerShell. Quote package arguments and
 project paths with single quotes:
 
 ```powershell
-npx --yes --package '@lyy-gh/memocap@0.1.0' memocap-setup install --global --yes --json
-npx --yes --package '@lyy-gh/memocap@0.1.0' memocap-setup install --project 'C:\work\my repo' --yes --json
+npx --yes --package '@lyy-gh/memocap@0.2.0' memocap-setup install --global --yes --json
+npx --yes --package '@lyy-gh/memocap@0.2.0' memocap-setup install --project 'C:\work\my repo' --yes --json
 ```
 
 For an update, use `memocap-setup check --global --json`, then pass its exact
-resolved version to `memocap-setup update --to 0.1.0 --global --dry-run --json`
+resolved version to `memocap-setup update --to 0.2.0 --global --dry-run --json`
 and, after reviewing the plan, to the matching `--yes` command. The PowerShell
 wrapper in a source checkout forwards the same arguments to the same setup core.
 
 ```powershell
 memocap-setup check --global --json
-memocap-setup update --to 0.1.0 --global --dry-run --json
-memocap-setup update --to 0.1.0 --global --yes --json
+memocap-setup update --to 0.2.0 --global --dry-run --json
+memocap-setup update --to 0.2.0 --global --yes --json
 ```

@@ -55,4 +55,4 @@ Memory admission and least-sharing placement policy:
 
 ## Install and update
 
-When asked to install or update memocap, follow the [v0.1.0 agent installation and update guide](https://github.com/LYY/memocap/blob/v0.1.0/docs/INSTALL-AGENT.md). The skill can be installed without the repository's other documentation, so use this versioned official link rather than a relative path. The [user installation guide](https://github.com/LYY/memocap/blob/v0.1.0/docs/INSTALL.md) covers manual steps and recovery.
+When asked to install or update memocap, follow the [v0.2.0 agent installation and update guide](https://github.com/LYY/memocap/blob/v0.2.0/docs/INSTALL-AGENT.md). The skill can be installed without the repository's other documentation, so use this versioned official link rather than a relative path. The [user installation guide](https://github.com/LYY/memocap/blob/v0.2.0/docs/INSTALL.md) covers manual steps and recovery.

@@ -14,10 +14,10 @@ remote operation are documented in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Install
 
-Install the v0.1.0 CLI, OpenCode plugin, and runtime skill for your user:
+Install the v0.2.0 CLI, OpenCode plugin, and runtime skill for your user:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.1.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup install --global --yes --json
 ```
 
 Requires Node.js 22.20 or later, npm/npx, Git, and OpenCode 1.19.3. The setup
@@ -35,7 +35,7 @@ mutually exclusive. `<PLACEMENT>` is `repository:<64 lowercase hex>`,
 Global `--repo <PATH>` selects a concrete repository instead of the working
 directory; repeat it only for recall, up to eight targets. Writes have one
 target. Global `--json` returns a format-1 receipt for automation; it is not
-supported by `serve` or `ui`. Package `0.1.0`, core schema `1.0`, and receipt
+supported by `serve` or `ui`. Package `0.2.0`, core schema `2.0`, and receipt
 format `1` are independent identities.
 
 ```text
@@ -91,18 +91,26 @@ empty or cached result, satisfies recall-first without repeating the same query.
 Use `scope list --all` only for an intentional full inventory, then
 `list --placement <PLACEMENT> --limit 20 --offset 0` for exact paged rows.
 `status --read-only --json` checks core and activity compatibility without
-logical writes: it does not write data or schema, initialize or migrate core,
-prune history, or record activity. SQLite `READ_ONLY` connections may still
-coordinate WAL/SHM sidecars; ordinary WAL inspection needs no owner snapshot.
-`activity prepare` explicitly prepares only local auxiliary storage; remote
-preparation belongs to the server administrator. See the
+logical writes: it does not write data or schema, initialize or migrate the main
+database, prune history, or record activity. Ordinary memory commands such as
+`memocap list` use a read-write open and can initialize a missing database or
+bridge schema `1.0` to `2.0`. `activity list/show` use read-only access and do
+not prepare the database. SQLite `READ_ONLY` connections may still coordinate
+WAL/SHM sidecars; ordinary WAL inspection needs no owner snapshot.
+`activity prepare` explicitly prepares the local main database, creating schema
+`2.0` or bridging the exact registered `1.0` schema. Preparation can prune
+retained activity. Remote preparation belongs to the server administrator.
+See the
 [schema versioning contract](docs/SCHEMA-VERSIONING.md) for the full boundary.
 
-Activity is retained operational metadata in `<core filename>.activity.sqlite`,
-not a complete audit log. Recall/injection retention is 30 days and 10,000 events;
-write metadata is capped at 1,000 events. Gaps can follow expiry, pruning, or
-recording failure. A successful core write stays successful if activity fails;
-report its warning and never replay the write to repair history.
+Activity and repository hints are retained operational metadata in the main
+SQLite database, not a complete audit log. Recall/injection retention is 30 days
+and 10,000 events; write metadata is capped at 1,000 events. Gaps can follow
+expiry, pruning, or recording failure. A successful core write stays successful
+if activity fails; report its warning and never replay the write to repair
+history. An existing `<core filename>.activity.sqlite` file is left untouched
+and its history is not imported. Any later discard is a separate, user-authorized
+choice after old writers are quiescent.
 
 The plugin exposes `memocap_recall`, `memocap_remember`, and `memocap_scope`
 tools. `/memory status`, `/memory recall`, `/memory scope <PATH...>`,
@@ -217,15 +225,13 @@ written. Authorization is only the remote bearer-token gate described above.
 ## Schema and data loss
 
 Read [SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md) before opening a store
-created by an earlier build. The sole no-confirmation bulk-delete exception is
-an exact recognized pre-versioned schema. Its transaction deletes all old
-memory rows, creates schema `1.0`, makes no backup, and prints the required
-reset notice. Unknown or incompatible schemas refuse without mutation. There is
-no user-facing reset command.
-
-A normal upgrade retains compatible schema-1.0 core data and its complete
-fingerprint. The v0.0.10 binary can still use that core store; it does not gain
-receipts or activity. Returning to an older binary does not restore a backup.
+created by an earlier build. The exact registered schema `1.0` is bridged to
+`2.0` without rebuilding core tables or changing memory IDs and placements.
+Pre-versioned, unknown, malformed, and unsupported schemas are refused without
+reset. Back up with SQLite's backup API or another WAL-aware method before a
+legacy upgrade. The v0.1.0 and v0.0.10 binaries cannot open schema `2.0`; changing
+software versions does not restore data. Never restore an older backup over
+newer schema `2.0` data.
 
 ## Compare
 
