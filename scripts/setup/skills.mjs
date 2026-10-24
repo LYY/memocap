@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { SetupError } from "./arguments.mjs";
-import { ancestors, fingerprint, readJSON, readText, skillFiles } from "./files.mjs";
 import { parseConfig } from "./config.mjs";
-import { checked } from "./process.mjs";
+import { ancestors, fingerprint, readJSON, readText, skillFiles } from "./files.mjs";
 
 export function skillLock(scope, runtime) {
   const filename = scope.kind === "project" ? path.join(scope.directory, "skills-lock.json")
@@ -57,10 +56,11 @@ export function discoverSkill(scope, runtime, record) {
 
 export async function listSkills(scope, runtime) {
   const args = ["--yes", "skills@1.7.4", "list", ...(scope.kind === "global" ? ["--global"] : []), "--json"];
-  const stdout = await checked(runtime, "npx", args, scope.directory);
+  const execution = await runtime.run("npx", args, { cwd: scope.directory, env: { ...runtime.env, DISABLE_TELEMETRY: "1" }, stdoutFile: true });
+  if (execution.code !== 0) throw new SetupError("process_failed", `npx exited ${execution.code}`, { command: "npx", args, stderr: execution.stderr, stdout: execution.stdout });
   let inventory;
-  try { inventory = JSON.parse(stdout); } catch { throw new SetupError("skills_response", "skills list did not return JSON"); }
-  if (!Array.isArray(inventory) || inventory.some((entry) => typeof entry.name !== "string" || typeof entry.path !== "string" || !Array.isArray(entry.agents))) throw new SetupError("skills_response", "Invalid skills list inventory");
+  try { inventory = JSON.parse(execution.stdout); } catch { throw new SetupError("skills_response", "skills list did not return JSON"); }
+  if (!Array.isArray(inventory) || inventory.some((entry) => !entry || typeof entry.name !== "string" || typeof entry.path !== "string" || !Array.isArray(entry.agents) || entry.agents.some((agent) => typeof agent !== "string"))) throw new SetupError("skills_response", "Invalid skills list inventory");
   return inventory.filter((entry) => entry.name === "memocap");
 }
 
@@ -80,7 +80,9 @@ export function assertSkillOwnership(inspection, record, context) {
   const sourceVersion = entry?.ref?.replace(/^v/, "");
   const installed = context.report.shared_cli;
   const expected = sourceVersion === installed.version && installed.package_root ? fingerprint(path.join(installed.package_root, "skills/memocap")) : null;
-  if (entry?.source !== "LYY/memocap" || entry.sourceType !== "github" || !["0.0.10", context.target].includes(sourceVersion) || !expected || selected.fingerprint !== expected || !selected.discovery_path) {
+  if (entry?.source !== "LYY/memocap" || entry.sourceType !== "github" || !["0.0.10", "0.1.0", context.target].includes(sourceVersion) ||
+      entry.ref !== `v${sourceVersion}` || (entry.skillPath !== undefined && entry.skillPath !== "skills/memocap/SKILL.md") ||
+      (entry.sourceUrl && !["https://github.com/LYY/memocap.git", `https://github.com/LYY/memocap/tree/v${sourceVersion}`].includes(entry.sourceUrl)) || !expected || selected.fingerprint !== expected || !selected.discovery_path) {
     throw new SetupError("unowned_skill", `Cannot prove original release contents of ${selected.path}`, { lock: entry });
   }
   inspection.adoption = { source: entry.source, ref: entry.ref, fingerprint: expected };

@@ -76,9 +76,10 @@ function readOnlyResult(context, inspections) {
   backendWarnings(report);
   if (options.command === "check") { report.status = "ok"; report.readiness = backendReadiness(report); report.exit_code = 0; return true; }
   const complete = report.prerequisites.opencode === "1.19.3" && report.shared_cli.version === target && report.shared_cli.executable_path && report.shared_cli.cache.status === "verified" && inspections.every(({ plugin, skill }) => !plugin.conflicts.length && plugin.entries.length === 1 && skill.selected?.discovery_path && skill.lock.entry?.ref === `v${target}`);
-  report.status = complete ? backendReadiness(report) : "incomplete";
+  const readiness = backendReadiness(report);
+  report.status = !complete && readiness === "static_ready" ? "incomplete" : readiness;
   report.readiness = report.status;
-  report.exit_code = ["static_ready", "installation_ready"].includes(report.status) ? 0 : 1;
+  report.exit_code = report.status === "static_ready" ? 0 : 1;
   return true;
 }
 
@@ -86,7 +87,7 @@ async function executePlan(context, inspections) {
   const { options, report, runtime } = context;
   if (options.command !== "uninstall") sharedImpact(context);
   preflight(context, inspections);
-  if (options.dryRun) { report.status = "planned"; report.exit_code = 0; report.dry_run = true; return; }
+  if (options.dryRun) { report.status = "planned"; report.exit_code = 0; report.dry_run = true; if (options.command !== "uninstall") report.readiness = backendReadiness(report); return; }
   if (!options.yes) throw new SetupError("confirmation_required", "Review --dry-run, then pass --yes to execute the declared scopes");
   if (options.command !== "uninstall") report.prerequisites.opencode = await verifyHost(runtime, report.prerequisites.host);
   if (options.command === "uninstall") await mutateUninstall(context, inspections);
@@ -96,7 +97,7 @@ async function executePlan(context, inspections) {
   report.restart_required = report.status === "changed";
   if (options.command !== "uninstall") backendWarnings(report);
   report.readiness = options.command === "uninstall" ? "removed" : backendReadiness(report);
-  report.exit_code = ["removed", "static_ready", "installation_ready"].includes(report.readiness) ? 0 : 1;
+  report.exit_code = ["removed", "static_ready"].includes(report.readiness) ? 0 : 1;
 }
 
 function reportFailure(context, error) {

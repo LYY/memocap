@@ -34,25 +34,28 @@ function fixture(context) {
   const state = { stable: "0.1.0", fail: null, afterCommand: null, agents: ["OpenCode"], manager: "npm" };
   function installCLI(version) {
     fs.mkdirSync(installed, { recursive: true });
-    fs.writeFileSync(path.join(installed, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version }));
+    fs.writeFileSync(path.join(installed, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version, bin: { memocap: "fixture-cli.cjs" } }));
     fs.cpSync(path.join(packageRoot, "skills"), path.join(installed, "skills"), { recursive: true });
     fs.mkdirSync(path.join(prefix, "bin"), { recursive: true });
-    if (cliPath !== cliScript) fs.writeFileSync(cliPath, "@echo off\r\n", { mode: 0o755 });
-    fs.writeFileSync(path.join(prefix, "bin/memocap"), `#!${process.execPath}
+    const launcher = path.join(installed, "fixture-cli.cjs");
+    fs.mkdirSync(path.dirname(launcher), { recursive: true });
+    if (cliPath !== cliScript) fs.writeFileSync(cliPath, `@echo off\r\n:: cmd-shim-target=${launcher}\r\n`, { mode: 0o755 });
+    if (!fs.existsSync(cliScript)) fs.symlinkSync(launcher, cliScript, "file");
+    fs.writeFileSync(launcher, `#!${process.execPath}
 const fs = require('node:fs');
 const path = require('node:path');
 const args = process.argv.slice(2);
 if (args[0] === '--version') { console.log('memocap ${version}'); process.exit(0); }
 const database = process.env.MEMOCAP_DB || path.join(process.env.HOME, '.memocap/memocap.db');
-const auxiliary = database + '.activity.sqlite';
 if (args.join(' ') === 'activity prepare --json') {
-  fs.mkdirSync(path.dirname(auxiliary), {recursive:true}); fs.writeFileSync(auxiliary, 'fixture auxiliary');
+  fs.mkdirSync(path.dirname(database), {recursive:true}); fs.writeFileSync(database, 'fixture main');
   console.log(JSON.stringify({format_version:1,status:'ok',backend:'local'})); process.exit(0);
 }
 if (args.join(' ') !== 'status --read-only --json') process.exit(9);
-console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEMOCAP_ADDR?'remote':'local',origin:'cli',inspection:{
-  core_status:'not_initialized',schema_version:null,visible:null,activity_status:fs.existsSync(auxiliary)?'ready':'not_initialized',activity_error:null,
-  capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status']}}));
+const ready = fs.existsSync(database);
+console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEMOCAP_ADDR?'remote':'local',origin:process.env.MEMOCAP_ADDR?'server':'cli',inspection:{
+  core_status:ready?'ready':'not_initialized',schema_version:ready?'2.0':null,visible:ready?{schema_version:'2.0',placements:[],addressable_total:0,effective_total:0}:null,activity_status:ready?'ready':'not_initialized',activity_error:null,
+  capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status','single_database','schema_2_compatible']}}));
 `, { mode: 0o755 });
   }
   function skillPaths(cwd, global) {

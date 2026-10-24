@@ -68,12 +68,17 @@ export function ancestors(directory) {
 export function skillFiles(directory) {
   if (!fs.existsSync(directory)) return [];
   const found = [];
+  const visited = new Set();
   function walk(current, depth) {
+    const real = fs.realpathSync(current);
+    if (visited.has(real)) return;
+    visited.add(real);
     if (depth > 6) throw new SetupError("discovery_depth", `Skill discovery too deep: ${current}`);
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      if (["node_modules", ".pnpm", ".git", "vendor"].includes(entry.name)) continue;
       const filename = path.join(current, entry.name);
       if (entry.name === "SKILL.md" && entry.isFile()) found.push(filename);
-      else if (entry.isDirectory() || entry.isSymbolicLink()) walk(filename, depth + 1);
+      else if (entry.isDirectory() || (entry.isSymbolicLink() && fs.existsSync(filename) && fs.statSync(filename).isDirectory())) walk(filename, depth + 1);
     }
   }
   walk(directory, 0);

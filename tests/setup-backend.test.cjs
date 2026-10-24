@@ -17,11 +17,11 @@ function backendFixture(context, mode = "missing") {
 const fs = require('node:fs');
 const args = process.argv.slice(2);
 if (args[0] === '--version') { console.log('memocap 0.1.0'); process.exit(0); }
-const aux = process.env.MEMOCAP_DB + '.activity.sqlite';
+const main = process.env.MEMOCAP_DB;
 const remote = Boolean(process.env.MEMOCAP_ADDR);
 if (args.join(' ') === 'activity prepare --json') {
   if (remote) process.exit(8);
-  if (process.env.PREPARE_MODE !== 'failed') fs.writeFileSync(aux, 'prepared');
+  if (process.env.PREPARE_MODE !== 'failed') fs.writeFileSync(main, 'prepared');
   console.log(JSON.stringify({format_version:1,status:'ok',backend:'local'})); process.exit(process.env.PREPARE_MODE ? 1 : 0);
 }
 if (args[0] !== 'status' || !args.includes('--read-only') || !args.includes('--json')) process.exit(9);
@@ -31,9 +31,9 @@ if (mode === 'unknown' || mode === 'unsupported') {
   console.log(JSON.stringify({format_version:1,status:'failed',backend:remote?'remote':'local',error:{code:mode === 'unknown'?'operation_failed':'capability_unsupported',message:mode}})); process.exit(1);
 }
 console.log(JSON.stringify({format_version:1,status:'ok',backend:remote?'remote':'local',origin:remote?'server':'cli',inspection:{
-core_status: mode === 'missing'?'not_initialized':'ready',schema_version:mode === 'missing'?null:'1.0',visible:mode === 'missing'?null:{addressable_total:3,effective_total:2},
-activity_status:mode === 'degraded'?'degraded':fs.existsSync(aux)?'ready':'not_initialized',activity_error:mode === 'degraded'?'unsupported auxiliary schema':null,
-capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status']}}));
+core_status: mode === 'missing'&&!fs.existsSync(main)?'not_initialized':'ready',schema_version:mode === 'missing'&&!fs.existsSync(main)?null:'2.0',visible:mode === 'missing'&&!fs.existsSync(main)?null:{schema_version:'2.0',placements:[],addressable_total:3,effective_total:2},
+activity_status:mode === 'degraded'?'degraded':mode === 'missing'&&!fs.existsSync(main)?'not_initialized':'ready',activity_error:mode === 'degraded'?'activity inspection failed':null,
+capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status','single_database','schema_2_compatible']}}));
 `, { mode: 0o755 });
   return setup;
 }
@@ -58,7 +58,7 @@ test("check consumes missing-core inspection without creating storage", async (c
 
 test("check cannot claim installation ready when plugin and skill are absent", async (context) => {
   const setup = backendFixture(context);
-  fs.writeFileSync(`${setup.env.MEMOCAP_DB}.activity.sqlite`, "prepared");
+  fs.writeFileSync(setup.env.MEMOCAP_DB, "prepared");
   const before = tree(setup.home);
   const report = await setup.setup(["check", "--to", "0.1.0"]);
   assert.equal(report.readiness, "incomplete");
@@ -67,14 +67,15 @@ test("check cannot claim installation ready when plugin and skill are absent", a
   assert.deepEqual(tree(setup.home), before);
 });
 
-test("install prepares auxiliary only once then reads status and reports no runtime memory yet", async (context) => {
+test("install prepares main only once then reads ready status without runtime verification", async (context) => {
   const setup = backendFixture(context);
   const report = await setup.setup(["install", "--yes"]);
   assert.equal(report.exit_code, 0, JSON.stringify(report));
-  assert.equal(report.readiness, "installation_ready");
+  assert.equal(report.readiness, "static_ready");
   assert.equal(report.backend.activity.status, "ready");
-  assert.equal(report.backend.memory_status, "not_initialized");
-  assert.equal(fs.existsSync(setup.env.MEMOCAP_DB), false);
+  assert.equal(report.backend.memory_status, "ready");
+  assert.equal(fs.existsSync(setup.env.MEMOCAP_DB), true);
+  assert.equal(fs.existsSync(`${setup.env.MEMOCAP_DB}.activity.sqlite`), false);
   assert.equal(setup.calls.filter(({ args }) => args.join(" ") === "activity prepare --json").length, 1);
   assert.equal(setup.calls.filter(({ command }) => command === setup.cliPath).at(-1).args[0], "status");
   const before = tree(setup.home);
@@ -82,7 +83,7 @@ test("install prepares auxiliary only once then reads status and reports no runt
   assert.deepEqual(tree(setup.home), before);
 });
 
-test("known core counts and degraded auxiliary are independent", async (context) => {
+test("known core counts and degraded activity are independent", async (context) => {
   const setup = backendFixture(context, "degraded");
   const report = await setup.setup(["install", "--yes"]);
   assert.equal(report.backend.core_schema.status, "compatible");
@@ -106,19 +107,19 @@ for (const mode of ["unknown", "unsupported"]) test(`${mode} backend stops insta
   assert.equal(JSON.stringify(report).includes("never-print-this-token"), false);
 });
 
-test("remote missing auxiliary requires server administrator without client preparation", async (context) => {
-  const setup = backendFixture(context, "ready");
+test("remote missing main requires server administrator without client preparation", async (context) => {
+  const setup = backendFixture(context, "missing");
   setup.env.MEMOCAP_ADDR = "http://127.0.0.1:1";
   setup.env.MEMOCAP_TOKEN = "fixture-secret";
   const report = await setup.setup(["install", "--yes"]);
   assert.equal(report.backend.remote_capabilities.status, "compatible");
   assert.equal(report.backend.activity.status, "not_initialized");
-  assert.equal(report.readiness, "activity_not_initialized");
+  assert.equal(report.readiness, "not_initialized");
   assert.ok(report.warnings.some(({ code }) => code === "server_admin_required"));
   assert.equal(setup.calls.some(({ args }) => args[0] === "activity"), false);
 });
 
-test("dry run observes ready core and auxiliary without preparation", async (context) => {
+test("dry run observes ready core and preserves unrelated legacy auxiliary without preparation", async (context) => {
   const setup = backendFixture(context, "ready");
   fs.writeFileSync(setup.env.MEMOCAP_DB, "fixture core bytes");
   fs.writeFileSync(`${setup.env.MEMOCAP_DB}.activity.sqlite`, "prepared");
@@ -131,7 +132,7 @@ test("dry run observes ready core and auxiliary without preparation", async (con
   assert.equal(setup.calls.some(({ args }) => args[0] === "activity"), false);
 });
 
-test("doctor reports installation ready with missing core and never mutates prepared auxiliary", async (context) => {
+test("doctor reports static ready with prepared main and never mutates storage", async (context) => {
   const setup = backendFixture(context);
   await setup.setup(["install", "--yes"]);
   const cache = path.join(setup.home, "Library/Caches/memocap/0.1.0");
@@ -142,7 +143,7 @@ test("doctor reports installation ready with missing core and never mutates prep
   const before = tree(setup.home);
   setup.calls.length = 0;
   const report = await setup.setup(["doctor"]);
-  assert.equal(report.status, "installation_ready", JSON.stringify(report));
+  assert.equal(report.status, "static_ready", JSON.stringify(report));
   assert.equal(report.exit_code, 0);
   assert.equal(report.runtime.status, "not_run");
   assert.equal(report.restart_required, false);

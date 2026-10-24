@@ -1,90 +1,25 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const crypto = require("node:crypto");
 const fs = require("node:fs");
-const http = require("node:http");
-const os = require("node:os");
 const path = require("node:path");
-const { spawn } = require("node:child_process");
+const { lifecycleFixture, digest, write, snapshot } = require("./setup-package-lifecycle-fixture.cjs");
 
 const workspace = path.resolve(__dirname, "..");
-const evidencePath = path.join(workspace, ".omo/evidence/memocap-observable-opencode-v1/packaged-lifecycle.json");
-const digest = (bytes) => crypto.createHash("sha256").update(bytes).digest("hex");
+const packageVersion = require("../package.json").version;
+const evidencePath = path.join(workspace, ".omo/evidence/memocap-v020-single-database/task-6-tracked-lifecycle.json");
 const evidence = { format_version: 1, started_at: new Date().toISOString(), commands: [], assertions: [], failures: [],
+  scope: "manual Darwin arm64 / invoking Node 24 / package 0.2.0 / schema 2.0; prepublication local fixture",
+  source_hashes: Object.fromEntries([__filename, path.join(__dirname, "setup-package-lifecycle-fixture.cjs")].map((filename) => [path.relative(workspace, filename), digest(fs.readFileSync(filename))])),
   boundary: { npm: "loopback registry serves actual npm pack artifact; other package requests redirect to registry.npmjs.org",
     skills: "real skills@1.7.4; unpublished GitHub release URL rewritten only at git transport to sandbox release refs built from unpacked tarball",
     binary: "prepublish_local: copied current target/debug/memocap with locally computed checksum; published release asset NOT verified" },
-  not_run: ["published npm/tag/provenance acceptance", "plugin host/runtime", "native Windows/PowerShell", "native Linux", "pnpm installation", "normal WAL acceptance: parent-owned readonly fix pending"] };
-if (fs.existsSync(evidencePath)) {
-  const prior = JSON.parse(fs.readFileSync(evidencePath));
-  evidence.reproductions = prior.reproductions || [];
-  if (prior.failures.length) evidence.reproductions.push({ started_at: prior.started_at, failures: prior.failures.map(({ name, message }) => ({ name, message })),
-    commands: prior.commands.filter((receipt) => receipt.executable === "npx" && receipt.args.includes("memocap-setup")) });
-}
-
-function write(filename, contents) {
-  fs.mkdirSync(path.dirname(filename), { recursive: true });
-  fs.writeFileSync(filename, contents);
-}
-
-function snapshot(roots) {
-  const entries = {};
-  function visit(filename) {
-    if (!fs.existsSync(filename)) return;
-    const stat = fs.lstatSync(filename);
-    if (stat.isSymbolicLink()) entries[filename] = `symlink:${fs.readlinkSync(filename)}`;
-    else if (stat.isDirectory()) {
-      entries[filename] = "directory";
-      for (const name of fs.readdirSync(filename).sort()) visit(path.join(filename, name));
-    } else entries[filename] = digest(fs.readFileSync(filename));
-  }
-  roots.forEach(visit);
-  return entries;
-}
+  not_run: ["published npm/tag/provenance acceptance", "plugin host/runtime", "native Windows/PowerShell", "native Linux", "pnpm installation"],
+  prior_integration: ".omo/evidence/memocap-v020-single-database/task-6-integration.json" };
 
 async function main() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap packed lifecycle "));
-  const home = path.join(root, "home");
-  const prefix = path.join(root, "package prefix");
-  const tools = path.join(root, "tools");
-  const bins = path.join(root, "boundary bin");
-  const project = path.join(root, "project with spaces ' $() ; literal");
-  const localSkillProject = path.join(root, "local payload project");
-  for (const directory of [home, prefix, tools, bins, project, localSkillProject]) fs.mkdirSync(directory, { recursive: true });
-  const env = { HOME: home, USERPROFILE: home, XDG_CONFIG_HOME: path.join(home, "config"), XDG_CACHE_HOME: path.join(home, "cache"),
-    XDG_STATE_HOME: path.join(home, "state"), XDG_DATA_HOME: path.join(home, "data"), TMPDIR: path.join(root, "tmp"),
-    PATH: [bins, path.join(prefix, "bin"), path.join(tools, "bin"), "/usr/bin", "/bin"].join(path.delimiter),
-    npm_config_prefix: prefix, npm_config_cache: path.join(root, "npm cache"), npm_config_userconfig: path.join(root, "npmrc"),
-    npm_config_globalconfig: path.join(root, "global-npmrc"), npm_config_audit: "false", npm_config_fund: "false", npm_config_update_notifier: "false",
-    DISABLE_TELEMETRY: "1", DO_NOT_TRACK: "1", CI: "1", GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: path.join(root, "gitconfig"),
-    GIT_TERMINAL_PROMPT: "0", MEMOCAP_DB: path.join(home, "memory/core.db"), LANG: "en_US.UTF-8" };
-  fs.mkdirSync(env.TMPDIR);
-  for (const command of ["node", "npm", "npx"]) fs.symlinkSync(`/opt/homebrew/bin/${command}`, path.join(bins, command));
-  const binary = path.join(root, "local native 0.1.0");
-  fs.copyFileSync(path.join(workspace, "target/debug/memocap"), binary);
-  fs.chmodSync(binary, 0o755);
-  evidence.binary = { source: "target/debug/memocap", sha256: digest(fs.readFileSync(binary)), origin: "prepublish_local" };
-  let server;
-
-  async function command(executable, args, options = {}) {
-    const cwd = options.cwd || project;
-    const childEnv = { ...env, ...options.env };
-    const started = Date.now();
-    const receipt = await new Promise((resolve, reject) => {
-      const child = spawn(executable, args, { cwd, env: childEnv, stdio: ["ignore", "pipe", "pipe"] });
-      let stdout = "";
-      let stderr = "";
-      const timer = setTimeout(() => child.kill("SIGKILL"), 120_000);
-      child.stdout.on("data", (chunk) => { stdout += chunk; });
-      child.stderr.on("data", (chunk) => { stderr += chunk; });
-      child.on("error", (error) => { clearTimeout(timer); reject(error); });
-      child.on("close", (code, signal) => { clearTimeout(timer); resolve({ code, signal, stdout, stderr }); });
-    });
-    evidence.commands.push({ executable, args, cwd, ...receipt, elapsed_ms: Date.now() - started });
-    if (!options.allowFailure) assert.equal(receipt.code, 0, `${executable} ${args.join(" ")}\n${receipt.stderr}\n${receipt.stdout}`);
-    return receipt;
-  }
+  const fixture = lifecycleFixture(workspace, evidence);
+  const { home, prefix, project, localSkillProject, env, command } = fixture;
 
   async function scenario(name, action) {
     try { await action(); evidence.assertions.push({ name, status: "passed" }); }
@@ -92,55 +27,11 @@ async function main() {
   }
 
   try {
-    const version = await command(binary, ["--version"]);
-    assert.equal(version.stdout.trim(), "memocap 0.1.0");
-    const packed = await command("npm", ["pack", "--json", "--ignore-scripts", "--pack-destination", root], { cwd: workspace });
-    const metadata = JSON.parse(packed.stdout)[0];
-    const tarball = path.join(root, metadata.filename);
-    const bytes = fs.readFileSync(tarball);
-    evidence.pack = { ...metadata, sha256: digest(bytes) };
-    const unpack = path.join(root, "unpacked tarball");
-    fs.mkdirSync(unpack);
-    await command("tar", ["-xzf", tarball, "-C", unpack]);
-    const payload = path.join(unpack, "package");
-    const source = path.join(root, "release fixture");
-    fs.mkdirSync(source);
-    fs.cpSync(path.join(payload, "skills"), path.join(source, "skills"), { recursive: true });
-    const git = "/opt/homebrew/bin/git";
-    await command(git, ["init", "--quiet", source]);
-    await command(git, ["-C", source, "add", "skills"]);
-    await command(git, ["-C", source, "-c", "user.name=Sandbox Fixture", "-c", "user.email=fixture@localhost", "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "Unpacked tarball skill fixture"]);
-    await command(git, ["-C", source, "tag", "v0.1.0"]);
-    write(env.GIT_CONFIG_GLOBAL, `[url "file://${source}/"]\n  insteadOf = https://github.com/LYY/memocap.git\n[protocol "file"]\n  allow = always\n`);
-    const failClone = path.join(root, "fail clone");
-    const gitLog = path.join(root, "git calls.jsonl");
-    write(path.join(bins, "git"), `#!${process.execPath}\nconst fs=require('node:fs');const {spawnSync}=require('node:child_process');const args=process.argv.slice(2);fs.appendFileSync(${JSON.stringify(gitLog)},JSON.stringify(args)+'\\n');if(args.includes('clone')&&fs.existsSync(${JSON.stringify(failClone)})){process.stderr.write('sandbox unpublished release transport failure\\n');process.exit(73);}const child=spawnSync(${JSON.stringify(git)},args,{stdio:'inherit',env:process.env});process.exit(child.status??1);\n`);
-    fs.chmodSync(path.join(bins, "git"), 0o755);
-    const requests = [];
-    server = http.createServer((request, response) => {
-      requests.push({ method: request.method, url: request.url });
-      if (request.url === "/memocap.tgz") { response.writeHead(200, { "content-type": "application/octet-stream" }); response.end(bytes); return; }
-      if (decodeURIComponent(request.url).startsWith("/@lyy-gh/memocap")) {
-        const versionMetadata = { ...JSON.parse(fs.readFileSync(path.join(payload, "package.json"))), dist: {
-          tarball: `http://127.0.0.1:${server.address().port}/memocap.tgz`, integrity: `sha512-${crypto.createHash("sha512").update(bytes).digest("base64")}` } };
-        response.writeHead(200, { "content-type": "application/json" });
-        response.end(JSON.stringify({ name: "@lyy-gh/memocap", "dist-tags": { latest: "0.1.0" }, versions: { "0.1.0": versionMetadata } }));
-      } else { response.writeHead(302, { location: `https://registry.npmjs.org${request.url}` }); response.end(); }
-    });
-    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-    env.npm_config_registry = `http://127.0.0.1:${server.address().port}`;
-    evidence.registry_requests = requests;
-    await command("npm", ["install", "--global", "--prefix", tools, "opencode-ai@1.19.3", "--registry", "https://registry.npmjs.org"]);
-    await command("opencode", ["--version"]);
-    const cache = path.join(home, "Library/Caches/memocap/0.1.0");
-    const asset = "memocap-aarch64-apple-darwin";
-    fs.mkdirSync(cache, { recursive: true });
-    fs.copyFileSync(binary, path.join(cache, asset));
-    write(path.join(cache, `${asset}.sha256`), `${evidence.binary.sha256}  ${asset}\n`);
+    const { payload, failClone, gitLog } = await fixture.prepare();
     const config = path.join(env.XDG_CONFIG_HOME, "opencode/opencode.jsonc");
     const originalConfig = '{\n // preserve operator settings\n "model": "fixture/model",\n "plugin": [["other-plugin@1", {"enabled": true}]]\n}\n';
     write(config, originalConfig);
-    const bootstrap = ["--yes", "--package", "@lyy-gh/memocap@0.1.0", "memocap-setup"];
+    const bootstrap = ["--yes", "--package", `@lyy-gh/memocap@${packageVersion}`, "memocap-setup"];
     const setup = async (args, options = {}) => {
       const receipt = await command(options.bootstrap ? "npx" : "memocap-setup", options.bootstrap ? [...bootstrap, ...args, "--json"] : [...args, "--json"], { allowFailure: true });
       const report = JSON.parse(receipt.stdout);
@@ -153,7 +44,7 @@ async function main() {
       const before = snapshot(watched);
       const report = await setup(["install", "--global", "--dry-run"], { bootstrap: true });
       assert.equal(report.exit_code, 0, JSON.stringify(report));
-      assert.equal(report.runner_version, "0.1.0");
+      assert.equal(report.runner_version, packageVersion);
       assert.deepEqual(snapshot(watched), before);
       evidence.bootstrap_cache = { path: env.npm_config_cache, excluded_from_core_snapshot: true, exists: fs.existsSync(env.npm_config_cache) };
     });
@@ -161,18 +52,25 @@ async function main() {
       write(failClone, "external transport failure");
       const partial = await setup(["install", "--global", "--yes"], { bootstrap: true });
       assert.equal(partial.status, "partial", JSON.stringify(partial));
-      assert.equal(partial.shared_cli.executable_version, "0.1.0");
+      assert.equal(partial.shared_cli.executable_version, packageVersion);
       assert.equal(partial.scopes[0].plugin.status, "configured");
       assert.ok(partial.steps.some((step) => step.component === "skill" && ["failed", "outcome_unknown"].includes(step.status)));
+      assert.equal(fs.existsSync(env.MEMOCAP_DB), false);
+      assert.equal(partial.steps.some((step) => step.component === "backend" && step.status === "changed"), false);
       const packageBefore = snapshot([path.join(prefix, "lib/node_modules/@lyy-gh/memocap")]);
       fs.unlinkSync(failClone);
       installed = await setup(["install", "--global", "--yes"]);
       assert.equal(installed.exit_code, 0, JSON.stringify(installed));
-      assert.equal(installed.readiness, "installation_ready");
+      assert.equal(installed.readiness, "static_ready");
       assert.deepEqual(snapshot([path.join(prefix, "lib/node_modules/@lyy-gh/memocap")]), packageBefore);
       assert.equal(installed.steps.find((step) => step.component === "cli").status, "unchanged");
       assert.equal(installed.runtime.status, "not_run");
-      assert.equal(fs.existsSync(env.MEMOCAP_DB), false);
+      assert.equal(fs.existsSync(env.MEMOCAP_DB), true);
+      const inspected = JSON.parse((await command("memocap", ["status", "--read-only", "--json"])).stdout);
+      assert.equal(inspected.inspection.core_status, "ready");
+      assert.equal(inspected.inspection.schema_version, "2.0");
+      assert.equal(inspected.inspection.activity_status, "ready");
+      assert.equal(fs.existsSync(`${env.MEMOCAP_DB}.activity.sqlite`), false);
       evidence.partial_resume = { partial, resumed: installed };
     });
     const installedRoot = path.join(prefix, "lib/node_modules/@lyy-gh/memocap");
@@ -182,7 +80,7 @@ async function main() {
       const resolved = await command("node", ["-e", "console.log(require.resolve('jsonc-parser',{paths:[process.argv[1]]}))", installedRoot]);
       assert.ok(resolved.stdout.trim().startsWith(fs.realpathSync(prefix) + path.sep), resolved.stdout);
       const version = await command("memocap", ["--version"]);
-      assert.equal(version.stdout.trim(), "memocap 0.1.0");
+      assert.equal(version.stdout.trim(), `memocap ${packageVersion}`);
       await command("sh", ["-n", path.join(installedRoot, "scripts/install.sh")]);
       const literal = "literal'\"$(touch SHOULD_NOT_EXIST); with spaces";
       const wrapped = await command("sh", [path.join(installedRoot, "scripts/install.sh"), "install", "--project", project, literal, "--json"], { allowFailure: true });
@@ -190,18 +88,18 @@ async function main() {
       assert.ok(JSON.parse(wrapped.stdout).error.message.includes(literal));
       assert.equal(fs.existsSync(path.join(project, "SHOULD_NOT_EXIST")), false);
       const help = await command("sh", [path.join(installedRoot, "scripts/install.sh"), "--help", "--json"]);
-      assert.equal(JSON.parse(help.stdout).runner_version, "0.1.0");
+      assert.equal(JSON.parse(help.stdout).runner_version, packageVersion);
     });
     await scenario("installed check/doctor/exact update no-op preserve all home/project/prefix bytes", async () => {
       const before = snapshot(watched);
-      for (const args of [["check", "--global"], ["doctor", "--global"], ["update", "--to", "0.1.0", "--global", "--dry-run"], ["update", "--to", "0.1.0", "--global", "--yes"]]) {
+      for (const args of [["check", "--global"], ["doctor", "--global"], ["update", "--to", packageVersion, "--global", "--dry-run"], ["update", "--to", packageVersion, "--global", "--yes"]]) {
         const report = await setup(args);
         assert.equal(report.exit_code, 0, JSON.stringify(report));
         if (args[0] === "update" && args.includes("--yes")) assert.equal(report.status, "unchanged");
         assert.deepEqual(snapshot(watched), before, args.join(" "));
       }
       evidence.checkNoMutation = { watched: ["entire sandbox HOME (memory/config/skills/manifest)", "project", "npm prefix"], unchanged: true,
-        excluded: ["npm/npx cache outside HOME, explicitly allowed runner loader cache", "temporary process files"], core: "absent, not initialized by installer" };
+        excluded: ["npm/npx cache outside HOME, explicitly allowed runner loader cache", "temporary process files"], core: "schema 2.0 created by explicit install preparation; read-only checks and exact update preserve bytes" };
     });
     await scenario("real pinned skills installs directly from unpacked tarball local directory", async () => {
       await command("npx", ["--yes", "skills@1.7.4", "add", payload, "--skill", "memocap", "--agent", "opencode", "--yes"], { cwd: localSkillProject });
@@ -230,9 +128,9 @@ async function main() {
       assert.equal(receipt.status, "inserted", remembered.stdout);
       const recalled = await command("memocap", ["recall", "packaged lifecycle", "--match", "all", "--repo", project, "--json"]);
       assert.ok(JSON.parse(recalled.stdout).returned_ids.length > 0);
-      await command("sqlite3", [env.MEMOCAP_DB, "PRAGMA journal_mode=DELETE;"]);
+      await command("node", ["-e", "const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync(process.argv[1]);try{db.exec('PRAGMA journal_mode=DELETE;')}finally{db.close();}", env.MEMOCAP_DB]);
       const rollbackBefore = snapshot([path.dirname(env.MEMOCAP_DB)]);
-      const checked = await setup(["check", "--to", "0.1.0", "--global"]);
+      const checked = await setup(["check", "--to", packageVersion, "--global"]);
       assert.equal(checked.exit_code, 0, JSON.stringify(checked));
       assert.equal(checked.readiness, "static_ready");
       assert.deepEqual(snapshot([path.dirname(env.MEMOCAP_DB)]), rollbackBefore);
@@ -252,7 +150,7 @@ async function main() {
       env.MEMOCAP_DB = path.join(home, "second missing/core.db");
       const report = await setup(["install", "--global", "--yes"]);
       assert.equal(report.exit_code, 0, JSON.stringify(report));
-      await command("npx", ["--yes", "skills@1.7.4", "add", "https://github.com/LYY/memocap/tree/v0.1.0", "--skill", "memocap", "--agent", "claude-code", "--global", "--yes"]);
+      await command("npx", ["--yes", "skills@1.7.4", "add", `https://github.com/LYY/memocap/tree/v${packageVersion}`, "--skill", "memocap", "--agent", "claude-code", "--global", "--yes"]);
       const skill = path.join(home, ".agents/skills/memocap");
       const before = snapshot([skill, path.join(home, ".claude/skills/memocap")]);
       const removed = await setup(["uninstall", "--global", "--remove-cli", "--yes"]);
@@ -276,12 +174,9 @@ async function main() {
   } catch (error) {
     evidence.failures.push({ name: "harness prerequisite", message: error.message, stack: error.stack });
   } finally {
-    if (server) await new Promise((resolve) => server.close(resolve));
-    fs.rmSync(root, { recursive: true, force: true });
-    evidence.cleanup = { sandbox_removed: !fs.existsSync(root), loopback_server_closed: !server?.listening, personal_config_or_memory_used: false,
-      git_writes: "sandbox release fixture refs only; no worktree/index/branch changes in user repository" };
+    evidence.cleanup = await fixture.cleanup();
     evidence.DoneClaim = { packaging: evidence.failures.length === 0 ? "passed_prepublication_local_boundary" : "failed_see_receipts", runtime_verified: false,
-      release_ready: false, changed_files: ["scripts/setup/packages.mjs", "scripts/setup/process.mjs", "tests/setup-package-bootstrap.test.cjs", "tests/setup-package-lifecycle.cjs", ".omo/evidence/memocap-observable-opencode-v1/packaged-lifecycle.json"] };
+      release_ready: false, changed_files: ["tests/setup-package-lifecycle.cjs", "tests/setup-package-lifecycle-fixture.cjs"], evidence: path.relative(workspace, evidencePath) };
     evidence.finished_at = new Date().toISOString();
     write(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
     assert.equal(JSON.parse(fs.readFileSync(evidencePath)).finished_at, evidence.finished_at);

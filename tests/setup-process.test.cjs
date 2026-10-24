@@ -33,7 +33,7 @@ test("Windows resolves npm Node shims before extensionless shell launchers and p
   const { executable, runProcess } = await import("../scripts/setup/process.mjs");
   const directory = path.join(f.root, "tools with spaces");
   fs.mkdirSync(directory);
-  const scripts = { npm: "node_modules/npm/bin/npm-cli.js", npx: "node_modules/npm/bin/npx-cli.js", memocap: "node_modules/@lyy-gh/memocap/bin/cli.cjs" };
+  const scripts = { npm: "node_modules/npm/bin/npm-cli.js", npx: "node_modules/npm/bin/npx-cli.js", pnpm: "node_modules/pnpm/bin/pnpm.cjs", memocap: "node_modules/@lyy-gh/memocap/bin/cli.cjs" };
   for (const [name, script] of Object.entries(scripts)) {
     fs.writeFileSync(path.join(directory, name), "#!/bin/sh\nexit 99\n", { mode: 0o755 });
     fs.writeFileSync(path.join(directory, `${name}.cmd`), "@echo off\r\n", { mode: 0o755 });
@@ -60,8 +60,11 @@ test("core installs a local packed fixture through a real isolated npm prefix an
   const { runProcess, executable } = await import("../scripts/setup/process.mjs");
   fs.mkdirSync(path.join(f.packageRoot, "bin"));
   const cliSource = `#!/usr/bin/env node
+const fs = require('node:fs'); const path = require('node:path');
+const database = process.env.MEMOCAP_DB || path.join(process.env.HOME, '.memocap/memocap.db');
 if (process.argv[2] === '--version') console.log('memocap 0.1.0');
-else console.log(JSON.stringify({format_version:1,status:'ok',backend:'local',origin:'cli',inspection:{core_status:'not_initialized',schema_version:null,visible:null,activity_status:'ready',activity_error:null,capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status']}}));
+else if (process.argv.includes('prepare')) { fs.mkdirSync(path.dirname(database),{recursive:true}); fs.writeFileSync(database,'fixture main'); console.log(JSON.stringify({format_version:1,status:'ok'})); }
+else { const ready=fs.existsSync(database); console.log(JSON.stringify({format_version:1,status:'ok',backend:'local',origin:'cli',inspection:{core_status:ready?'ready':'not_initialized',schema_version:ready?'2.0':null,visible:ready?{schema_version:'2.0',placements:[],addressable_total:0,effective_total:0}:null,activity_status:ready?'ready':'not_initialized',activity_error:null,capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status','single_database','schema_2_compatible']}})); }
 `;
   fs.writeFileSync(path.join(f.packageRoot, "bin/cli.cjs"), cliSource, { mode: 0o755 });
   const cache = path.join(f.home, "Library/Caches/memocap/0.1.0");
@@ -117,4 +120,21 @@ test("a timed-out process that ignores termination is killed instead of hanging 
   assert.ok(Date.now() - started < 10_000, "termination is bounded");
   if (process.platform === "win32") assert.ok(execution.signal === null || execution.signal === "SIGKILL");
   else assert.equal(execution.signal, "SIGKILL");
+});
+
+test("Windows pnpm 12 cmd wrapper dispatches its installed mjs entry without a shell", async (context) => {
+  const f = fixture(context);
+  const { runProcess } = await import("../scripts/setup/process.mjs");
+  const directory = path.join(f.root, "pnpm tools");
+  fs.mkdirSync(path.join(directory, "node_modules/pnpm/bin"), { recursive: true });
+  fs.writeFileSync(path.join(directory, "pnpm.cmd"), "@echo off\r\nexit /b 99\r\n");
+  fs.writeFileSync(path.join(directory, "node_modules/pnpm/bin/pnpm.mjs"), "console.log(JSON.stringify(process.argv.slice(2)));\n");
+  const platform = Object.getOwnPropertyDescriptor(process, "platform");
+  Object.defineProperty(process, "platform", { value: "win32" });
+  try {
+    const args = ["quote'\"$() & ; literal"];
+    const execution = await runProcess(path.join(directory, "pnpm.cmd"), args, { env: f.env });
+    assert.equal(execution.code, 0, execution.stderr);
+    assert.deepEqual(JSON.parse(execution.stdout), args);
+  } finally { Object.defineProperty(process, "platform", platform); }
 });
