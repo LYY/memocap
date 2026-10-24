@@ -12,10 +12,10 @@ OpenCode 是唯一官方支持的集成。插件通过包内绝对路径的 CLI 
 
 ## 安装
 
-为当前用户安装 v0.2.0 CLI、OpenCode 插件和运行时 skill：
+为当前用户安装 v0.2.1 CLI、OpenCode 插件和运行时 skill：
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --global --yes --json
 ```
 
 需要 Node.js 22.20 或更高版本、npm/npx、Git 和 OpenCode 1.19.3。安装器不会
@@ -29,7 +29,7 @@ Agent 进行已获授权的非交互安装或更新时，按[Agent 指南](docs/
 
 全局 `--repo <PATH>` 显式选择真实仓库路径；只有 recall 可重复指定，最多八个目标。
 写操作始终只有一个目标。全局 `--json` 返回 format-1 receipt，供自动化使用；
-`serve` 和 `ui` 不支持它。package `0.2.0`、core schema `2.0`、receipt format
+`serve` 和 `ui` 不支持它。package `0.2.1`、core schema `2.0`、receipt format
 `1` 是独立版本。
 
 ```text
