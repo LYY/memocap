@@ -40,7 +40,7 @@ export function preflight(context, inspections) {
     if (existing && !inspection.record?.plugin) {
       const version = pluginSource(existing).slice(`${packageName}@`.length);
       if (version !== context.report.shared_cli.version || !context.report.shared_cli.package_root) throw new SetupError("unowned_plugin", "Cannot prove installed package owns existing plugin pin", { existing });
-      if (version !== "0.0.10" && version !== context.target) throw new SetupError("unowned_plugin", "Legacy adoption supports only proven 0.0.10 or exact target installations");
+      if (!["0.0.10", "0.1.0", context.target].includes(version)) throw new SetupError("unowned_plugin", "Legacy adoption supports only proven 0.0.10, 0.1.0 or exact target installations");
       inspection.adoption = { version, source: context.report.shared_cli.package_root };
     }
     if (inspection.adoption || inspection.skill.adoption) context.adoptions.set(inspection.scope.id, { plugin: inspection.adoption || null, skill: inspection.skill.adoption || null });
@@ -63,7 +63,6 @@ export async function mutateInstall(context, inspections) {
   try {
     prepareBackups(context, inspections);
     await step(context, "cli", null, () => installCLI(context));
-    await step(context, "backend", null, () => prepareBackend(context));
     for (const { scope, plugin } of inspections) {
       await step(context, "plugin", scope, async () => {
         const source = `${packageName}@${context.target}`;
@@ -78,6 +77,7 @@ export async function mutateInstall(context, inspections) {
       });
       await step(context, "skill", scope, () => installSkill(scope, context));
     }
+    await step(context, "backend", null, () => prepareBackend(context));
   } finally { unlock(); }
 }
 

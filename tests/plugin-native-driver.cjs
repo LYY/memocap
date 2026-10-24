@@ -8,6 +8,7 @@ const { spawnSync } = require("node:child_process");
 const { sandbox, fixture, user } = require("./plugin-fixture.cjs");
 
 const root = path.resolve(__dirname, "..");
+const packageVersion = require("../package.json").version;
 const output = path.join(root, ".omo/evidence/memocap-observable-opencode-v1/plugin-fixes.json");
 const report = { format_version: 1, status: "running", started_at: new Date().toISOString(),
   scope: "plugin integration; native caller and linked observations, not model adoption",
@@ -71,7 +72,7 @@ async function main() {
       return argv.includes("--json") ? JSON.parse(executed.stdout) : executed.stdout;
     };
 
-    check("native and package version agree", nativeRun(["--version"]).trim(), "memocap 0.1.0");
+    check("native and package version agree", nativeRun(["--version"]).trim(), `memocap ${packageVersion}`);
     const host = fixture();
     host.input.client.session.get = async () => ({ data: { directory: actualDirectory } });
     hooks = await fixturePackage.module.default.server(host.input);

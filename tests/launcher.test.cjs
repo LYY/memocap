@@ -9,6 +9,7 @@ const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 
 const launcherPath = path.resolve(__dirname, "../bin/cli.cjs");
+const packageVersion = require("../package.json").version;
 const { resolveReleaseAsset, verifyCachedBinary } = require(launcherPath);
 
 function runResolver(platform, arch) {
@@ -55,8 +56,8 @@ for (const target of [
     // Given
     const expected = {
       name: target.name,
-      url: `https://github.com/LYY/memocap/releases/download/v0.1.0/${target.name}`,
-      checksumUrl: `https://github.com/LYY/memocap/releases/download/v0.1.0/${target.name}.sha256`,
+      url: `https://github.com/LYY/memocap/releases/download/v${packageVersion}/${target.name}`,
+      checksumUrl: `https://github.com/LYY/memocap/releases/download/v${packageVersion}/${target.name}.sha256`,
     };
 
     // When

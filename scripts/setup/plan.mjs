@@ -13,8 +13,9 @@ export function installationPlan(context, inspections) {
       plugin: { config: scope.config, action: uninstall ? "remove_unmodified_owned_entry" : "set_owned_entry", pin: `${packageName}@${target}` },
       skill: { action: uninstall ? "remove_unmodified_unshared_reference" : "install_or_reuse_matching_release", source: `https://github.com/LYY/memocap/tree/v${target}`,
         command: uninstall ? null : { executable: "npx", args: skillInstallArguments(scope, target), cwd: scope.directory } },
-      automatic_recall: { enabled: !uninstall && !(Array.isArray(plugin.entries[0]) && plugin.entries[0][1]?.automatic === false), effects: ["read_core_memory", "write_auxiliary_activity", "prune_auxiliary_activity", "configured_remote_requests"] } })),
-    database_action: "preserve_core_schema_1.0", auxiliary_preparation: uninstall ? "preserve" : report.backend?.backend === "remote" ? "server_admin_only" : "prepare_missing_after_prerequisites", runtime_verification: "not_run",
+      automatic_recall: { enabled: !uninstall && !(Array.isArray(plugin.entries[0]) && plugin.entries[0][1]?.automatic === false), effects: ["read_core_memory", "write_main_activity", "prune_main_activity", "configured_remote_requests"] } })),
+    database_action: uninstall ? "preserve" : report.backend?.backend === "remote" ? "server_admin_only" : "prepare_main_schema_2_compatible",
+    main_preparation: uninstall ? "preserve" : report.backend?.backend === "remote" ? "server_admin_only" : "prepare_missing_or_legacy_after_prerequisites", runtime_verification: "not_run",
     unknown_shared_consumers: "not_enumerated",
   };
 }

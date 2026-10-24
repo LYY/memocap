@@ -1,166 +1,120 @@
 # Schema Versioning Contract
 
-This document is the authority for SQLite schema lifecycle behavior. Package
-release identity and database schema identity are independent.
+This document defines the SQLite lifecycle contract implemented for package
+0.2.0. It does not claim that the package has been published.
+Package target `0.2.0`, database schema `2.0`, and receipt `format_version: 1`
+are independent identities.
 
-Package release `0.1.0` does not make the database schema `1.0` become
-`0.1.0`. The current schema policy remains `1.0` for every package release that
-uses this contract.
+## Main Database
 
-The v0.1.0 upgrade preserves the existing complete core schema fingerprint,
-including schema metadata and transfer provenance/ledger tables. Compatible
-core data is retained and remains usable by the v0.0.10 binary. Returning to
-that binary does not restore a database backup and does not provide new receipt
-or activity features. Receipt `format_version: 1`, package `0.1.0`, and core
-schema `1.0` are separate identities.
+`schema_metadata` is the single schema-version source. One main SQLite database
+stores core memories and placements, activity events, and repository metadata
+and hints. Activity access uses the configured main database path; the active
+schema does not use a separate `.activity.sqlite` database.
 
-## Opening Commands
+An old `.activity.sqlite` file is not part of the main database transition.
+Generic preparation does not open, import, rewrite, or delete it, and its old
+history does not appear in current activity queries. Its presence or corruption
+does not block the main database bridge. There is no blanket cleanup action.
 
-Schema handling occurs when a local command opens the SQLite database. These
-commands are representative entry points:
+The strict `0.0.10` and `0.1.0` binaries cannot open schema `2.0`. Changing the
+binary version does not downgrade a database or restore data. There is no
+standalone reset command, and pre-versioned databases are refused without reset.
 
-```text
-memocap remember <CONTENT>
-memocap recall <QUERY>
-memocap list
-memocap status
-```
+## Opening and Inspection
 
-There is no standalone schema reset command. Automatic reset is allowed only
-when opening an exact recognized pre-versioned database. It is the sole
-approved no-confirmation bulk-delete exception.
+Schema preparation runs when a read-write connection opens the main database.
+The first read-write open of a missing database creates the schema `2.0`
+baseline; an exact registered `1.0` database uses the bridge below.
 
-`memocap status --read-only --json` uses the inspection path instead: it reports
-an absent core as `not_initialized`, opens an existing supported core without
-running lifecycle transitions, and rejects unknown/corrupt/future core data.
-It makes no logical writes to the core or activity store: it does not write data
-or schema, initialize or reset the core, migrate schema, prune history, or record
-activity. Both stores are inspected through SQLite `READ_ONLY` connections.
-SQLite may still coordinate WAL/SHM sidecars during inspection. A WAL-backed
-store can be inspected directly without an owner-generated snapshot; this
-logical read-only contract does not promise zero filesystem-level activity from
-SQLite's ordinary WAL handling.
+`memocap status --read-only --json` inspects without running those lifecycle
+transitions. Its successful format-1 receipt reports:
 
-## Policy Matrix
+- A missing main database returns `core_status: not_initialized` with null
+  schema version and visibility.
+- An exact registered schema `1.0` returns `core_status: upgrade_needed` and
+  version `1.0`, leaves visibility null, and skips schema-2-dependent queries.
+- A valid schema `2.n` returns `core_status: ready` and the actual schema
+  version, then reports the existing visible-stack status.
 
-The following JSON object summarizes the documented lifecycle. Runtime code
-does not consume this documentation as configuration.
+Unknown major versions, unsupported schema versions, malformed metadata or
+known structures, pre-versioned databases, and corrupt main databases fail
+without reset. Consumers should use exit status and structured receipt fields,
+not error prose.
 
-```json
-{
-  "contract": "memocap-schema-versioning",
-  "schema_version": "1.0",
-  "package_version": {
-    "example": "0.1.0",
-    "manifest_unchanged": false
-  },
-  "commands": {
-    "open": [
-      "memocap remember <CONTENT>",
-      "memocap recall <QUERY>",
-      "memocap list",
-      "memocap status"
-    ],
-    "reset": "automatic only when opening an exact recognized pre-versioned database; no standalone reset command"
-  },
-  "states": [
-    {
-      "id": "fresh",
-      "action": "create current schema 1.0",
-      "data_outcome": "database starts empty",
-      "notice": "none"
-    },
-    {
-      "id": "exact_pre_versioned",
-      "action": "reset transactionally to current schema 1.0",
-      "data_outcome": "all pre-versioned memory rows are deleted; no backup is made",
-      "notice": "memocap: reset recognized pre-versioned database to schema 1.0"
-    },
-    {
-      "id": "unknown_pre_versioned",
-      "action": "refuse without mutation",
-      "data_outcome": "existing database remains unchanged",
-      "notice": "error"
-    },
-    {
-      "id": "exact_current",
-      "action": "open",
-      "data_outcome": "rows remain unchanged",
-      "notice": "none"
-    },
-    {
-      "id": "lower_minor",
-      "action": "run registered lower-minor migrations transactionally",
-      "data_outcome": "registered migrations determine row changes",
-      "notice": "none unless migration fails"
-    },
-    {
-      "id": "higher_minor",
-      "action": "refuse without mutation",
-      "data_outcome": "rows and schema remain unchanged",
-      "notice": "error"
-    },
-    {
-      "id": "different_major",
-      "action": "refuse without mutation",
-      "data_outcome": "rows and schema remain unchanged",
-      "notice": "error"
-    }
-  ],
-  "reset_exception": {
-    "sole_approved_no_confirmation_bulk_delete_exception": true,
-    "recognition": "exact pre-versioned schema fingerprint; SQLite internal names are excluded only when their names literally match sqlite_*",
-    "transaction": "immediate transaction; rollback on failure",
-    "backup": "none",
-    "notice": "memocap: reset recognized pre-versioned database to schema 1.0"
-  }
-}
-```
+`memocap status --read-only` and setup `doctor` do not initialize or migrate a
+missing or legacy main database, prune retained activity, or write activity or
+repository hints. `memocap activity list/show` also use SQLite read-only
+connections; they do not prepare the database and may fail when its activity
+tables are absent. Ordinary memory commands such as `memocap list` use a
+read-write main-database open and can initialize a missing database or bridge
+the registered schema `1.0`. SQLite read-only connections may still coordinate
+WAL/SHM sidecars; this logical read-only contract does not promise zero
+filesystem-level activity. A WAL-backed database can be inspected without an
+owner-generated snapshot.
 
-## Recognition And Data Loss
+`memocap activity prepare --json` is an explicit local preparation operation.
+It creates a missing main schema or bridges exact schema `1.0`, then prepares
+activity retention. Preparation can prune retained events. Remote preparation
+is not available to a client; a server administrator runs it locally against
+the server's configured main database.
 
-The pre-versioned reset requires an exact schema fingerprint. A database that
-merely resembles the old shape is unknown and must be refused without
-mutation. Recognition compares the complete known schema, including tables,
-triggers, the FTS virtual table, and its non-internal schema entries. SQLite
-internal names are excluded only by the literal `sqlite_*` name rule. A name
-such as `sqliteXunexpected` is not an internal name for this purpose and must
-prevent recognition.
+## Registered 1.0 Bridge
 
-When the exact fingerprint matches, the reset runs inside an immediate SQLite
-transaction. The old memory rows are deleted, the current schema `1.0` is
-created, and the transaction commits only after creation succeeds. A failure
-rolls back the reset. No backup is created. The stderr notice in the policy
-matrix is the required disclosure of this data-loss action.
+The only registered migration is the precise legacy schema `1.0` to baseline
+`2.0`. It adds the activity event table and retention index plus repository
+metadata, and advances `schema_metadata`. It does not rebuild, reset, export, or
+import core tables. It preserves memory rows and IDs, placements, domains and
+attachments, provenance, the operation ledger, FTS data, and its required
+triggers.
 
-Unknown schema shapes, malformed metadata, higher minor versions, and
-different major versions refuse without changing rows or schema. A lower minor
-version may be migrated only through registered migrations, in order and inside
-a transaction. A migration failure rolls back.
+Preparation enables foreign keys, starts `BEGIN IMMEDIATE`, and re-reads the
+schema while holding the write lock. The registered DDL, version update, and
+target validation commit in one transaction. Failure rolls the transaction
+back. A competing opener rechecks the committed state; a busy or lock failure
+is reported rather than treated as a reset. Repeating preparation on a valid
+schema `2.n` database does not downgrade or reapply the bridge.
 
-This policy does not authorize a user-facing bulk delete. Normal memory deletion
-still requires the existing explicit deletion command and its target ID.
+Only the exact registered legacy `1.0` shape is bridgeable. Pre-versioned,
+malformed, unknown, different-major, and other unsupported schema versions are
+refused without changing their rows or schema. A user-requested memory deletion
+continues to require its explicit target ID and placement.
 
-## Auxiliary Activity Store
+## Bounded 2.x Compatibility
 
-Operational metadata is stored separately at `<core filename>.activity.sqlite`
-(normally `~/.memocap/memocap.db.activity.sqlite`). Its own marker/schema is
-independent of the core; it must not add tables, triggers, or metadata to the
-core fingerprint. `memocap activity prepare --json` explicitly creates or
-validates local auxiliary storage without initializing the core. Server-side
-preparation belongs to the server administrator; remote clients cannot prepare
-it through the receipt endpoint.
+Schema `2.0` is the new compatibility baseline. A higher `2.n` version opens
+only when all baseline-required structures remain compatible. Validation checks
+known columns and constraints, foreign keys, required indexes, FTS objects and
+triggers, and database integrity. Changed or missing required objects and
+tightened known constraints are rejected.
 
-Unknown, incompatible, or corrupt auxiliary stores fail explicitly without
-automatic reset. A core operation that already succeeded remains successful
-when auxiliary recording fails, with `activity_status: failed` and a warning.
-Do not replay the memory operation to repair the history. Inventory counts are
-computed from core rows, not from activity events.
+Compatible higher-minor databases preserve additional tables and their values,
+plain additional columns, non-unique indexes, and compatible triggers. An added
+column must allow existing writes and copies to omit it: it is nullable or has
+a compatible non-null default. Additional unique indexes and constrained or
+otherwise incompatible added columns are rejected. This is a bounded publisher
+compatibility contract, not support for arbitrary handwritten schema changes.
+Unknown trigger semantics are trusted only for supported same-major publishers.
 
-Recall/injection events have a 30-day and 10,000-event retention bound. Write
-metadata has a separate 1,000-event bound. Reads exclude expired read events;
-write-time pruning enforces the physical bounds. History is not a full audit:
-`not_found_or_expired` cannot distinguish expiry, pruning, or missing recording,
-and a process failure after core commit can leave a gap. Preparation, uninstall,
-and software rollback do not restore or erase core memory. Back up and restore
-data only through a separately chosen WAL-aware procedure.
+Stored activity phases and payloads use closed enums and deny unknown fields.
+Future supported `2.n` publishers must keep baseline event decoders able to read
+existing stored payloads. Arbitrary activity JSON evolution is not guaranteed.
+
+## Activity and Recovery
+
+Activity is retained operational metadata, not a complete audit log. Recall and
+injection events are bounded to 30 days and 10,000 events; write metadata is
+bounded to 1,000 events. Expiry, pruning, or recording failure can leave gaps.
+Activity writes and explicit preparation may prune; ordinary core opens and
+read-only inspection do not.
+
+Core mutations commit before optional activity or repository-hint recording.
+If recording fails, the core result remains successful and the activity warning
+is reported separately. Never replay a committed memory operation to create a
+history entry. Inventory counts come from core rows, not activity history.
+
+Before bridging, make a backup with SQLite's backup API or another WAL-aware
+method. A raw file copy while WAL is active can omit committed data. A software
+downgrade is not backup restoration; never restore an older backup over newer
+schema `2.0` data. Backup selection and restore are separate, explicit
+operations.

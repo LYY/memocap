@@ -5,7 +5,7 @@ import { inspectCache } from "./cache.mjs";
 import { readJSON } from "./files.mjs";
 import { inspectHost } from "./host.mjs";
 import { pnpmRoot } from "./pnpm.mjs";
-import { checked, executable, windowsShimScript } from "./process.mjs";
+import { checked, executable, launcherScript } from "./process.mjs";
 
 export async function resolveVersion(options, runtime, runnerVersion) {
   if (options.to) return options.to;
@@ -28,7 +28,7 @@ function installedExecutable(runtime, owner) {
     if (!directory) continue;
     const candidate = executable("memocap", { ...runtime.env, PATH: directory });
     if (!candidate) continue;
-    const script = /\.(cmd|bat)$/i.test(candidate) ? windowsShimScript(candidate) : candidate;
+    const script = launcherScript(candidate);
     if (!script || fs.realpathSync(script) !== runnerLauncher) return candidate;
   }
   return null;
@@ -56,6 +56,13 @@ export async function discoverCLI(runtime, options) {
   if (owner && options.manager && owner.manager !== options.manager) throw new SetupError("manager_conflict", `Existing owner is ${owner.manager}; refusing a duplicate ${options.manager} install`);
   const executablePath = installedExecutable(runtime, owner);
   if (!owner && executablePath) throw new SetupError("unowned_cli", `Cannot prove package-manager ownership of ${executablePath}`);
+  if (owner && executablePath) {
+    const metadata = readJSON(path.join(owner.package_root, "package.json"));
+    const bin = typeof metadata.bin === "string" ? metadata.bin : metadata.bin?.memocap;
+    const expected = bin && path.resolve(owner.package_root, bin);
+    const actual = launcherScript(executablePath);
+    if (!expected || !fs.existsSync(expected) || !actual || fs.realpathSync(expected) !== fs.realpathSync(actual)) throw new SetupError("unowned_cli", `PATH launcher does not belong to ${owner.manager}'s memocap package: ${executablePath}`);
+  }
   return { scope: "current_user", manager: owner?.manager || options.manager || "npm", available_managers: available, package_root: owner?.package_root || null,
     version: owner?.version || null, executable_path: executablePath, executable_version: null, binary_status: "not_run", cache: inspectCache(runtime, owner?.version) };
 }

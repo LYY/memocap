@@ -128,9 +128,9 @@ fn recall_activity_preserves_the_applied_result_and_character_budget() {
 }
 
 #[test]
-fn missing_history_fails_without_creating_auxiliary_storage() {
+fn missing_history_fails_without_creating_main_storage() {
     let f = Fixture::new();
     let receipt = f.json(&["activity", "list", "--json"], false);
     assert_eq!(receipt["status"], "failed");
-    assert!(!memocap::activity::activity_path(&f.database).exists());
+    assert!(!f.database.exists());
 }

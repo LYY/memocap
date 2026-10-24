@@ -425,7 +425,7 @@ fn empty_topics_do_not_shadow_and_overwrite_preserves_or_clears_topic() {
 }
 
 #[test]
-fn creates_and_reopens_exact_schema_1_0() {
+fn creates_and_reopens_schema_2_0() {
     // Given
     let d = dir();
     let database = d.path().join("db");
@@ -444,7 +444,7 @@ fn creates_and_reopens_exact_schema_1_0() {
                 Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
             })
             .unwrap(),
-        (1, 0)
+        (2, 0)
     );
     assert_eq!(
         reopened
@@ -456,7 +456,7 @@ fn creates_and_reopens_exact_schema_1_0() {
 }
 
 #[test]
-fn resets_exact_pre_versioned_schema_to_empty_1_0() {
+fn refuses_exact_pre_versioned_schema_without_reset() {
     // Given
     let d = dir();
     let database = d.path().join("db");
@@ -465,25 +465,21 @@ fn resets_exact_pre_versioned_schema_to_empty_1_0() {
     drop(legacy);
 
     // When
-    let (connection, lifecycle) = store::open_with_lifecycle(&database).unwrap();
+    let failure = store::open_with_lifecycle(&database);
 
     // Then
-    assert_eq!(lifecycle, store::SchemaLifecycle::ResetPreVersioned);
+    assert!(failure.is_err());
+    let connection = rusqlite::Connection::open(&database).unwrap();
     assert_eq!(
         connection
             .query_row("SELECT COUNT(*) FROM memories", [], |row| row
                 .get::<_, i64>(0))
             .unwrap(),
-        0
+        1
     );
-    assert_eq!(
-        connection
-            .query_row("SELECT major, minor FROM schema_metadata", [], |row| {
-                Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
-            })
-            .unwrap(),
-        (1, 0)
-    );
+    assert!(connection
+        .prepare("SELECT major,minor FROM schema_metadata")
+        .is_err());
     assert!(!database.with_extension("bak").exists());
 }
 
@@ -657,11 +653,11 @@ fn refuses_future_schema_versions_without_mutation() {
             .unwrap(),
     );
     unchanged
-        .execute("UPDATE schema_metadata SET major = 2, minor = 0", [])
+        .execute("UPDATE schema_metadata SET major = 3, minor = 0", [])
         .unwrap();
     let unknown_major = (
         schema_rows(&unchanged),
-        (2, 0),
+        (3, 0),
         unchanged
             .query_row(
                 "SELECT content FROM memories WHERE id = ?1",

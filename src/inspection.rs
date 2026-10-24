@@ -1,4 +1,4 @@
-use crate::{activity, scope::RepositoryId, store};
+use crate::{scope::RepositoryId, store};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -10,6 +10,8 @@ pub const CAPABILITIES: &[&str] = &[
     "inventory",
     "activity",
     "read_only_status",
+    "single_database",
+    "schema_2_compatible",
 ];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,7 +25,9 @@ pub struct Inspection {
 }
 
 pub fn inspect(database: &Path, repository: &RepositoryId) -> Result<Inspection> {
-    inspect_using(database, repository, store::open_strict_readonly)
+    inspect_using(database, repository, |path| {
+        store::open_strict_readonly(path, std::time::Duration::from_secs(5))
+    })
 }
 
 pub(crate) fn inspect_runtime(database: &Path, repository: &RepositoryId) -> Result<Inspection> {
@@ -35,34 +39,31 @@ fn inspect_using(
     repository: &RepositoryId,
     open: fn(&Path) -> Result<rusqlite::Connection>,
 ) -> Result<Inspection> {
-    let visible = if database.try_exists()? {
+    let (status, version, visible) = if database.try_exists()? {
         let connection = open(database)?;
-        Some(store::visible_status(
-            &connection,
-            &store::visible_sources(&connection, repository)?,
-        )?)
-    } else {
-        None
-    };
-    let (activity_status, activity_error) = if activity::activity_path(database).try_exists()? {
-        match activity::ActivityStore::open_readonly(database) {
-            Ok(_) => ("ready", None),
-            Err(error) => ("degraded", Some(error.to_string())),
+        let version = store::schema::version(&connection)?;
+        let actual_version = Some(format!("{}.{}", version.major, version.minor));
+        if version.needs_upgrade() {
+            ("upgrade_needed", actual_version, None)
+        } else {
+            (
+                "ready",
+                actual_version,
+                Some(store::visible_status(
+                    &connection,
+                    &store::visible_sources(&connection, repository)?,
+                )?),
+            )
         }
     } else {
-        ("not_initialized", None)
+        ("not_initialized", None, None)
     };
     Ok(Inspection {
-        core_status: if visible.is_some() {
-            "ready"
-        } else {
-            "not_initialized"
-        }
-        .into(),
-        schema_version: visible.as_ref().map(|status| status.schema_version.clone()),
+        core_status: status.into(),
+        schema_version: version,
         visible,
-        activity_status: activity_status.into(),
-        activity_error,
+        activity_status: status.into(),
+        activity_error: None,
         capabilities: CAPABILITIES
             .iter()
             .map(|capability| (*capability).into())

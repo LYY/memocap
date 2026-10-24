@@ -1,5 +1,27 @@
 use super::*;
 
+#[test]
+fn readonly_activity_reports_busy_promptly_when_schema_is_exclusively_locked() {
+    let directory = tempfile::tempdir().unwrap();
+    let core = directory.path().join("locked.db");
+    drop(ActivityStore::open(&core).unwrap());
+    let mut lock = Connection::open(&core).unwrap();
+    lock.execute_batch("PRAGMA journal_mode=DELETE").unwrap();
+    let _exclusive = lock
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Exclusive)
+        .unwrap();
+
+    let started = std::time::Instant::now();
+    let opened = ActivityStore::open_readonly(&core);
+    let elapsed = started.elapsed();
+
+    assert!(matches!(opened, Err(ActivityError::Busy)));
+    assert!(
+        elapsed < std::time::Duration::from_secs(1),
+        "readonly activity waited {elapsed:?} for the schema lock"
+    );
+}
+
 fn snapshot(connection: &Connection) -> Vec<(String, String)> {
     connection
         .prepare("SELECT name, coalesce(sql, '') FROM sqlite_schema ORDER BY name")
@@ -11,51 +33,47 @@ fn snapshot(connection: &Connection) -> Vec<(String, String)> {
 }
 
 #[test]
-fn rejected_auxiliary_shapes_and_versions_are_never_reset() {
+fn rejected_main_shapes_and_versions_are_never_reset() {
     for mutation in [
-        "CREATE TABLE unexpected (sentinel TEXT); INSERT INTO unexpected VALUES ('keep')",
-        "UPDATE activity_schema_metadata SET major = 2",
-        "UPDATE activity_schema_metadata SET minor = 1",
-        "DELETE FROM activity_schema_metadata",
-        "ALTER TABLE activity_events ADD COLUMN unexpected TEXT",
+        "DROP INDEX activity_retention",
+        "UPDATE schema_metadata SET major = 3",
+        "UPDATE schema_metadata SET major = 1,minor = 1",
+        "DELETE FROM schema_metadata",
+        "ALTER TABLE activity_events ADD COLUMN unexpected TEXT NOT NULL",
     ] {
         let directory = tempfile::tempdir().unwrap();
         let core = directory.path().join("db");
         drop(ActivityStore::open(&core).unwrap());
-        let raw = Connection::open(activity_path(&core)).unwrap();
+        let raw = Connection::open(&core).unwrap();
         raw.execute_batch(mutation).unwrap();
-        let before = std::fs::read(activity_path(&core)).unwrap();
+        let before = snapshot(&raw);
 
         assert!(ActivityStore::open(&core).is_err(), "{mutation}");
 
-        assert_eq!(std::fs::read(activity_path(&core)).unwrap(), before);
-        assert!(!core.exists());
+        assert_eq!(snapshot(&raw), before);
     }
 }
 
 #[test]
-fn corrupt_and_unmarked_empty_files_fail_without_replacement() {
-    for bytes in [b"not sqlite".as_slice(), b"".as_slice()] {
+fn corrupt_main_files_fail_without_replacement() {
+    for bytes in [b"not sqlite".as_slice(), b"unrecognized data".as_slice()] {
         let directory = tempfile::tempdir().unwrap();
         let core = directory.path().join("db");
-        std::fs::write(activity_path(&core), bytes).unwrap();
+        std::fs::write(&core, bytes).unwrap();
 
         assert!(ActivityStore::open(&core).is_err());
 
-        assert_eq!(std::fs::read(activity_path(&core)).unwrap(), bytes);
-        assert!(!core.exists());
+        assert_eq!(std::fs::read(&core).unwrap(), bytes);
     }
 }
 
 #[test]
-fn locked_auxiliary_does_not_turn_committed_core_write_into_retry() {
+fn activity_lock_after_core_commit_does_not_turn_write_into_retry() {
     let directory = tempfile::tempdir().unwrap();
     let core = directory.path().join("db");
     let connection = memocap::store::open(&core).unwrap();
     let before_schema = snapshot(&connection);
     drop(ActivityStore::open(&core).unwrap());
-    let lock = Connection::open(activity_path(&core)).unwrap();
-    lock.execute_batch("BEGIN IMMEDIATE").unwrap();
     let id = memocap::store::remember(
         &connection,
         "sqlite committed sentinel",
@@ -67,6 +85,8 @@ fn locked_auxiliary_does_not_turn_committed_core_write_into_retry() {
     )
     .unwrap();
     let before = memocap::store::list(&connection, 20).unwrap();
+    let lock = Connection::open(&core).unwrap();
+    lock.execute_batch("BEGIN IMMEDIATE").unwrap();
 
     let status = record_after_commit(&core, &event("committed"));
 
@@ -90,7 +110,7 @@ fn locked_auxiliary_does_not_turn_committed_core_write_into_retry() {
 }
 
 #[test]
-fn auxiliary_paths_preserve_complete_filenames_and_isolate_each_core() {
+fn main_paths_preserve_complete_filenames_and_isolate_each_store() {
     let directory = tempfile::tempdir().unwrap();
     let first = directory.path().join("memory.db");
     let second = directory.path().join("memory.other");
@@ -101,20 +121,14 @@ fn auxiliary_paths_preserve_complete_filenames_and_isolate_each_core() {
         .record(&original)
         .unwrap();
 
-    assert_eq!(
-        activity_path(&first),
-        directory.path().join("memory.db.activity.sqlite")
-    );
-    assert_eq!(
-        activity_path(&second),
-        directory.path().join("memory.other.activity.sqlite")
-    );
+    assert_eq!(ActivityStore::open(&first).unwrap().path(), first);
+    assert_eq!(ActivityStore::open(&second).unwrap().path(), second);
     assert!(ActivityStore::open(&second)
         .unwrap()
         .show(&original.operation_id)
         .unwrap()
         .is_empty());
-    assert!(!first.exists() && !second.exists());
+    assert!(first.exists() && second.exists());
 }
 
 #[test]
@@ -124,7 +138,7 @@ fn damaged_event_payload_fails_explicitly_on_read() {
     let original = event("corrupt-row");
     let mut activity = ActivityStore::open(&core).unwrap();
     activity.record(&original).unwrap();
-    Connection::open(activity_path(&core))
+    Connection::open(&core)
         .unwrap()
         .execute("UPDATE activity_events SET event_json = '{}'", [])
         .unwrap();
@@ -137,7 +151,7 @@ fn damaged_event_payload_fails_explicitly_on_read() {
 
 #[cfg(unix)]
 #[test]
-fn parent_symlink_is_supported_but_auxiliary_symlink_cannot_alias_core() {
+fn parent_symlink_is_supported_but_main_file_symlink_is_refused() {
     let directory = tempfile::tempdir().unwrap();
     let alias = directory.path().join("alias");
     std::os::unix::fs::symlink(directory.path(), &alias).unwrap();
@@ -149,13 +163,14 @@ fn parent_symlink_is_supported_but_auxiliary_symlink_cannot_alias_core() {
         .unwrap()
         .record(&event("parent-alias"))
         .unwrap();
-    std::os::unix::fs::symlink(&core, activity_path(&core)).unwrap();
+    let file_alias = alias.join("file-alias.db");
+    std::os::unix::fs::symlink(&core, &file_alias).unwrap();
 
-    assert!(ActivityStore::open(&core).is_err());
+    assert!(ActivityStore::open(&file_alias).is_err());
 
     assert_eq!(snapshot(&connection), before);
     assert_eq!(memocap::store::list(&connection, 20).unwrap().len(), 0);
-    assert!(!absent_core.exists());
+    assert!(absent_core.exists());
 }
 
 #[test]
@@ -163,7 +178,7 @@ fn open_store_record_and_hint_update_report_busy_without_partial_event() {
     let directory = tempfile::tempdir().unwrap();
     let core = directory.path().join("db");
     let mut activity = ActivityStore::open(&core).unwrap();
-    let lock = Connection::open(activity_path(&core)).unwrap();
+    let lock = Connection::open(&core).unwrap();
     lock.execute_batch("BEGIN IMMEDIATE").unwrap();
     let original = event("locked-record");
     let hint = RepositoryHint {
@@ -193,7 +208,7 @@ fn open_store_record_and_hint_update_report_busy_without_partial_event() {
 }
 
 #[test]
-fn future_version_has_typed_error_and_retains_existing_events() {
+fn unknown_major_refuses_and_retains_existing_events() {
     let directory = tempfile::tempdir().unwrap();
     let core = directory.path().join("db");
     let original = event("future");
@@ -201,14 +216,11 @@ fn future_version_has_typed_error_and_retains_existing_events() {
         .unwrap()
         .record(&original)
         .unwrap();
-    let raw = Connection::open(activity_path(&core)).unwrap();
-    raw.execute("UPDATE activity_schema_metadata SET major=2", [])
+    let raw = Connection::open(&core).unwrap();
+    raw.execute("UPDATE schema_metadata SET major=3", [])
         .unwrap();
 
-    assert!(matches!(
-        ActivityStore::open(&core),
-        Err(ActivityError::UnsupportedVersion { major: 2, minor: 0 })
-    ));
+    assert!(ActivityStore::open(&core).is_err());
 
     assert_eq!(
         raw.query_row("SELECT count(*) FROM activity_events", [], |row| row
@@ -219,13 +231,13 @@ fn future_version_has_typed_error_and_retains_existing_events() {
 }
 
 #[test]
-fn missing_parent_directory_initializes_only_auxiliary_storage() {
+fn missing_parent_directory_initializes_whole_main_storage() {
     let directory = tempfile::tempdir().unwrap();
     let core = directory.path().join("new/parent/core.db");
 
     let activity = ActivityStore::open(&core).unwrap();
 
     assert!(activity.path().is_file());
-    assert!(!core.exists());
+    assert!(core.exists());
     assert!(activity.list(&ActivityQuery::default()).unwrap().is_empty());
 }

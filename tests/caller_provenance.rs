@@ -8,7 +8,7 @@ const CALLER: &str =
     r#"{"actor":"plugin","session_id":"session-typed","message_id":"message-typed"}"#;
 
 #[test]
-fn cli_caller_survives_core_commit_and_auxiliary_failure_without_replay() {
+fn cli_caller_survives_core_commit_and_activity_failure_without_replay() {
     let f = support::Fixture::new();
     let inserted = f.json(
         &[
@@ -54,13 +54,13 @@ fn cli_caller_survives_core_commit_and_auxiliary_failure_without_replay() {
     );
     assert_eq!(invalid["status"], "failed");
     drop(memocap::store::open(&f.database).unwrap());
-    std::fs::write(memocap::activity::activity_path(&f.database), "corrupt").unwrap();
+    memocap::store::open(&f.database).unwrap().execute_batch("CREATE TRIGGER reject_activity BEFORE INSERT ON activity_events BEGIN SELECT RAISE(FAIL,'injected activity failure'); END;").unwrap();
     let committed = f.json(
         &[
             "--caller-json",
             CALLER,
             "remember",
-            "auxiliary failure once",
+            "activity failure once",
             "--json",
         ],
         true,
@@ -159,15 +159,13 @@ fn independent_observations_keep_a_typed_durable_parent_recall() {
         .unwrap()
         .iter()
         .all(|entry| entry["related_operation_id"] == related));
-    let auxiliary =
-        rusqlite::Connection::open(memocap::activity::activity_path(&f.database)).unwrap();
-    auxiliary
-        .execute(
-            "UPDATE activity_events SET started_at_ms=0 WHERE operation_id=?1",
-            [related.as_str().unwrap()],
-        )
-        .unwrap();
-    drop(auxiliary);
+    let main = rusqlite::Connection::open(&f.database).unwrap();
+    main.execute(
+        "UPDATE activity_events SET started_at_ms=0 WHERE operation_id=?1",
+        [related.as_str().unwrap()],
+    )
+    .unwrap();
+    drop(main);
     let expired = f.json(
         &["activity", "show", related.as_str().unwrap(), "--json"],
         true,

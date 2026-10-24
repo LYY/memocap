@@ -1,7 +1,16 @@
-import fs from "node:fs";
-import path from "node:path";
 import { spawn } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { SetupError } from "./arguments.mjs";
+import { readText } from "./files.mjs";
+
+export function launcherScript(program) {
+  const real = fs.realpathSync(program);
+  const target = readText(real)?.match(/^(?:#|::|rem) cmd-shim-target=(.+)\r?$/mi)?.[1]?.trim();
+  if (target) return path.isAbsolute(target) && fs.existsSync(target) ? fs.realpathSync(target) : null;
+  return /\.(cmd|bat)$/i.test(real) ? windowsShimScript(real) : real;
+}
 
 export function executable(name, env) {
   const extensions = process.platform === "win32" ? (/\.(exe|cmd|bat)$/i.test(name) ? [""] : [".exe", ".cmd", ".bat"]) : [""];
@@ -18,6 +27,8 @@ export function executable(name, env) {
 }
 
 export function windowsShimScript(program) {
+  const target = readText(program)?.match(/^(?:::|rem) cmd-shim-target=(.+)\r?$/mi)?.[1]?.trim();
+  if (target) return path.isAbsolute(target) && fs.existsSync(target) ? fs.realpathSync(target) : null;
   const directory = path.dirname(program);
   const stem = path.basename(program, path.extname(program)).toLowerCase();
   const modules = path.basename(directory) === ".bin" ? path.dirname(directory) : path.join(directory, "node_modules");
@@ -25,7 +36,7 @@ export function windowsShimScript(program) {
     npm: [path.join(modules, "npm/bin/npm-cli.js")],
     npx: [path.join(modules, "npm/bin/npx-cli.js")],
     memocap: [path.join(modules, "@lyy-gh/memocap/bin/cli.cjs")],
-    pnpm: [path.join(modules, "pnpm/bin/pnpm.cjs"), path.join(directory, "pnpm.cjs")],
+    pnpm: [path.join(modules, "pnpm/bin/pnpm.cjs"), path.join(modules, "pnpm/bin/pnpm.mjs"), path.join(directory, "pnpm.cjs")],
   };
   for (const filename of scripts[stem] || []) {
     try { if (fs.statSync(filename).isFile()) return filename; }
@@ -61,22 +72,41 @@ export async function runProcess(command, args, options = {}) {
       argumentsList = [script, ...args];
     }
   }
-  return new Promise((resolve) => {
-    const child = spawn(program, argumentsList, { cwd: options.cwd, env, shell: false, windowsHide: true, detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    let forceTimer;
-    const stop = () => {
-      if (forceTimer) return;
-      killTree(child, "SIGTERM", options.env || process.env);
-      forceTimer = setTimeout(() => killTree(child, "SIGKILL", options.env || process.env), 250);
-    };
-    const timer = setTimeout(stop, options.timeout || 180_000);
-    child.stdout.on("data", (chunk) => { stdout += chunk; if (stdout.length > 4_000_000) stop(); });
-    child.stderr.on("data", (chunk) => { stderr += chunk; if (stderr.length > 4_000_000) stop(); });
-    child.once("error", (error) => { clearTimeout(timer); clearTimeout(forceTimer); resolve({ code: 127, stdout, stderr: `${stderr}${error.message}` }); });
-    child.once("close", (code, signal) => { clearTimeout(timer); clearTimeout(forceTimer); resolve({ code: forceTimer ? 1 : code ?? 1, stdout, stderr, signal }); });
-  });
+  let captureDirectory;
+  let stdoutDescriptor;
+  try {
+    if (options.stdoutFile) {
+      captureDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-inventory-"));
+      stdoutDescriptor = fs.openSync(path.join(captureDirectory, "stdout"), "wx+", 0o600);
+    }
+    const execution = await new Promise((resolve) => {
+      const child = spawn(program, argumentsList, { cwd: options.cwd, env, shell: false, windowsHide: true, detached: process.platform !== "win32", stdio: ["ignore", stdoutDescriptor ?? "pipe", "pipe"] });
+      let stdout = "";
+      let stderr = "";
+      let forceTimer;
+      const stop = () => {
+        if (forceTimer) return;
+        killTree(child, "SIGTERM", options.env || process.env);
+        forceTimer = setTimeout(() => killTree(child, "SIGKILL", options.env || process.env), 250);
+      };
+      const timer = setTimeout(stop, options.timeout || 180_000);
+      const captureTimer = stdoutDescriptor === undefined ? undefined : setInterval(() => { if (fs.fstatSync(stdoutDescriptor).size > 4_000_000) stop(); }, 25);
+      child.stdout?.on("data", (chunk) => { stdout += chunk; if (stdout.length > 4_000_000) stop(); });
+      child.stderr.on("data", (chunk) => { stderr += chunk; if (stderr.length > 4_000_000) stop(); });
+      child.once("error", (error) => { clearTimeout(timer); clearTimeout(forceTimer); clearInterval(captureTimer); resolve({ code: 127, stdout, stderr: `${stderr}${error.message}` }); });
+      child.once("close", (code, signal) => { clearTimeout(timer); clearTimeout(forceTimer); clearInterval(captureTimer); resolve({ code: forceTimer ? 1 : code ?? 1, stdout, stderr, signal }); });
+    });
+    if (stdoutDescriptor !== undefined) {
+      const output = Buffer.alloc(Math.min(fs.fstatSync(stdoutDescriptor).size, 4_000_001));
+      const length = fs.readSync(stdoutDescriptor, output, 0, output.length, 0);
+      execution.stdout = length > 4_000_000 ? "" : output.subarray(0, length).toString("utf8");
+      if (length > 4_000_000) execution.code = 1;
+    }
+    return execution;
+  } finally {
+    try { if (stdoutDescriptor !== undefined) fs.closeSync(stdoutDescriptor); }
+    finally { if (captureDirectory) fs.rmSync(captureDirectory, { recursive: true, force: true }); }
+  }
 }
 
 export async function checked(runtime, command, args, cwd) {
