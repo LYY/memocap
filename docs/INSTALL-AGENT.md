@@ -1,7 +1,7 @@
 # Agent Install and Update Guide
 
 Use this guide only when the user has authorized a memocap installation or
-update. It covers package target v0.2.0. Keep the CLI, plugin, and runtime skill
+update. It covers package target v0.2.1. Keep the CLI, plugin, and runtime skill
 on one release. For the human-facing explanation, see [Install and Update](INSTALL.md).
 
 ## Authorization boundary
@@ -43,7 +43,7 @@ version-pinned setup runner instead of assuming `memocap` or
 `memocap-setup` is already installed:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --global --yes --json
 ```
 
 For project scope, use the same command with
@@ -56,13 +56,13 @@ report that the runtime integration is not installed.
 For a new global install:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --global --yes --json
 ```
 
 For a project install, substitute the user's concrete path:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --project "/absolute/path/to/repo" --yes --json
 ```
 
 The installer performs the write steps for the selected scope and returns JSON
@@ -91,12 +91,12 @@ Read `resolved_version` once from that result. For an authorized update, use
 that exact version for dry-run and execution:
 
 ```sh
-memocap-setup update --to 0.2.0 --global --dry-run --json
-memocap-setup update --to 0.2.0 --global --yes --json
+memocap-setup update --to 0.2.1 --global --dry-run --json
+memocap-setup update --to 0.2.1 --global --yes --json
 ```
 
 Use the exact `resolved_version` returned by `check` in both commands; the
-examples pin the v0.2.0 target. For a project, use
+examples pin the v0.2.1 target. For a project, use
 `--project "/absolute/path/to/repo"` instead of `--global`. Do not substitute a
 second registry lookup for the version already selected by `check`.
 
@@ -111,13 +111,13 @@ there is no fallback to a different worker target.
 
 If updating an older v0.0.10 installation that has no setup command or new
 read-only status interface, preflight reports `inspection_deferred` only. This
-is not success or readiness. After authorization, use the exact v0.2.0 runner:
+is not success or readiness. After authorization, use the exact v0.2.1 runner:
 
 Before running it against a database that may be schema `1.0`, make a WAL-aware
 backup.
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup update --to 0.2.0 --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup update --to 0.2.1 --global --yes --json
 ```
 
 For a proven v0.1.0 producer, preflight reports schema `1.0` as
@@ -176,7 +176,7 @@ not literal setup JSON payloads:
 {
   "result": "static_ready",
   "scope": "global",
-  "target_version": "0.2.0",
+  "target_version": "0.2.1",
   "cli": "unchanged",
   "plugin": "installed",
   "skill": "installed",
@@ -191,7 +191,7 @@ For a partial failure, name the component and next read-only check:
 {
   "result": "partial",
   "scope": "global",
-  "target_version": "0.2.0",
+  "target_version": "0.2.1",
   "cli": "unchanged",
   "plugin": "installed",
   "skill": "failed",
@@ -228,11 +228,11 @@ PowerShell uses the same pinned workflow. Quote a project path that contains
 spaces:
 
 ```powershell
-npx --yes --package '@lyy-gh/memocap@0.2.0' memocap-setup install --global --yes --json
-npx --yes --package '@lyy-gh/memocap@0.2.0' memocap-setup install --project 'C:\work\my repo' --yes --json
+npx --yes --package '@lyy-gh/memocap@0.2.1' memocap-setup install --global --yes --json
+npx --yes --package '@lyy-gh/memocap@0.2.1' memocap-setup install --project 'C:\work\my repo' --yes --json
 memocap-setup check --global --json
-memocap-setup update --to 0.2.0 --global --dry-run --json
-memocap-setup update --to 0.2.0 --global --yes --json
+memocap-setup update --to 0.2.1 --global --dry-run --json
+memocap-setup update --to 0.2.1 --global --yes --json
 ```
 
 The source checkout's `scripts/install.sh` and `scripts/install.ps1` only

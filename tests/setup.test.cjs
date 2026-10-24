@@ -102,6 +102,82 @@ test("uninstall preserves DB and unrelated user config", async (context) => {
   assert.equal(report.exit_code, 0, JSON.stringify(report));
   assert.equal(parse(fs.readFileSync(f.config, "utf8")).model, "user/new");
   assert.deepEqual(parse(fs.readFileSync(f.config, "utf8")).plugin, []);
+  const errors = [];
+  parse(fs.readFileSync(f.config, "utf8"), errors, { allowTrailingComma: true });
+  assert.deepEqual(errors, []);
   assert.equal(fs.readFileSync(database, "utf8"), "preserve core DB bytes");
   assert.equal(fs.existsSync(path.join(f.prefix, "bin/memocap")), true);
+});
+
+for (const owned of ['"@lyy-gh/memocap@0.2.0"', '["@lyy-gh/memocap@0.2.0", {"automatic":false,"nested":[1,2]}]']) {
+  for (const position of ["sole", "first", "middle", "last"]) {
+    for (const layout of ["compact", "multiline", "CRLF", "comments"]) {
+      for (const trailing of [false, true]) {
+        test(`JSONC uninstall preserves bytes: ${position}/${layout}/trailing=${trailing}/tuple=${owned[0] === "["}`, async (context) => {
+          const f = fixture(context);
+          const { parse } = await import("jsonc-parser");
+          const { removePlugin } = await import("../scripts/setup/config.mjs");
+          const others = ['"other,\\"plugin"', '["unicode-\u4e2d\ud83d\ude00", {"nested":[{"text":",]"},[1,2]],"enabled":true}]'];
+          const entries = position === "sole" ? [owned] : [...others];
+          const index = { sole: 0, first: 0, middle: 1, last: 2 }[position];
+          if (position !== "sole") entries.splice(index, 0, owned);
+          const gap = { compact: "", multiline: "\n  ", CRLF: "\r\n\t", comments: "\n /* comma , and quoted \\\" */ " }[layout];
+          const slots = entries.map((entry) => `${gap}${entry}${layout === "comments" ? " /* after, ] */" : ""}`);
+          const separators = entries.map((_, offset) => offset < entries.length - 1 || trailing ? "," : "");
+          const render = () => `{ /* outside, */ "plugin":[${slots.map((slot, offset) => slot + separators[offset]).join("")}${gap}],"model":"keep,setting"}`;
+          const text = render();
+          slots[index] = slots[index].replace(owned, "");
+          if (separators[index]) separators[index] = "";
+          else if (index > 0) separators[index - 1] = "";
+          const expected = render();
+          fs.mkdirSync(path.dirname(f.config), { recursive: true });
+          fs.writeFileSync(f.config, text);
+          const record = { plugin: { entry: JSON.parse(owned) } };
+          removePlugin({ config: f.config, text }, record);
+          const changed = fs.readFileSync(f.config, "utf8");
+          const errors = [];
+          const remaining = parse(changed, errors, { allowTrailingComma: true });
+          assert.deepEqual(errors, [], changed);
+          assert.deepEqual(remaining, { plugin: position === "sole" ? [] : others.map((entry) => JSON.parse(entry)), model: "keep,setting" });
+          assert.equal(changed, expected);
+          assert.deepEqual(removePlugin({ config: f.config, text: changed }, record), { backup: null });
+          assert.equal(fs.readFileSync(f.config, "utf8"), changed);
+        });
+      }
+    }
+  }
+}
+
+test("JSONC uninstall after compact 0.1 to 0.2 source update preserves unrelated tuple", async (context) => {
+  const f = fixture(context);
+  const { writePlugin, removePlugin } = await import("../scripts/setup/config.mjs");
+  const { parse } = await import("jsonc-parser");
+  const text = '{"plugin":[["other",{"enabled":true}],"@lyy-gh/memocap@0.1.0"]}';
+  fs.mkdirSync(path.dirname(f.config), { recursive: true });
+  fs.writeFileSync(f.config, text);
+  writePlugin({ config: f.config, text }, "@lyy-gh/memocap@0.2.0");
+  removePlugin({ config: f.config, text: fs.readFileSync(f.config, "utf8") }, { plugin: { entry: "@lyy-gh/memocap@0.2.0" } });
+  const changed = fs.readFileSync(f.config, "utf8");
+  const errors = [];
+  assert.deepEqual(parse(changed, errors, { allowTrailingComma: true }).plugin, [["other", { enabled: true }]]);
+  assert.deepEqual(errors, []);
+});
+
+test("JSONC uninstall integration after update keeps valid syntax and DB", async (context) => {
+  const f = fixture(context);
+  fs.mkdirSync(path.dirname(f.config), { recursive: true });
+  fs.writeFileSync(f.config, '{/* user,comment */"plugin":[["other",{"nested":[1,2]}]],"model":"keep"}');
+  assert.equal((await f.setup(["install", "--yes"])).exit_code, 0);
+  fs.writeFileSync(path.join(f.packageRoot, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version: "0.2.0" }));
+  assert.equal((await f.setup(["update", "--to", "0.2.0", "--yes"])).exit_code, 0);
+  const database = path.join(f.home, ".memocap/memocap.db");
+  fs.writeFileSync(database, "synthetic core");
+  assert.equal((await f.setup(["uninstall", "--yes"])).exit_code, 0);
+  const { parse } = await import("jsonc-parser");
+  const errors = [];
+  const text = fs.readFileSync(f.config, "utf8");
+  assert.deepEqual(parse(text, errors, { allowTrailingComma: true }), { plugin: [["other", { nested: [1, 2] }]], model: "keep" });
+  assert.deepEqual(errors, []);
+  assert.equal(text.includes("/* user,comment */"), true);
+  assert.equal(fs.readFileSync(database, "utf8"), "synthetic core");
 });

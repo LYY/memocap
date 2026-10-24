@@ -1,5 +1,13 @@
 # Changelog
 
+## @lyy-gh/memocap 0.2.1 (2026-10-24)
+
+- Fix setup uninstall removing owned OpenCode plugin entries from JSONC,
+  including string and tuple entries with optional trailing commas. Preserve
+  comments, whitespace, unrelated plugin entries and options, and memory databases.
+- Parse configuration strictly before edits and validate edited JSONC before
+  writing, so malformed input is rejected without changing the file.
+
 ## @lyy-gh/memocap 0.2.0 (2026-10-24)
 
 Implemented outcomes for package target `0.2.0` and Git tag target `v0.2.0`.

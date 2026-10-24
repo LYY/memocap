@@ -24,4 +24,4 @@ job, including its registry metadata, integrity, and provenance verification.
 Investigate trusted-publisher configuration only when that job fails. Do not
 automatically create, change, or remove npm trust relationships.
 
-Before changing database schema, SQL, storage lifecycle, or database compatibility, read [ADR-0001](docs/adr/0001-single-database-compatible-evolution.md) for the accepted design and [SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md) for the implemented package 0.2.0 contract. For released v0.1.0 behavior, use the [v0.1.0 schema contract](https://github.com/LYY/memocap/blob/v0.1.0/docs/SCHEMA-VERSIONING.md) until package 0.2.0 is published.
+Before changing database schema, SQL, storage lifecycle, or database compatibility, read [ADR-0001](docs/adr/0001-single-database-compatible-evolution.md) for the accepted design and [SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md) for the implemented contract. For historical v0.1.0 behavior, use the [v0.1.0 schema contract](https://github.com/LYY/memocap/blob/v0.1.0/docs/SCHEMA-VERSIONING.md).

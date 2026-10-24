@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { parse, modify, applyEdits } from "jsonc-parser";
+import { parse, modify, applyEdits, parseTree, findNodeAtLocation, createScanner, SyntaxKind } from "jsonc-parser";
 import { SetupError, packageName } from "./arguments.mjs";
 import { ancestors, atomicWrite, readText, digest } from "./files.mjs";
 
@@ -99,6 +99,21 @@ export function removePlugin(scope, record) {
   const index = (current.plugin || []).findIndex(isMemocap);
   if (index < 0) return { backup: null };
   if (!record?.plugin || JSON.stringify(current.plugin[index]) !== JSON.stringify(record.plugin.entry)) throw new SetupError("plugin_modified", `Preserving unowned or changed plugin: ${scope.config}`);
-  const changed = applyEdits(scope.text, modify(scope.text, ["plugin", index], undefined, {}));
+  const tree = parseTree(scope.text, [], { allowTrailingComma: true });
+  const node = findNodeAtLocation(tree, ["plugin", index]);
+  const edits = [{ offset: node.offset, length: node.length, content: "" }];
+  // Keep trivia outside the owned value; jsonc-parser's array removal consumes it.
+  const scanner = createScanner(scope.text, true);
+  scanner.setPosition(node.offset + node.length);
+  if (scanner.scan() === SyntaxKind.CommaToken) {
+    edits.push({ offset: scanner.getTokenOffset(), length: scanner.getTokenLength(), content: "" });
+  } else if (index > 0) {
+    const previous = findNodeAtLocation(tree, ["plugin", index - 1]);
+    scanner.setPosition(previous.offset + previous.length);
+    scanner.scan();
+    edits.push({ offset: scanner.getTokenOffset(), length: scanner.getTokenLength(), content: "" });
+  }
+  const changed = applyEdits(scope.text, edits);
+  parseConfig(scope.config, changed);
   return atomicWrite(scope.config, changed, scope.text);
 }

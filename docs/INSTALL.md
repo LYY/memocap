@@ -1,6 +1,6 @@
 # Install and Update
 
-This guide covers package target v0.2.0. Keep the CLI, OpenCode plugin, and
+This guide covers package target v0.2.1. Keep the CLI, OpenCode plugin, and
 runtime skill on the same release unless you are following an explicit recovery
 procedure.
 
@@ -26,10 +26,10 @@ remains `not_run`.
 ## Global install
 
 This installs the user-level CLI and OpenCode integration. The command is pinned
-to v0.2.0 and does not select a memory placement:
+to v0.2.1 and does not select a memory placement:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --global --yes --json
 ```
 
 The installer reports the CLI, plugin, skill, and configuration result for each
@@ -46,7 +46,7 @@ before the setup core starts.
 Pass the full project path explicitly. Quote paths that contain spaces:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --project "/absolute/path/to/repo" --yes --json
 ```
 
 This configures the project integration and project skill. The user-level CLI
@@ -64,10 +64,10 @@ install only the skill from the matching release tag. Choose one scope:
 
 ```sh
 # Global skill
-npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.2.0 --skill memocap --agent opencode --global --yes
+npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.2.1 --skill memocap --agent opencode --global --yes
 
 # Project skill, run from the project directory
-npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.2.0 --skill memocap --agent opencode --yes
+npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.2.1 --skill memocap --agent opencode --yes
 ```
 
 The `skills` CLI manages its shared canonical skill and agent links. Do not
@@ -83,13 +83,13 @@ managed installation, pin the CLI and plugin to the same release, then install
 the matching skill:
 
 ```sh
-npm install --global @lyy-gh/memocap@0.2.0
+npm install --global @lyy-gh/memocap@0.2.1
 ```
 
 If you use pnpm for this global CLI, keep the same package-manager owner:
 
 ```sh
-pnpm add --global @lyy-gh/memocap@0.2.0
+pnpm add --global @lyy-gh/memocap@0.2.1
 ```
 
 Setup can adopt an existing manual integration only when the installed package,
@@ -105,7 +105,7 @@ and JSONC, and the v1 config key is `plugin`. See the
 ```jsonc
 {
   "plugin": [
-    "@lyy-gh/memocap@0.2.0"
+    "@lyy-gh/memocap@0.2.1"
   ]
 }
 ```
@@ -142,12 +142,12 @@ For an authorized update, copy the exact `resolved_version` from that check.
 Review the exact-target dry-run, then execute the same target with `--yes`:
 
 ```sh
-memocap-setup update --to 0.2.0 --global --dry-run --json
-memocap-setup update --to 0.2.0 --global --yes --json
+memocap-setup update --to 0.2.1 --global --dry-run --json
+memocap-setup update --to 0.2.1 --global --yes --json
 ```
 
 Use the exact `resolved_version` returned by `check` in both commands; the
-examples pin the v0.2.0 target. Do not resolve `latest` again between the plan
+examples pin the v0.2.1 target. Do not resolve `latest` again between the plan
 and execution. The setup command does not prompt interactively when `--yes` is
 absent. `check` is informational: read its `readiness` field, not only its
 successful command exit, to determine whether the database is ready.
@@ -175,13 +175,13 @@ replacing unrelated user state.
 
 The v0.0.10 CLI does not include the setup command or the new read-only status
 interface. Its higher-target preflight reports `inspection_deferred` only; this
-is not a successful readiness result. Bootstrap the exact v0.2.0 runner with
+is not a successful readiness result. Bootstrap the exact v0.2.1 runner with
 the authorized update, then inspect and prepare through the target setup logic.
 Before running it against a database that may be schema `1.0`, make a WAL-aware
 backup:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.0 memocap-setup update --to 0.2.0 --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup update --to 0.2.1 --global --yes --json
 ```
 
 Use `--project "/absolute/path/to/repo"` for a project integration. The target
@@ -211,7 +211,7 @@ before updating.
 
 ## Data and compatibility
 
-Package `0.2.0`, schema `2.0`, and receipt format `1` are independent
+Package `0.2.1`, schema `2.0`, and receipt format `1` are independent
 identities. The exact registered schema `1.0` bridges atomically to `2.0`,
 preserving core rows and IDs, placements, domains and attachments, provenance,
 the operation ledger, and FTS. Missing main databases are prepared at schema
@@ -329,17 +329,17 @@ The same pinned commands work from PowerShell. Quote package arguments and
 project paths with single quotes:
 
 ```powershell
-npx --yes --package '@lyy-gh/memocap@0.2.0' memocap-setup install --global --yes --json
-npx --yes --package '@lyy-gh/memocap@0.2.0' memocap-setup install --project 'C:\work\my repo' --yes --json
+npx --yes --package '@lyy-gh/memocap@0.2.1' memocap-setup install --global --yes --json
+npx --yes --package '@lyy-gh/memocap@0.2.1' memocap-setup install --project 'C:\work\my repo' --yes --json
 ```
 
 For an update, use `memocap-setup check --global --json`, then pass its exact
-resolved version to `memocap-setup update --to 0.2.0 --global --dry-run --json`
+resolved version to `memocap-setup update --to 0.2.1 --global --dry-run --json`
 and, after reviewing the plan, to the matching `--yes` command. The PowerShell
 wrapper in a source checkout forwards the same arguments to the same setup core.
 
 ```powershell
 memocap-setup check --global --json
-memocap-setup update --to 0.2.0 --global --dry-run --json
-memocap-setup update --to 0.2.0 --global --yes --json
+memocap-setup update --to 0.2.1 --global --dry-run --json
+memocap-setup update --to 0.2.1 --global --yes --json
 ```
