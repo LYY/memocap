@@ -36,18 +36,15 @@ fn event(seed: &str) -> ActivityEvent {
 }
 
 #[test]
-fn missing_auxiliary_initializes_without_creating_core() {
+fn missing_main_initializes_core_and_activity_together() {
     let directory = tempfile::tempdir().unwrap();
     let core = directory.path().join("memocap.db");
 
     let activity = ActivityStore::open(&core).unwrap();
 
-    assert_eq!(
-        activity.path(),
-        directory.path().join("memocap.db.activity.sqlite")
-    );
-    assert!(activity_path(&core).is_file());
-    assert!(!core.exists());
+    assert_eq!(activity.path(), core);
+    assert!(core.is_file());
+    assert!(!directory.path().join("memocap.db.activity.sqlite").exists());
     assert!(activity.list(&ActivityQuery::default()).unwrap().is_empty());
 }
 

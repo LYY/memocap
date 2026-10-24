@@ -138,7 +138,7 @@ fn visible_stack_orders_tiers_shadows_lower_topics_and_reports_counts() {
         Visibility::Shadowed(ref cause)
             if cause.source_order == 1 && cause.placement == "domain:engineering/rust"
     ));
-    assert_eq!(status.schema_version, "1.0");
+    assert_eq!(status.schema_version, "2.0");
     assert_eq!(status.addressable_total, 7);
     assert_eq!(status.effective_total, 4);
     assert_eq!(

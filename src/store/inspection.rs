@@ -1,6 +1,6 @@
 use anyhow::{ensure, Result};
 use rusqlite::{Connection, OpenFlags};
-use std::path::Path;
+use std::{path::Path, time::Duration};
 
 pub fn memory_by_id(connection: &Connection, id: i64) -> Result<Option<super::Memory>> {
     use rusqlite::OptionalExtension;
@@ -23,22 +23,15 @@ pub fn open_readonly(path: &Path) -> Result<Connection> {
     Ok(connection)
 }
 
-pub fn open_strict_readonly(path: &Path) -> Result<Connection> {
+pub fn open_strict_readonly(path: &Path, timeout: Duration) -> Result<Connection> {
     let connection = crate::readonly::open(path)?;
+    connection.busy_timeout(timeout)?;
     validate(&connection)?;
     Ok(connection)
 }
 
 fn validate(connection: &Connection) -> Result<()> {
-    ensure!(
-        super::schema_matches_v1(connection)?,
-        "database schema is not a recognized memocap schema"
-    );
-    let version = super::schema_version(connection)?;
-    ensure!(
-        version.major == super::SCHEMA_MAJOR && version.minor == super::SCHEMA_MINOR,
-        "database schema version is not supported by this binary"
-    );
+    super::schema::validate(connection)?;
     let integrity: String = connection.query_row("PRAGMA quick_check", [], |row| row.get(0))?;
     ensure!(
         integrity == "ok",

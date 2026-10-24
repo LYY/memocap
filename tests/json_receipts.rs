@@ -39,13 +39,13 @@ fn unknown_schema_refuses_without_activity_or_schema_mutation() {
     f.json(&["status", "--read-only", "--json"], false);
     f.json(&["remember", "must not commit", "--json"], false);
     assert_eq!(std::fs::read(&f.database).unwrap(), before);
-    assert!(!memocap::activity::activity_path(&f.database).exists());
+    assert!(!f.database.with_extension("db.activity.sqlite").exists());
 }
 
 #[test]
-fn committed_write_remains_successful_when_auxiliary_is_corrupt() {
+fn committed_write_remains_successful_when_activity_insert_fails() {
     let f = Fixture::new();
-    std::fs::write(memocap::activity::activity_path(&f.database), b"corrupt").unwrap();
+    memocap::store::open(&f.database).unwrap().execute_batch("CREATE TRIGGER reject_activity BEFORE INSERT ON activity_events BEGIN SELECT RAISE(FAIL,'injected activity failure'); END;").unwrap();
     let receipt = f.json(&["remember", "committed once", "--json"], true);
     assert_eq!(receipt["status"], "inserted");
     assert_eq!(receipt["activity_status"], "failed");
@@ -65,18 +65,13 @@ fn read_only_status_does_not_initialize_or_change_existing_databases() {
     let missing = f.json(&["status", "--read-only", "--json"], true);
     assert_eq!(missing["inspection"]["core_status"], "not_initialized");
     assert!(!f.database.exists());
-    assert!(!memocap::activity::activity_path(&f.database).exists());
+    assert!(!f.database.with_extension("db.activity.sqlite").exists());
     f.json(&["remember", "readonly proof", "--json"], true);
     let core = std::fs::read(&f.database).unwrap();
-    let auxiliary = std::fs::read(memocap::activity::activity_path(&f.database)).unwrap();
     let ready = f.json(&["status", "--read-only", "--json"], true);
     assert_eq!(ready["inspection"]["core_status"], "ready");
     assert_eq!(ready["inspection"]["activity_status"], "ready");
     assert_eq!(std::fs::read(&f.database).unwrap(), core);
-    assert_eq!(
-        std::fs::read(memocap::activity::activity_path(&f.database)).unwrap(),
-        auxiliary
-    );
     let normal = f.json(&["status", "--json"], true);
     assert_eq!(normal["inspection"]["activity_status"], "ready");
 }

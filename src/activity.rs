@@ -19,12 +19,6 @@ pub struct ActivityStore {
     path: PathBuf,
 }
 
-pub fn activity_path(core_path: &Path) -> PathBuf {
-    let mut filename = core_path.as_os_str().to_os_string();
-    filename.push(".activity.sqlite");
-    PathBuf::from(filename)
-}
-
 pub fn record_after_commit(core_path: &Path, event: &ActivityEvent) -> ActivityStatus {
     match ActivityStore::open(core_path).and_then(|mut activity| activity.record(event)) {
         Ok(RecordOutcome::Recorded) => ActivityStatus::Recorded,
@@ -37,7 +31,7 @@ pub fn record_after_commit(core_path: &Path, event: &ActivityEvent) -> ActivityS
 
 impl ActivityStore {
     pub fn open_readonly(core_path: &Path) -> Result<Self> {
-        let path = activity_path(core_path);
+        let path = core_path.to_path_buf();
         let parent = path.parent().unwrap_or_else(|| Path::new("."));
         let filename = path
             .file_name()
@@ -48,13 +42,23 @@ impl ActivityStore {
     }
 
     pub fn open(core_path: &Path) -> Result<Self> {
-        let path = activity_path(core_path);
+        let path = core_path.to_path_buf();
         let connection = schema::open(&path)?;
         Ok(Self { connection, path })
     }
 
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    pub fn prepare(core_path: &Path) -> Result<Self> {
+        let mut store = Self::open(core_path)?;
+        let transaction = store
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        schema::prune(&transaction)?;
+        transaction.commit()?;
+        Ok(store)
     }
 
     pub fn record(&mut self, event: &ActivityEvent) -> Result<RecordOutcome> {

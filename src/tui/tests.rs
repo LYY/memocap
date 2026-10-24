@@ -87,7 +87,7 @@ fn status_panel_shows_visible_stack_totals_in_a_standard_terminal() {
         concat!(
             "database: /tmp/{}/memocap.db\n",
             "repository_id: repository:{}\n",
-            "schema: 1.0\n",
+            "schema: 2.0\n",
             "0 repository 3/3\n",
             "1 domain:team/beta 2/1\n",
             "2 domain:team/alpha 2/1\n",
@@ -115,7 +115,7 @@ fn status_panel_shows_visible_stack_totals_in_a_standard_terminal() {
 #[test]
 fn compact_status_labels_sources_and_totals() {
     let status = crate::store::VisibleStackStatus {
-        schema_version: "1.0".to_owned(),
+        schema_version: "2.0".to_owned(),
         placements: vec![
             crate::store::PlacementCount {
                 placement: "repository:fixture".to_owned(),
@@ -142,7 +142,7 @@ fn compact_status_labels_sources_and_totals() {
 
     assert_eq!(
         format_tui_status(&status),
-        "schema: 1.0\n0 repository 3/3\n1 domain:team/beta 2/1\n2 universal 4/2\ntotal addressable/effective: 9/6"
+        "schema: 2.0\n0 repository 3/3\n1 domain:team/beta 2/1\n2 universal 4/2\ntotal addressable/effective: 9/6"
     );
 }
 

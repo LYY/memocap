@@ -26,17 +26,17 @@ fn old_recall_is_pruned_while_old_write_remains_available() {
 }
 
 #[test]
-fn retention_caps_reads_and_writes_separately_and_expires_on_reopen() {
+fn retention_caps_reads_and_writes_on_explicit_preparation() {
     let directory = tempfile::tempdir().unwrap();
     let core = directory.path().join("db");
     drop(ActivityStore::open(&core).unwrap());
-    let raw = Connection::open(activity_path(&core)).unwrap();
+    let raw = Connection::open(&core).unwrap();
     let sample = event("bulk");
     let json = serde_json::to_string(&sample).unwrap();
     raw.execute("WITH RECURSIVE series(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM series WHERE n<10005) INSERT INTO activity_events(operation_id,phase,category,started_at_ms,recorded_at,event_json) SELECT printf('read-%d',n),'recall','read',?1,'fixture',?2 FROM series", rusqlite::params![chrono::Utc::now().timestamp_millis(), json]).unwrap();
     raw.execute("WITH RECURSIVE series(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM series WHERE n<1005) INSERT INTO activity_events(operation_id,phase,category,started_at_ms,recorded_at,event_json) SELECT printf('write-%d',n),'write','write',?1,'fixture',?2 FROM series", rusqlite::params![chrono::Utc::now().timestamp_millis(), json]).unwrap();
 
-    drop(ActivityStore::open(&core).unwrap());
+    drop(ActivityStore::prepare(&core).unwrap());
 
     let counts: (i64, i64) = raw
         .query_row(
@@ -66,7 +66,21 @@ fn retention_caps_reads_and_writes_separately_and_expires_on_reopen() {
         [],
     )
     .unwrap();
+    drop(memocap::store::open(&core).unwrap());
+    assert_eq!(
+        raw.query_row("SELECT count(*) FROM activity_events", [], |row| row
+            .get::<_, i64>(0))
+            .unwrap(),
+        11000
+    );
     drop(ActivityStore::open(&core).unwrap());
+    assert_eq!(
+        raw.query_row("SELECT count(*) FROM activity_events", [], |row| row
+            .get::<_, i64>(0))
+            .unwrap(),
+        11000
+    );
+    drop(ActivityStore::prepare(&core).unwrap());
     assert_eq!(
         raw.query_row("SELECT count(*) FROM activity_events", [], |row| row
             .get::<_, i64>(0))

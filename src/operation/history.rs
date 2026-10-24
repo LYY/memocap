@@ -64,7 +64,7 @@ pub(super) fn execute(database: &Path, request: &Request, receipt: &mut Receipt)
                 receipt.backend == "local",
                 "remote preparation requires the server administrator"
             );
-            ActivityStore::open(database)?;
+            ActivityStore::prepare(database)?;
         }
         Command::ActivityRecord { event } => {
             ensure!(
