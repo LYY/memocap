@@ -52,7 +52,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: task-8-${{ runner.os }}
-          path: ${{ runner.temp }}/task-8-${{ runner.os }}.json
+          path: |
+            ${{ runner.temp }}/task-8-${{ runner.os }}.json
+            ${{ runner.temp }}/memocap-link-journals/
           if-no-files-found: error
           retention-days: 7
 

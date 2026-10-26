@@ -186,7 +186,7 @@ test("only attributed official bootstrap hardlinks are outside the managed zero-
     entry_sha256: "5a7c990fe552e76b16422cdba3f4b0550590c7a487f7932c773362f74317c87b",
     source: "<sandbox>/tools/node_modules/opencode-ai/node_modules/opencode-windows-x64/bin/opencode.exe",
     destination: "<sandbox>/tools/node_modules/opencode-ai/bin/opencode.exe",
-    stack: [`    at copyBinary (file://${entry}:151:8)`] };
+    stack: [`    at copyBinary (${entry}:151:8)`] };
   fs.writeFileSync(log, `${JSON.stringify(event)}\n`);
   assert.equal(assertManagedLinks(log).attempted_links, 0);
   assert.equal(assertManagedLinks(log).bootstrap_attempted_links, 1);
@@ -246,8 +246,9 @@ test("registry-verified official postinstall copies after denied hardlink with i
   const log = denyLinks(root, env);
   env.MEMOCAP_LINK_PHASE = "official-host-bootstrap";
   const child = spawnSync(process.execPath, [script], { env, encoding: "utf8", timeout: 30000 });
+  retainLinkEvents(log, { child_status: child.status, control: "actual-official-postinstall" }, `${log}.json`);
   assert.equal(child.status, 0, child.stderr);
-  assert.equal(fs.existsSync(log), true, "original zero-log assertion is RED for the real official caller");
+  assert.ok(fs.statSync(log).size > 0, "original zero-log assertion is RED for the real official caller");
   const receipt = assertManagedLinks(log);
   assert.equal(receipt.bootstrap_attempted_links, 1);
   assert.equal(linkEvents(log).events[0].pid, child.pid);

@@ -73,25 +73,31 @@ function mergeHostConfig(filename, settings) {
 }
 
 function denyLinks(root, env) {
-  const log = path.join(root, "denied-links.jsonl");
+  const directory = process.env.RUNNER_TEMP ? path.join(process.env.RUNNER_TEMP, "memocap-link-journals") :
+    path.join(__dirname, "../.omo/evidence/memocap-unified-skill/link-journals");
+  const log = path.join(directory, `${crypto.randomUUID()}.jsonl`);
+  fs.mkdirSync(directory, { recursive: true });
+  fs.writeFileSync(log, "", { flag: "wx" });
+  write(`${log}.proof.json`, JSON.stringify({ raw_bytes: 0, raw_sha256: digest(Buffer.alloc(0)) }));
   const preload = path.join(root, "deny-links.cjs");
   write(preload, `const fs = require('node:fs');
 const crypto = require('node:crypto');
+const { linkLocation } = require(${JSON.stringify(path.join(__dirname, "packaged-link-location.cjs"))});
 const roots = ${JSON.stringify([fs.realpathSync(root), root].map((value) => value.replaceAll("\\", "/")))};
-const sanitize = value => {
-  if (typeof value !== 'string') return null;
-  value = value.replaceAll('\\\\', '/');
-  for (const root of roots) value = value.split(root).join('<sandbox>').split(encodeURI(root)).join('<sandbox>');
-  return value;
-};
+const sanitize = value => linkLocation(value, roots);
 const denied = (name, args) => {
   const stack = new Error().stack.split('\\n').slice(2).map(sanitize);
-  fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ api: name, pid: process.pid,
+  const log = ${JSON.stringify(log)};
+  fs.appendFileSync(log, JSON.stringify({ api: name, pid: process.pid,
     ppid: process.ppid, phase: process.env.MEMOCAP_LINK_PHASE || 'unknown',
     source: sanitize(args[0]), destination: sanitize(args[1]), stack,
     entry: sanitize(process.argv[1]),
     entry_sha256: process.argv[1] && fs.existsSync(process.argv[1]) ?
       crypto.createHash('sha256').update(fs.readFileSync(process.argv[1])).digest('hex') : null }) + '\\n');
+  const raw = fs.readFileSync(log);
+  const proof = JSON.stringify({ raw_bytes: raw.length, raw_sha256: crypto.createHash('sha256').update(raw).digest('hex') });
+  fs.writeFileSync(log + '.proof.json', proof);
+  require('node:assert/strict').equal(fs.readFileSync(log + '.proof.json', 'utf8'), proof);
   return Object.assign(new Error('fixture denies link creation'), { code: 'EPERM' });
 };
 for (const name of ['symlink', 'link']) {
@@ -105,8 +111,9 @@ for (const name of ['symlink', 'link']) {
 }
 
 function linkEvents(log) {
-  const raw = fs.existsSync(log) ? fs.readFileSync(log, "utf8") : "";
-  return { raw, events: raw.trim() ? raw.trim().split("\n").map((line) => {
+  const bytes = fs.existsSync(log) ? fs.readFileSync(log) : Buffer.alloc(0);
+  const raw = bytes.toString("utf8");
+  return { raw, raw_file: log, raw_bytes: bytes.length, raw_sha256: digest(bytes), events: raw.trim() ? raw.trim().split("\n").map((line) => {
     try { return JSON.parse(line); }
     catch (error) { return { phase: "unknown", parse_error: error.message, line }; }
   }) : [] };
@@ -121,7 +128,7 @@ function assertManagedLinks(log) {
       /^<sandbox>\/tools\/(lib\/)?node_modules\/opencode-ai\/postinstall\.mjs$/.test(entry) &&
       event.destination === entry.replace("postinstall.mjs", "bin/opencode.exe") &&
       event.source?.startsWith("<sandbox>/tools/") &&
-      event.stack?.some((frame) => frame.includes(`at copyBinary (`) && frame.includes(`${entry}:151:8`));
+      event.stack?.some((frame) => frame === `    at copyBinary (${entry}:151:8)`);
     assert.ok(official, `unexpected link attempt in ${event.phase || "unknown"}: ${JSON.stringify(event)}`);
   }
   return { link_creation_denied_by_fixture: true, attempted_links: 0,
