@@ -18,8 +18,9 @@ export function loadPolicy(options = {}) {
   if (managed && (typeof options.skillDirectory !== "string" || !path.isAbsolute(options.skillDirectory))) {
     throw new PolicyError("policy_directory", "skillDirectory must be an absolute directory", options.skillDirectory);
   }
-  const bundled = inspect(fileURLToPath(new URL("../skills/memocap", import.meta.url)));
-  const selected = managed ? inspect(options.skillDirectory) : bundled;
+  const bundledDirectory = fileURLToPath(new URL("../skills/memocap", import.meta.url));
+  const selected = inspect(managed ? options.skillDirectory : bundledDirectory);
+  const bundled = managed ? inspect(bundledDirectory) : selected;
   if (selected.digest !== bundled.digest) {
     throw new PolicyError("policy_digest", `Policy differs from this plugin package: ${selected.directory}`, selected.directory);
   }

@@ -2,6 +2,8 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');
+const childProcess = require('node:child_process');
+const { syncBuiltinESMExports } = require('node:module');
 const { pathToFileURL } = require('node:url');
 const { sandbox, fixture } = require('./plugin-fixture.cjs');
 const { version } = require('../package.json');
@@ -29,13 +31,101 @@ async function status(hooks) {
 test('managed initialization rejects a missing selected source before any sidecar', async (context) => {
   const pkg = await policyFixture(context);
   const directory = path.join(pkg.root, 'missing');
+  const { inspectPolicy, PolicyError } = await import(pathToFileURL(path.join(pkg.root, 'lib/policy.mjs')).href);
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) if (key.toUpperCase() === 'SYSTEMROOT') delete env[key];
+  context.mock.property(process, 'env', env);
+  context.mock.property(process, 'platform', 'win32');
+  context.mock.method(childProcess, 'spawnSync', () => assert.fail('missing SystemRoot must not start PowerShell'));
+  syncBuiltinESMExports();
+  context.after(() => { context.mock.restoreAll(); syncBuiltinESMExports(); });
+  assert.throws(() => inspectPolicy(pkg.bundled), (error) => {
+    assert.ok(error instanceof PolicyError);
+    assert.equal(error.code, 'policy_reparse_check_failed');
+    assert.equal(error.path, pkg.bundled);
+    assert.match(error.cause.message, /absolute SystemRoot/);
+    return true;
+  });
   await assert.rejects(pkg.module.default.server(pkg.input, { skillDirectory: directory }), (error) => {
-    assert.equal(error.name, 'PolicyError');
+    assert.ok(error instanceof PolicyError);
     assert.equal(error.code, 'policy_read');
     assert.equal(error.path, directory);
     assert.equal(error.cause.code, 'ENOENT');
     return true;
   });
+  assert.deepEqual(pkg.calls(), []);
+});
+
+function windowsMetadata(context, run) {
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) if (key.toUpperCase() === 'SYSTEMROOT') delete env[key];
+  context.mock.property(process, 'env', { ...env, SystemRoot: 'C:\\Windows' });
+  context.mock.property(process, 'platform', 'win32');
+  context.mock.method(childProcess, 'spawnSync', run);
+  syncBuiltinESMExports();
+  context.after(() => { context.mock.restoreAll(); syncBuiltinESMExports(); });
+}
+
+test('managed selection success still rejects bundled metadata failure with original diagnostics', async (context) => {
+  const pkg = await policyFixture(context);
+  const denied = Object.assign(new Error('bundle metadata denied'), { code: 'EACCES' });
+  const scanned = { status: null, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.from('bundle diagnostic'), error: denied };
+  const inspections = [];
+  windowsMetadata(context, (_executable, _argv, options) => {
+    const directory = JSON.parse(options.input).root;
+    inspections.push(directory);
+    return directory === pkg.directory
+      ? { status: 0, signal: null, stdout: Buffer.from('{"status":"ok"}'), stderr: Buffer.alloc(0) } : scanned;
+  });
+  await assert.rejects(pkg.module.default.server(pkg.input, { skillDirectory: pkg.directory }), (error) => {
+    assert.equal(error.name, 'PolicyError');
+    assert.equal(error.code, 'policy_reparse_check_failed');
+    assert.equal(error.path, pkg.bundled);
+    assert.equal(error.cause.cause, denied);
+    assert.equal(error.cause.diagnostics, scanned);
+    return true;
+  });
+  assert.deepEqual(inspections, [pkg.directory, pkg.bundled]);
+  assert.deepEqual(pkg.calls(), []);
+});
+
+for (const stdout of ['{"status":"error","operation":"enumerate"}', '{"status":"partial"}']) {
+  test('selected metadata failure or incomplete scan refuses initialization before inspecting bundle', async (context) => {
+    const pkg = await policyFixture(context);
+    const scanned = { status: stdout.includes('error') ? 1 : 0, signal: null, stdout: Buffer.from(stdout), stderr: Buffer.from('selected diagnostic') };
+    const inspections = [];
+    windowsMetadata(context, (_executable, _argv, options) => { inspections.push(JSON.parse(options.input).root); return scanned; });
+    await assert.rejects(pkg.module.default.server(pkg.input, { skillDirectory: pkg.directory }), (error) => {
+      assert.equal(error.name, 'PolicyError');
+      assert.equal(error.code, 'policy_reparse_check_failed');
+      assert.equal(error.path, pkg.directory);
+      assert.equal(error.cause.diagnostics, scanned);
+      return true;
+    });
+    assert.deepEqual(inspections, [pkg.directory]);
+    assert.deepEqual(pkg.calls(), []);
+  });
+}
+
+test('unmanaged loading fully inspects the bundled payload only once', async (context) => {
+  const pkg = await policyFixture(context);
+  const { loadPolicy } = await import(pathToFileURL(path.join(pkg.root, 'plugin/policy.js')).href);
+  const inspections = [];
+  windowsMetadata(context, (_executable, _argv, options) => {
+    inspections.push(JSON.parse(options.input).root);
+    return { status: 0, signal: null, stdout: Buffer.from('{"status":"ok"}'), stderr: Buffer.alloc(0) };
+  });
+  assert.equal(loadPolicy().provenance.directory, pkg.bundled);
+  assert.deepEqual(inspections, [pkg.bundled]);
+  assert.deepEqual(pkg.calls(), []);
+});
+
+test('valid managed selection cannot bypass malformed bundled markers', async (context) => {
+  const pkg = await policyFixture(context);
+  const mainPath = path.join(pkg.bundled, 'SKILL.md');
+  fs.writeFileSync(mainPath, '<!-- memocap:begin --><!-- memocap:end -->');
+  await assert.rejects(pkg.module.default.server(pkg.input, { skillDirectory: pkg.directory }),
+    { name: 'PolicyError', code: 'policy_markers', path: mainPath });
   assert.deepEqual(pkg.calls(), []);
 });
 
