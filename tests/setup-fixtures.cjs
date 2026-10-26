@@ -20,7 +20,9 @@ function fixture(context) {
   const host = path.join(root, "host");
   fs.mkdirSync(path.join(host, "bin"), { recursive: true });
   fs.writeFileSync(path.join(host, "package.json"), JSON.stringify({ name: "opencode-ai", version: "1.19.3" }));
-  fs.writeFileSync(path.join(host, process.platform === "win32" ? "bin/opencode.cmd" : "bin/opencode"), "fixture host\n", { mode: 0o755 });
+  const hostScript = path.join(host, "bin", process.platform === "win32" ? "opencode.cjs" : "opencode");
+  fs.writeFileSync(hostScript, `#!${process.execPath}\nif (process.argv[2] !== '--version') process.exit(9);\nconsole.log('1.19.3');\n`, { mode: 0o755 });
+  if (process.platform === "win32") fs.writeFileSync(path.join(host, "bin/opencode.cmd"), `@echo off\r\n:: cmd-shim-target=${hostScript}\r\n`, { mode: 0o755 });
   const env = {
     HOME: home, USERPROFILE: home, PATH: [path.join(prefix, "bin"), path.join(host, "bin")].join(path.delimiter),
     XDG_CONFIG_HOME: path.join(home, "config"), XDG_STATE_HOME: path.join(home, "state"),
@@ -68,7 +70,6 @@ console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEM
     if (state.afterCommand) state.afterCommand(command, args);
     if (state.fail?.(command, args)) return { code: 1, stdout: "", stderr: "injected process failure" };
     const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
-    if (command === "opencode") return ok("1.19.3\n");
     if (command === "git") return ok("git version 2.50.0\n");
     if (command === "npm" || command === "pnpm") {
       if (command !== state.manager && args[0] !== "view") return { code: 1, stdout: "", stderr: "not installed" };
@@ -93,7 +94,10 @@ console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEM
       throw new Error("skills CLI is not part of managed setup");
     }
     if (path.isAbsolute(command)) {
-      const execution = spawnSync(process.execPath, [command === cliPath ? cliScript : command, ...args], { encoding: "utf8", env: { ...env, ...options.env } });
+      const { launcherScript } = await import("../scripts/setup/process.mjs");
+      const script = /\.(cmd|bat)$/i.test(command) ? launcherScript(command) : command;
+      if (!script) return { code: 126, stdout: "", stderr: `unsupported fixture shim ${command}` };
+      const execution = spawnSync(process.execPath, [script, ...args], { encoding: "utf8", env: { ...env, ...options.env } });
       if (execution.error) throw execution.error;
       return { code: execution.status ?? 1, stdout: execution.stdout || "", stderr: execution.stderr || "" };
     }

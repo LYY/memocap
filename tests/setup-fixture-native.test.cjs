@@ -5,6 +5,25 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const { fixture } = require("./setup-fixtures.cjs");
+const { snapshot } = require("./packaged-runtime.cjs");
+
+test("shared Windows host fixture has package metadata and a usable explicit cmd target", async (context) => {
+  const { inspectHost, verifyHost } = await import("../scripts/setup/host.mjs");
+  const { launcherScript } = await import("../scripts/setup/process.mjs");
+  const platform = Object.getOwnPropertyDescriptor(process, "platform");
+  Object.defineProperty(process, "platform", { value: "win32" });
+  try {
+    const setup = fixture(context);
+    const before = snapshot([setup.root]);
+    const host = inspectHost(setup.runtime);
+    assert.equal(host.version, "1.19.3");
+    assert.equal(host.source, fs.realpathSync(path.join(setup.root, "host/package.json")));
+    assert.equal(setup.calls.length, 0);
+    assert.ok(fs.statSync(launcherScript(host.executable_path)).isFile());
+    assert.equal(await verifyHost(setup.runtime, { ...host, version: null }), "1.19.3");
+    assert.deepEqual(snapshot([setup.root]), before);
+  } finally { Object.defineProperty(process, "platform", platform); }
+});
 
 for (const scope of ["global", "project"]) {
   test(`native ${scope} setup copies its policy within the selected filesystem root`, async (context) => {
