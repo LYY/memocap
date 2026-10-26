@@ -162,7 +162,9 @@ function runner(env, evidence, active, defaultCwd) {
     });
     evidence.commands.push({ executable: path.basename(executable), args, code: result.code,
       elapsed_ms: Date.now() - started, stdout_bytes: Buffer.byteLength(result.stdout),
-      stderr_bytes: Buffer.byteLength(result.stderr), ...(result.timedOut ? { timed_out: true } : {}) });
+      stderr_bytes: Buffer.byteLength(result.stderr), signal: result.signal,
+      stdout_tail: result.stdout.slice(-4000), stderr_tail: result.stderr.slice(-4000),
+      ...(result.timedOut ? { timed_out: true } : {}) });
     if (!options.allowFailure) assert.equal(result.code, 0,
       `${path.basename(executable)} ${args.join(" ")}: ${result.stderr.slice(-4000)} ${result.stdout.slice(-4000)}`);
     return result;

@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { repo, prepare, wireProvider, startHost, portClosed } = require('./opencode-v1/host.cjs');
+const { observe, retain } = require('./opencode-v1/phases.cjs');
 
 function reference(message) {
   const parts = typeof message.content === 'string' ? [message.content] :
@@ -34,10 +35,18 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       evidence.claims.packaged_installation = true;
       provider = await wireProvider();
       host = await startHost(fixture, provider, evidence);
-      evidence.loaded_commands = (await host.api('/command')).map(({ name, description, source }) =>
-        ({ name, description, source }));
+      const debugOptions = { cwd: fixture.directories.outside };
+      const effectiveConfig = await observe(evidence, 'debug_config', async () => {
+        const config = JSON.parse((await fixture.packaged.command(fixture.host, ['debug', 'config'], debugOptions)).stdout);
+        evidence.effective_skills = config.skills;
+        return config;
+      });
+      await observe(evidence, 'first_command', async () => {
+        evidence.loaded_commands = (await host.api('/command')).map(({ name, description, source }) =>
+          ({ name, description, source }));
+        assert.ok(evidence.loaded_commands.some((command) => command.name === 'memory'));
+      });
       evidence.loaded_tool_ids = await host.api('/experimental/tool/ids');
-      assert.ok(evidence.loaded_commands.some((command) => command.name === 'memory'));
       for (const tool of ['memocap_scope', 'memocap_recall', 'memocap_remember']) {
         assert.ok(evidence.loaded_tool_ids.includes(tool), `${tool} registered by actual host`);
       }
@@ -60,9 +69,6 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       const status = await command('status');
       assert.deepEqual(status.policy, { mode: 'managed', directory: fixture.managed,
         mainPath: path.join(fixture.managed, 'SKILL.md'), version: fixture.version, digest: fixture.bundled.digest });
-      const debugOptions = { cwd: fixture.directories.outside };
-      const effectiveConfig = JSON.parse((await fixture.packaged.command(fixture.host, ['debug', 'config'], debugOptions)).stdout);
-      evidence.effective_skills = effectiveConfig.skills;
       const debugSkill = await fixture.packaged.command(fixture.host, ['debug', 'skill', '--print-logs'], debugOptions);
       const discovered = JSON.parse(debugSkill.stdout)
         .filter((skill) => skill.name === 'memocap');
@@ -207,7 +213,8 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       if (evidence.host?.url) evidence.cleanup.host_port_closed = await portClosed(evidence.host.url);
       if (provider) {
         evidence.request_count = provider.requests.length;
-        await provider.close();
+        await observe(evidence, 'provider_cleanup', () => provider.close())
+          .catch((error) => { evidence.cleanup.provider_error = error.message; failure ||= error; });
         evidence.cleanup.provider_port_closed = await portClosed(provider.url);
       }
       evidence.cleanup.provider_closed = Boolean(provider);
@@ -231,14 +238,13 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
           assert.equal(evidence.linux_offline.cleanup.port_closed, true);
         } catch (error) { failure = error; evidence.status = 'failed'; evidence.error = error.stack; }
       } else evidence.linux_offline = { status: 'not_run', reason: 'Linux network namespace acceptance runs in the native Linux CI job; macOS/Windows outbound denial is not claimed' };
-      if (fixture) evidence.cleanup.package = await fixture.cleanup();
+      if (fixture) evidence.cleanup.package = await observe(evidence, 'package_cleanup', () => fixture.cleanup())
+        .catch((error) => { evidence.cleanup.package_error = error.message; failure ||= error; });
+      retain(evidenceFile, evidence, [[root, '<isolated-root>'], [repo, '<repository>']]);
       fs.rmSync(root, { recursive: true, force: true });
       evidence.cleanup.isolated_root_removed = !fs.existsSync(root);
       evidence.finished_at = new Date().toISOString();
-      const sanitize = (text) => text.split(root).join('<isolated-root>').split(repo).join('<repository>');
-      fs.mkdirSync(path.dirname(evidenceFile), { recursive: true });
-      fs.writeFileSync(evidenceFile, `${sanitize(JSON.stringify(evidence, null, 2))}\n`);
-      assert.equal(JSON.parse(fs.readFileSync(evidenceFile)).status, evidence.status);
+      retain(evidenceFile, evidence, [[root, '<isolated-root>'], [repo, '<repository>']]);
     }
     if (failure) throw failure;
   });

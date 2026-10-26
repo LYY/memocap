@@ -9,6 +9,7 @@ const { pathToFileURL } = require('node:url');
 const { lifecycleFixture } = require('../setup-package-lifecycle-fixture.cjs');
 const { runLifecycle } = require('../setup-package-lifecycle.cjs');
 const { mergeHostConfig } = require('../packaged-runtime.cjs');
+const { enter, finish } = require('./phases.cjs');
 
 const repo = path.resolve(__dirname, '../..');
 const officialVersion = '1.19.3';
@@ -106,6 +107,8 @@ async function startHost(fixture, provider, evidence) {
   await once(reservation, 'listening');
   const port = reservation.address().port;
   await new Promise((resolve) => reservation.close(resolve));
+  const listenerPhase = enter(evidence, 'listener_ready');
+  evidence.host ||= {};
   const child = spawn(fixture.host, ['serve', '--hostname=127.0.0.1', `--port=${port}`, '--print-logs'], {
     env, cwd: fixture.directories.outside, stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -117,6 +120,8 @@ async function startHost(fixture, provider, evidence) {
     finally { clearTimeout(timer); }
   }
   let output = '';
+  let stdout = '';
+  let stderr = '';
   let url;
   try {
     url = await new Promise((resolve, reject) => {
@@ -129,29 +134,56 @@ async function startHost(fixture, provider, evidence) {
         const match = /opencode server listening on (http:\/\/[^\s]+)/.exec(output);
         if (match) { clearTimeout(timer); resolve(match[1]); }
       };
-      child.stdout.on('data', received);
-      child.stderr.on('data', received);
+      child.stdout.on('data', (chunk) => { stdout = (stdout + chunk).slice(-6000); received(chunk); });
+      child.stderr.on('data', (chunk) => { stderr = (stderr + chunk).slice(-6000); received(chunk); });
     });
+    finish(listenerPhase);
   } catch (error) {
+    finish(listenerPhase, error);
+    const cleanupPhase = enter(evidence, 'host_cleanup');
     await stop();
+    finish(cleanupPhase);
+    evidence.host.stdout_tail = stdout;
+    evidence.host.stderr_tail = stderr;
     throw error;
   }
   evidence.host.pid = child.pid;
   evidence.host.url = url;
   assert.equal(new URL(url).port, String(port), 'host must bind the isolated ephemeral port');
   async function api(route, body) {
-    const response = await fetch(`${url}${route}`, { method: body === undefined ? 'GET' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-opencode-directory': fixture.directories.outside },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(25000) });
-    const raw = await response.text();
-    assert.ok(response.ok, `${route}: ${response.status}: ${raw.slice(0, 1000)}`);
-    return raw ? JSON.parse(raw) : null;
+    const request = { route, started_at: new Date().toISOString(),
+      started_monotonic_ms: performance.now(), stage: 'fetch' };
+    evidence.api_requests ||= [];
+    evidence.api_requests.push(request);
+    const signal = AbortSignal.timeout(25000);
+    try {
+      const response = await fetch(`${url}${route}`, { method: body === undefined ? 'GET' : 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-opencode-directory': fixture.directories.outside },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal });
+      request.stage = 'body_read';
+      const raw = await response.text();
+      request.stage = 'response';
+      request.http_status = response.status;
+      assert.ok(response.ok, `${route}: ${response.status}: ${raw.slice(0, 1000)}`);
+      const parsed = raw ? JSON.parse(raw) : null;
+      finish(request);
+      return parsed;
+    } catch (error) {
+      request.aborted = signal.aborted;
+      if (signal.aborted) request.abort_phase = request.stage;
+      finish(request, error);
+      throw error;
+    }
   }
   return { api, async close() {
+    const cleanupPhase = enter(evidence, 'host_cleanup');
     try { await api('/instance/dispose', {}); } catch (error) { evidence.cleanup.dispose_error = error.message; }
     const [code, signal] = await stop();
     evidence.host.exit = { code, signal };
     evidence.host.log_tail = output.slice(-2000);
+    evidence.host.stdout_tail = stdout;
+    evidence.host.stderr_tail = stderr;
+    finish(cleanupPhase);
   } };
 }
 
