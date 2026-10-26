@@ -98,9 +98,9 @@ test("all explicitly included global and project scopes upgrade as one fixed-ver
 test("doctor checks cached binary integrity and only executes readonly backend inspections", async (context) => {
   const f = fixture(context);
   await f.setup(["install", "--yes"]);
-  const directory = path.join(f.home, "Library/Caches/memocap/0.1.0");
+  const directory = path.dirname(f.cacheBinary("0.1.0"));
   fs.mkdirSync(directory, { recursive: true });
-  const name = "memocap-aarch64-apple-darwin";
+  const name = path.basename(f.cacheBinary("0.1.0"));
   fs.writeFileSync(path.join(directory, name), "verified binary bytes");
   fs.writeFileSync(path.join(directory, `${name}.sha256`), `${crypto.createHash("sha256").update("verified binary bytes").digest("hex")}  ${name}\n`);
   f.calls.length = 0;

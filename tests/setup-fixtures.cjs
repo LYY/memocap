@@ -99,13 +99,19 @@ console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEM
     }
     return { code: 1, stdout: "", stderr: `unsupported fixture process ${command} ${args.join(" ")}` };
   }
-  const runtime = { env, cwd: project, packageRoot, run, platform: "darwin", arch: "arm64" };
+  const runtime = { env, cwd: project, packageRoot, run, platform: process.platform, arch: process.arch };
+  function cacheBinary(version) {
+    const base = process.platform === "darwin" ? path.join(home, "Library/Caches")
+      : process.platform === "win32" ? env.LOCALAPPDATA : env.XDG_CACHE_HOME;
+    const { resolveReleaseAsset } = require("../bin/cli.cjs");
+    return path.join(base, "memocap", version, resolveReleaseAsset(process.platform, process.arch).name);
+  }
   async function setup(args) {
     const { runSetup } = await import("../scripts/setup/core.mjs");
     return runSetup(args, runtime);
   }
   function managedPath() { return JSON.parse(fs.readFileSync(config)).plugin.find((entry) => Array.isArray(entry) && entry[0].startsWith("@lyy-gh/memocap@"))[1].skillDirectory; }
-  return { root, home, prefix, project, packageRoot, config, env, calls, state, installed, cliPath, cliScript, installCLI, skillPaths, managedPath, runtime, setup };
+  return { root, home, prefix, project, packageRoot, config, env, calls, state, installed, cliPath, cliScript, installCLI, skillPaths, managedPath, cacheBinary, runtime, setup };
 }
 
 function failPolicyCopy(context) {

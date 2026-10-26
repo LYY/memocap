@@ -136,8 +136,12 @@ test('two instances from one plugin module keep their selected directories after
 test('two packages select independent managed rules and retain immutable initialization snapshots', async (context) => {
   const first = await policyFixture(context);
   const second = await policyFixture(context);
-  const secondMain = path.join(second.bundled, 'SKILL.md');
-  fs.writeFileSync(secondMain, fs.readFileSync(secondMain, 'utf8').replace(/\r?\n/g, '\r\n'));
+  for (const [pkg, newline] of [[first, '\n'], [second, '\r\n']]) {
+    const main = path.join(pkg.bundled, 'SKILL.md');
+    const bytes = fs.readFileSync(main, 'utf8').replace(/\r?\n/g, newline);
+    fs.writeFileSync(main, bytes);
+    fs.writeFileSync(path.join(pkg.directory, 'SKILL.md'), bytes);
+  }
   fs.cpSync(second.bundled, second.directory, { recursive: true });
   const { inspectPolicy } = await import('../lib/policy.mjs');
   const snapshots = [inspectPolicy(first.directory), inspectPolicy(second.directory)];

@@ -14,7 +14,7 @@ test("an update committed before manifest failure retains the new ownership afte
   let committed = false;
   let failed = false;
   context.mock.method(fs, "renameSync", (source, destination) => {
-    if (committed && !failed && String(destination).endsWith("/memocap/setup.json")) { failed = true; throw Object.assign(new Error("manifest commit fault"), { code: "EACCES" }); }
+    if (committed && !failed && destination === path.join(f.env.XDG_STATE_HOME, "memocap/setup.json")) { failed = true; throw Object.assign(new Error("manifest commit fault"), { code: "EACCES" }); }
     const outcome = rename(source, destination);
     if (destination === f.config) committed = true;
     return outcome;

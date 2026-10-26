@@ -67,11 +67,11 @@ else if (process.argv.includes('prepare')) { fs.mkdirSync(path.dirname(database)
 else { const ready=fs.existsSync(database); console.log(JSON.stringify({format_version:1,status:'ok',backend:'local',origin:'cli',inspection:{core_status:ready?'ready':'not_initialized',schema_version:ready?'2.0':null,visible:ready?{schema_version:'2.0',placements:[],addressable_total:0,effective_total:0}:null,activity_status:ready?'ready':'not_initialized',activity_error:null,capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status','single_database','schema_2_compatible']}})); }
 `;
   fs.writeFileSync(path.join(f.packageRoot, "bin/cli.cjs"), cliSource, { mode: 0o755 });
-  const cache = path.join(f.home, "Library/Caches/memocap/0.1.0");
+  const cache = path.dirname(f.cacheBinary("0.1.0"));
   fs.mkdirSync(cache, { recursive: true });
-  const binary = path.join(cache, "memocap-aarch64-apple-darwin");
+  const binary = f.cacheBinary("0.1.0");
   fs.writeFileSync(binary, cliSource, { mode: 0o755 });
-  fs.writeFileSync(`${binary}.sha256`, `${crypto.createHash("sha256").update(cliSource).digest("hex")}  memocap-aarch64-apple-darwin\n`);
+  fs.writeFileSync(`${binary}.sha256`, `${crypto.createHash("sha256").update(cliSource).digest("hex")}  ${path.basename(binary)}\n`);
   fs.writeFileSync(path.join(f.packageRoot, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version: "0.1.0", bin: { memocap: "bin/cli.cjs" }, files: ["bin", "skills"] }));
   const npm = executable("npm", process.env);
   assert.ok(npm, "npm must be installed for the packed lifecycle contract");
