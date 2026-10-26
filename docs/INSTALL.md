@@ -274,8 +274,9 @@ After restarting OpenCode yourself, use a new session and verify the live
 instance. `opencode debug skill` must show the actual `memocap` skill location.
 In that session, `/memory status` must report `policy.mode: "managed"` and the
 actual `policy.directory`, `policy.mainPath`, `policy.version`, and
-`policy.digest`. The host location and `policy.directory` must resolve to the
-same directory; the version and full digest must match the installed payload.
+`policy.digest`. The host location resolves to the `SKILL.md` file and must
+equal the canonical `policy.mainPath`; its parent directory must equal
+`policy.directory`. The version and full digest must match the installed payload.
 These are runtime fields, not `doctor` fields, and the policy object has no
 `source` property. The skill rules are added at compaction; setup does not force
 them into every turn or prove that a model adopted them. Without a real session,

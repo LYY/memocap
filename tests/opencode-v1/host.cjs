@@ -109,6 +109,13 @@ async function startHost(fixture, provider, evidence) {
   const child = spawn(fixture.host, ['serve', '--hostname=127.0.0.1', `--port=${port}`, '--print-logs'], {
     env, cwd: fixture.directories.outside, stdio: ['ignore', 'pipe', 'pipe'],
   });
+  const completed = new Promise((resolve) => child.once('close', (code, signal) => resolve([code, signal])));
+  async function stop() {
+    child.kill('SIGTERM');
+    const timer = setTimeout(() => child.kill('SIGKILL'), 3000);
+    try { return await completed; }
+    finally { clearTimeout(timer); }
+  }
   let output = '';
   let url;
   try {
@@ -126,11 +133,7 @@ async function startHost(fixture, provider, evidence) {
       child.stderr.on('data', received);
     });
   } catch (error) {
-    const exited = once(child, 'exit');
-    child.kill();
-    const timer = setTimeout(() => child.kill('SIGKILL'), 3000);
-    await exited;
-    clearTimeout(timer);
+    await stop();
     throw error;
   }
   evidence.host.pid = child.pid;
@@ -146,11 +149,7 @@ async function startHost(fixture, provider, evidence) {
   }
   return { api, async close() {
     try { await api('/instance/dispose', {}); } catch (error) { evidence.cleanup.dispose_error = error.message; }
-    const exited = once(child, 'exit');
-    child.kill('SIGTERM');
-    const timer = setTimeout(() => child.kill('SIGKILL'), 3000);
-    const [code, signal] = await exited;
-    clearTimeout(timer);
+    const [code, signal] = await stop();
     evidence.host.exit = { code, signal };
     evidence.host.log_tail = output.slice(-2000);
   } };

@@ -6,6 +6,74 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const { isolatedEnvironment, mergeHostConfig, denyLinks } = require("./packaged-runtime.cjs");
+const { startHost, wireProvider, portClosed } = require("./opencode-v1/host.cjs");
+
+function hostFixture(context, script) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-host-lifecycle-"));
+  context.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(root, "serve"), script);
+  fs.writeFileSync(path.join(root, "opencode.json"), "{}");
+  return { host: process.execPath, config: path.join(root, "opencode.json"),
+    env: isolatedEnvironment(root), directories: { outside: root } };
+}
+
+async function promptly(operation) {
+  let timer;
+  try {
+    return await Promise.race([operation, new Promise((_resolve, reject) => {
+      timer = setTimeout(() => reject(new Error("host lifecycle exceeded 1500ms")), 1500);
+    })]);
+  } finally { clearTimeout(timer); }
+}
+
+test("startHost rejects a real immediate exit and reaches outer failure evidence and cleanup", async (context) => {
+  const fixture = hostFixture(context, "process.exit(17);\n");
+  const provider = await wireProvider();
+  const evidence = { host: {}, cleanup: {} };
+  const started = performance.now();
+  let failure;
+  try { await promptly(startHost(fixture, provider, evidence)); }
+  catch (error) { failure = error; evidence.failure = error.message; }
+  finally {
+    await provider.close();
+    evidence.cleanup.provider_port_closed = await portClosed(provider.url);
+    fs.writeFileSync(path.join(fixture.directories.outside, "failure.json"), JSON.stringify(evidence));
+  }
+  assert.match(failure?.message || "", /host exited before ready: 17\/null/);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(fixture.directories.outside, "failure.json")))
+    .cleanup.provider_port_closed, true);
+  context.diagnostic(`immediate exit rejected and outer cleanup completed in ${Math.round(performance.now() - started)}ms`);
+});
+
+test("startHost closes a real ready host after disposal already exited the child", async (context) => {
+  const fixture = hostFixture(context, `
+    const http = require('node:http');
+    const port = Number(process.argv.find(arg => arg.startsWith('--port=')).split('=')[1]);
+    const server = http.createServer((request, response) => {
+      response.end('{}');
+      server.close(() => process.exit(0));
+    });
+    server.listen(port, '127.0.0.1', () => {
+      console.log('opencode server listening on http://127.0.0.1:' + port);
+    });
+  `);
+  const evidence = { host: {}, cleanup: {} };
+  const host = await startHost(fixture, { url: "http://127.0.0.1:1/v1" }, evidence);
+  context.after(() => { try { process.kill(evidence.host.pid, "SIGKILL"); } catch (error) {
+    if (error.code !== "ESRCH") throw error;
+  } });
+  await promptly(host.close());
+  await promptly(host.close());
+  assert.equal(await portClosed(evidence.host.url), true);
+  assert.ok(evidence.host.exit.code === 0 || evidence.host.exit.signal === "SIGTERM");
+});
+
+test("startHost rejects a real spawn error without an unhandled rejection", async (context) => {
+  const fixture = hostFixture(context, "");
+  fixture.host = path.join(fixture.directories.outside, "missing-host");
+  await assert.rejects(promptly(startHost(fixture, { url: "http://127.0.0.1:1/v1" },
+    { host: {}, cleanup: {} })), { code: "ENOENT" });
+});
 
 test("packaged harness isolates every persistent root without inheriting credentials", (context) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-harness-env-"));

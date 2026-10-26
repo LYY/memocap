@@ -220,9 +220,10 @@ running OpenCode process loaded the plugin or skill. Do not restart OpenCode
 automatically. After the user restarts it, `opencode debug skill` must show the
 actual `memocap` skill location. In that session, `/memory status` must report
 `policy.mode: "managed"` and the runtime `policy.directory`, `policy.mainPath`,
-`policy.version`, and `policy.digest`. The debug location and policy directory
-must resolve to the same path; the version and full digest must match the
-installed payload. The runtime policy object has no `source` property. Observe a
+`policy.version`, and `policy.digest`. Resolve the debug location to the
+`SKILL.md` file and compare it with the canonical `policy.mainPath`; compare
+its parent directory with `policy.directory`. The version and full digest must
+match the installed payload. The runtime policy object has no `source` property. Observe a
 real recall receipt before reporting `runtime_verified`. If no provider or live
 session is available, report the static result, `runtime.status: not_run`, and
 `restart_required` when applicable. Policy rules are appended at compaction,
