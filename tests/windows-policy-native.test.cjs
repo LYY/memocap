@@ -11,6 +11,21 @@ const nativeWindows = { skip: process.platform !== "win32" };
 const main = Buffer.from("<!-- memocap:begin -->\r\nfixture\r\n<!-- memocap:end -->\r\n");
 const binary = Buffer.from([0, 255, 128, 13, 10]);
 
+test("packaged Windows profile provides existing standard roaming and local application data roots", (context) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap profile roots "));
+  context.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  context.mock.property(process, "platform", "win32");
+  context.mock.property(process, "env", { ...process.env, SystemRoot: "C:\\Windows" });
+  const { isolatedEnvironment } = require("./packaged-runtime.cjs");
+
+  const env = isolatedEnvironment(root);
+
+  assert.equal(env.APPDATA, path.join(env.USERPROFILE, "AppData", "Roaming"));
+  assert.equal(env.LOCALAPPDATA, path.join(env.USERPROFILE, "AppData", "Local"));
+  assert.equal(fs.statSync(env.APPDATA).isDirectory(), true);
+  assert.equal(fs.statSync(env.LOCALAPPDATA).isDirectory(), true);
+});
+
 function fixture(context) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap windows policy "));
   context.after(() => fs.rmSync(root, { recursive: true, force: true }));
