@@ -42,7 +42,8 @@ async function legacyMissing(fixture, prepared, evidence) {
   fs.rmSync(previousManifest);
   await fixture.command("npm", ["uninstall", "--global", "@lyy-gh/memocap"]);
   const oldEnv = { ...fixture.env, NODE_OPTIONS: "", npm_config_registry: "https://registry.npmjs.org",
-    PATH: fixture.env.PATH.split(path.delimiter).filter((directory) => directory !== path.join(fixture.root, "guard-bin")).join(path.delimiter) };
+    PATH: [path.dirname(fixture.host), ...fixture.env.PATH.split(path.delimiter)
+      .filter((directory) => directory !== path.join(fixture.root, "guard-bin"))].join(path.delimiter) };
   const produced = await fixture.command(process.execPath, [path.join(oldRoot, "scripts/setup.mjs"),
     "install", "--to", version, "--global", "--yes", "--json"], { env: oldEnv, timeout: 240000 });
   const report = JSON.parse(produced.stdout);
