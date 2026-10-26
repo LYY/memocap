@@ -27,19 +27,24 @@ export function executable(name, env) {
 }
 
 export function windowsShimScript(program) {
+  return windowsShimTarget(program)?.filename || null;
+}
+
+function windowsShimTarget(program) {
   const target = readText(program)?.match(/^(?:::|rem) cmd-shim-target=(.+)\r?$/mi)?.[1]?.trim();
-  if (target) return path.isAbsolute(target) && fs.existsSync(target) ? fs.realpathSync(target) : null;
+  if (target) return path.isAbsolute(target) && fs.existsSync(target) ? { filename: fs.realpathSync(target), interpreter: process.execPath } : null;
   const directory = path.dirname(program);
   const stem = path.basename(program, path.extname(program)).toLowerCase();
   const modules = path.basename(directory) === ".bin" ? path.dirname(directory) : path.join(directory, "node_modules");
-  const scripts = {
+  const targets = {
     npm: [path.join(modules, "npm/bin/npm-cli.js")],
     npx: [path.join(modules, "npm/bin/npx-cli.js")],
     memocap: [path.join(modules, "@lyy-gh/memocap/bin/cli.cjs")],
     pnpm: [path.join(modules, "pnpm/bin/pnpm.cjs"), path.join(modules, "pnpm/bin/pnpm.mjs"), path.join(directory, "pnpm.cjs")],
+    opencode: [path.join(modules, "opencode-ai/bin/opencode.exe")],
   };
-  for (const filename of scripts[stem] || []) {
-    try { if (fs.statSync(filename).isFile()) return filename; }
+  for (const filename of targets[stem] || []) {
+    try { if (fs.statSync(filename).isFile()) return { filename, interpreter: stem === "opencode" ? null : process.execPath }; }
     catch (error) { if (!["ENOENT", "ENOTDIR"].includes(error.code)) throw error; }
   }
   return null;
@@ -66,10 +71,10 @@ export async function runProcess(command, args, options = {}) {
     program = path.isAbsolute(command) ? command : executable(command, env);
     if (!program) return { code: 127, stdout: "", stderr: `Executable not found: ${command}` };
     if (/\.(cmd|bat)$/i.test(program)) {
-      const script = windowsShimScript(program);
-      if (!script) return { code: 126, stdout: "", stderr: `Cannot safely dispatch Windows shim: ${program}` };
-      program = process.execPath;
-      argumentsList = [script, ...args];
+      const target = windowsShimTarget(program);
+      if (!target) return { code: 126, stdout: "", stderr: `Cannot safely dispatch Windows shim: ${program}` };
+      program = target.interpreter || target.filename;
+      argumentsList = target.interpreter ? [target.filename, ...args] : args;
     }
   }
   let captureDirectory;
