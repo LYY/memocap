@@ -18,8 +18,9 @@ export async function delegateWorker(argv, context) {
   return { ...report, bootstrap_runner_version: context.report.runner_version, delegated_worker: true };
 }
 
-export function sharedImpact(context) {
+export function sharedImpact(context, inspections = []) {
   const selected = new Set(context.scopes.map((scope) => scope.id));
+  for (const inspection of inspections) if (inspection.owner_reused && inspection.owner?.record?.skill?.version === context.target) selected.add(inspection.owner_id);
   const references = Object.entries(context.manifest.installs).filter(([id]) => !selected.has(id)).map(([id, record]) => ({ id, version: record.version, config: record.config, directory: record.directory }));
   context.report.shared_cli.other_known_installs = references;
   context.report.shared_cli.unknown_installs = "not_enumerated";

@@ -52,23 +52,26 @@ test("new target update delegates to exact worker and never falls back after fai
 
 test("shared CLI references require explicit inclusion in an update", async (context) => {
   const f = fixture(context);
-  await f.setup(["install", "--global", "--yes"]);
+  const independent = path.join(f.root, "independent project");
+  fs.mkdirSync(independent);
+  await f.setup(["install", "--project", independent, "--yes"]);
   const project = await f.setup(["install", "--project", f.project, "--yes"]);
   assert.equal(project.exit_code, 0, JSON.stringify(project));
   fs.writeFileSync(path.join(f.packageRoot, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version: "0.2.0" }));
-  const report = await f.setup(["update", "--to", "0.2.0", "--global", "--yes"]);
+  const report = await f.setup(["update", "--to", "0.2.0", "--project", f.project, "--yes"]);
   assert.equal(report.error.code, "shared_cli_conflict");
 });
 
 test("modified managed skill stops update and survives uninstall", async (context) => {
   const f = fixture(context);
   await f.setup(["install", "--yes"]);
-  const skillFile = path.join(f.skillPaths(f.project, true).canonical, "SKILL.md");
+  const skillFile = path.join(f.managedPath(), "SKILL.md");
   fs.appendFileSync(skillFile, "user addition\n");
   const update = await f.setup(["update", "--to", "0.1.0", "--yes"]);
   assert.equal(update.error.code, "skill_modified");
   const uninstall = await f.setup(["uninstall", "--yes"]);
-  assert.equal(uninstall.exit_code > 0, true);
+  assert.equal(uninstall.exit_code, 0);
+  assert.equal(uninstall.warnings.some((warning) => warning.code === "skill_modified"), true);
   assert.equal(fs.readFileSync(skillFile, "utf8").endsWith("user addition\n"), true);
 });
 

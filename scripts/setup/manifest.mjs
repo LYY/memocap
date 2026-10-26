@@ -3,6 +3,9 @@ import path from "node:path";
 import { SetupError } from "./arguments.mjs";
 import { atomicWrite, readText } from "./files.mjs";
 
+const locks = new WeakSet();
+const isRecord = (record) => record !== null && typeof record === "object" && !Array.isArray(record);
+
 export function manifestLocation(runtime) {
   return path.join(runtime.env.XDG_STATE_HOME || (runtime.platform === "win32" ? runtime.env.LOCALAPPDATA || path.join(runtime.env.USERPROFILE, "AppData/Local") : path.join(runtime.env.HOME, ".local/state")), "memocap/setup.json");
 }
@@ -13,8 +16,8 @@ export function loadManifest(runtime) {
   let manifest;
   try { manifest = text === null ? null : JSON.parse(text); }
   catch (error) { throw new SetupError("invalid_json", `Invalid JSON in ${filename}`, error.message); }
-  if (manifest && (manifest.format_version !== 1 || !manifest.installs || typeof manifest.installs !== "object" || Array.isArray(manifest.installs))) throw new SetupError("manifest_version", `Unrecognized setup manifest: ${filename}`);
-  return { filename, text, manifest: manifest || { format_version: 1, installs: {} } };
+  if (text !== null && (!isRecord(manifest) || ![1, 2].includes(manifest.format_version) || !isRecord(manifest.installs) || !Object.values(manifest.installs).every(isRecord))) throw new SetupError("manifest_version", `Unrecognized setup manifest: ${filename}`);
+  return { filename, text, manifest: text === null ? { format_version: 2, installs: {} } : manifest };
 }
 
 export function lockManifest(context) {
@@ -24,7 +27,19 @@ export function lockManifest(context) {
   try { descriptor = fs.openSync(filename, "wx", 0o600); }
   catch (error) { if (error.code === "EEXIST") throw new SetupError("setup_busy", `Another setup owns ${filename}; inspect owner before manual stale-lock removal`); throw error; }
   fs.writeFileSync(descriptor, JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() }));
-  return () => { fs.closeSync(descriptor); fs.unlinkSync(filename); };
+  locks.add(context);
+  return () => { locks.delete(context); fs.closeSync(descriptor); fs.unlinkSync(filename); };
+}
+
+export function upgradeManifest(context) {
+  if (!locks.has(context)) throw new SetupError("manifest_lock_required", "Acquire the manifest lock before upgrading its format");
+  if (context.manifest.format_version === 2) return { status: "unchanged" };
+  if (context.manifest.format_version !== 1) throw new SetupError("manifest_version", `Unrecognized setup manifest: ${context.manifestPath}`);
+  const previous = context.manifest;
+  context.manifest = { ...previous, format_version: 2 };
+  try { saveManifest(context); }
+  catch (error) { context.manifest = previous; throw error; }
+  return { status: "changed" };
 }
 
 export function saveManifest(context) {

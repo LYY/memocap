@@ -13,7 +13,7 @@ function fixture(context) {
   const packageRoot = path.join(root, "runner");
   const project = path.join(root, "project with spaces");
   for (const directory of [home, prefix, packageRoot, project]) fs.mkdirSync(directory, { recursive: true });
-  const skillText = "---\nname: memocap\ndescription: fixture\n---\nfixture release\n";
+  const skillText = "---\nname: memocap\ndescription: fixture\n---\n<!-- memocap:begin -->\nfixture release\n<!-- memocap:end -->\n";
   fs.mkdirSync(path.join(packageRoot, "skills/memocap"), { recursive: true });
   fs.writeFileSync(path.join(packageRoot, "skills/memocap/SKILL.md"), skillText);
   fs.writeFileSync(path.join(packageRoot, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version: "0.1.0" }));
@@ -90,30 +90,7 @@ console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEM
       }
     }
     if (command === "npx" && args.includes("skills@1.7.4")) {
-      const global = args.includes("--global");
-      const paths = skillPaths(options.cwd || project, global);
-      if (args.includes("list")) {
-        const present = fs.existsSync(path.join(paths.canonical, "SKILL.md"));
-        const metadata = fs.existsSync(paths.lock) ? JSON.parse(fs.readFileSync(paths.lock)).skills.memocap : null;
-        return ok(JSON.stringify(present ? [{ name: "memocap", path: paths.canonical,
-          scope: global ? "global" : "project", agents: state.agents,
-          source: metadata?.source ?? null, sourceUrl: metadata?.sourceUrl ?? null, sourceType: metadata?.sourceType ?? null }] : []));
-      }
-      if (args.includes("add")) {
-        fs.mkdirSync(path.dirname(paths.canonical), { recursive: true });
-        fs.cpSync(path.join(packageRoot, "skills/memocap"), paths.canonical, { recursive: true });
-        const sourceUrl = args[args.indexOf("add") + 1];
-        fs.mkdirSync(path.dirname(paths.lock), { recursive: true });
-        fs.writeFileSync(paths.lock, JSON.stringify({ version: global ? 3 : 1, skills: {
-          memocap: { source: "LYY/memocap", sourceUrl, sourceType: "github", ref: sourceUrl.split("/").at(-1) },
-        } }));
-        return ok();
-      }
-      if (args.includes("remove")) {
-        if (state.agents.some((agent) => agent !== "OpenCode")) return { code: 1, stdout: "", stderr: "shared" };
-        fs.rmSync(paths.canonical, { recursive: true, force: true });
-        return ok();
-      }
+      throw new Error("skills CLI is not part of managed setup");
     }
     if (path.isAbsolute(command)) {
       const execution = spawnSync(process.execPath, [command === cliPath ? cliScript : command, ...args], { encoding: "utf8", env: { ...env, ...options.env } });
@@ -127,7 +104,16 @@ console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEM
     const { runSetup } = await import("../scripts/setup/core.mjs");
     return runSetup(args, runtime);
   }
-  return { root, home, prefix, project, packageRoot, config, env, calls, state, installed, cliPath, cliScript, installCLI, skillPaths, runtime, setup };
+  function managedPath() { return JSON.parse(fs.readFileSync(config)).plugin.find((entry) => Array.isArray(entry) && entry[0].startsWith("@lyy-gh/memocap@"))[1].skillDirectory; }
+  return { root, home, prefix, project, packageRoot, config, env, calls, state, installed, cliPath, cliScript, installCLI, skillPaths, managedPath, runtime, setup };
 }
 
-module.exports = { fixture };
+function failPolicyCopy(context) {
+  const copy = fs.cpSync;
+  context.mock.method(fs, "cpSync", (source, destination, options) => {
+    if (String(destination).includes(".memocap-policy-")) throw Object.assign(new Error("injected partial policy copy"), { code: "EACCES" });
+    return copy(source, destination, options);
+  });
+}
+
+module.exports = { fixture, failPolicyCopy };

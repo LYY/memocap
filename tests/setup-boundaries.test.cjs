@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const crypto = require("node:crypto");
-const { fixture } = require("./setup-fixtures.cjs");
+const { fixture, failPolicyCopy } = require("./setup-fixtures.cjs");
 
 test("upgrade changes only the source token of plugin tuple preserving option comments", async (context) => {
   const f = fixture(context);
@@ -17,12 +17,13 @@ test("upgrade changes only the source token of plugin tuple preserving option co
   assert.equal(fs.readFileSync(f.config, "utf8").includes("// option comment"), true);
 });
 
-test("failed install reports current configured plugin after partial skill write", async (context) => {
+test("failed copy reports missing plugin without exposing a partial policy", async (context) => {
   const f = fixture(context);
-  f.state.fail = (command, args) => command === "npx" && args.includes("add");
+  failPolicyCopy(context);
   const report = await f.setup(["install", "--yes"]);
   assert.equal(report.exit_code, 1);
-  assert.equal(report.scopes[0].plugin.status, "configured");
+  assert.equal(report.scopes[0].plugin.status, "missing");
+  assert.equal(fs.existsSync(f.config), false);
   assert.equal(report.scopes[0].skill.status, "missing");
 });
 
@@ -38,7 +39,7 @@ test("uninstall still works after the user has removed the OpenCode host", async
 test("dry-run refuses a modified canonical skill reachable through a config symlink", async (context) => {
   const f = fixture(context);
   await f.setup(["install", "--yes"]);
-  const canonical = f.skillPaths(f.project, true).canonical;
+  const canonical = f.managedPath();
   fs.mkdirSync(path.join(path.dirname(f.config), "skills"), { recursive: true });
   fs.symlinkSync(canonical, path.join(path.dirname(f.config), "skills/memocap"), "dir");
   fs.appendFileSync(path.join(canonical, "SKILL.md"), "changed\n");
@@ -52,7 +53,7 @@ test("a second discoverable copy conflicts even if one owned copy is unchanged",
   await f.setup(["install", "--yes"]);
   const duplicate = path.join(path.dirname(f.config), "skills/memocap");
   fs.mkdirSync(path.dirname(duplicate), { recursive: true });
-  fs.cpSync(f.skillPaths(f.project, true).canonical, duplicate, { recursive: true });
+  fs.cpSync(f.managedPath(), duplicate, { recursive: true });
   const report = await f.setup(["update", "--to", "0.1.0", "--dry-run"]);
   assert.equal(report.error.code, "duplicate_skill");
 });
@@ -73,7 +74,7 @@ test("a skill edit made during package update is preserved instead of overwritte
   await f.setup(["install", "--yes"]);
   fs.writeFileSync(path.join(f.packageRoot, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version: "0.2.0" }));
   fs.appendFileSync(path.join(f.packageRoot, "skills/memocap/SKILL.md"), "new release\n");
-  const skillFile = path.join(f.skillPaths(f.project, true).canonical, "SKILL.md");
+  const skillFile = path.join(f.managedPath(), "SKILL.md");
   f.state.afterCommand = (_command, args) => { if (args[0] === "install") fs.appendFileSync(skillFile, "concurrent user edit\n"); };
   const report = await f.setup(["update", "--to", "0.2.0", "--yes"]);
   assert.equal(report.error?.code, "skill_modified");
@@ -90,7 +91,8 @@ test("all explicitly included global and project scopes upgrade as one fixed-ver
   const report = await f.setup(["update", "--to", "0.2.0", "--global", "--project", f.project, "--yes"]);
   assert.equal(report.exit_code, 0, JSON.stringify(report));
   assert.equal(report.shared_cli.executable_version, "0.2.0");
-  assert.equal(report.scopes.every((scope) => scope.plugin.entries[0] === "@lyy-gh/memocap@0.2.0" && scope.skill.source.ref === "v0.2.0"), true);
+  assert.equal(report.scopes.every((scope) => scope.plugin.entries[0][0] === "@lyy-gh/memocap@0.2.0" && scope.skill.source.version === "0.2.0"), true);
+  assert.equal(report.scopes[1].owner_reused, true);
 });
 
 test("doctor checks cached binary integrity and only executes readonly backend inspections", async (context) => {
@@ -126,11 +128,11 @@ test("read-only planning does not ask pnpm global root to create an absent bin d
   assert.equal(f.calls.some((call) => call.command === "pnpm" && call.args[0] === "root"), false);
 });
 
-test("disabled external skills cannot be reported as discovered from the canonical directory", async (context) => {
+test("disabled external skills leave the managed explicit path discoverable", async (context) => {
   const f = fixture(context);
   await f.setup(["install", "--yes"]);
   f.env.OPENCODE_DISABLE_EXTERNAL_SKILLS = "true";
   const report = await f.setup(["doctor"]);
-  assert.equal(report.scopes[0].skill.status, "missing");
-  assert.equal(report.scopes[0].skill.installed.discovery_path, null);
+  assert.equal(report.scopes[0].skill.status, "discovered");
+  assert.equal(report.scopes[0].skill.installed.discovery_path, f.managedPath());
 });

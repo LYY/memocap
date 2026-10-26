@@ -5,7 +5,7 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 const fs = require("node:fs");
-const { fixture } = require("./setup-fixtures.cjs");
+const { fixture, failPolicyCopy } = require("./setup-fixtures.cjs");
 
 test("setup exposes help without starting package or host processes", () => {
   const execution = spawnSync(process.execPath, [path.resolve(__dirname, "../scripts/setup.mjs"), "--help", "--json"], {
@@ -25,10 +25,12 @@ test("install preserves JSONC comments, options and unrelated plugins then repea
   const text = fs.readFileSync(f.config, "utf8");
   const { parse } = await import("jsonc-parser");
   assert.equal(text.includes("// keep comment"), true);
-  assert.deepEqual(parse(text).plugin, [["other@1", { enabled: true }], "@lyy-gh/memocap@0.1.0"]);
+  const entry = ["@lyy-gh/memocap@0.1.0", { skillDirectory: first.scopes[0].skill.installed.path }];
+  assert.deepEqual(parse(text).plugin, [["other@1", { enabled: true }], entry]);
+  assert.deepEqual(parse(text).skills.paths, [entry[1].skillDirectory]);
   assert.equal(first.runtime.status, "not_run");
   assert.equal(first.scopes[0].plugin.status, "configured");
-  assert.deepEqual(first.scopes[0].plugin.entries, ["@lyy-gh/memocap@0.1.0"]);
+  assert.deepEqual(first.scopes[0].plugin.entries, [entry]);
   assert.equal(first.restart_required, true);
   f.calls.length = 0;
   const repeat = await f.setup(["install", "--yes", "--json"]);
@@ -53,6 +55,7 @@ test("custom config and project selection preserve explicit scope and report pre
   f.env.OPENCODE_CONFIG = path.join(f.home, "custom file.jsonc");
   f.env.OPENCODE_CONFIG_DIR = path.join(f.home, "higher config");
   const explicit = path.join(f.project, "custom.jsonc");
+  f.env.OPENCODE_CONFIG = explicit;
   const report = await f.setup(["install", "--project", f.project, "--config", explicit, "--yes"]);
   assert.equal(report.exit_code, 0, JSON.stringify(report));
   assert.equal(fs.existsSync(explicit), true);
@@ -77,13 +80,14 @@ for (const conflict of ["memory", "content", "local-plugin"]) {
   });
 }
 
-test("partial skill failure resumes from CLI and plugin readback without repeating package install", async (context) => {
+test("partial policy copy resumes from CLI readback before exposing config without repeating package install", async (context) => {
   const f = fixture(context);
-  f.state.fail = (command, args) => command === "npx" && args.includes("add");
+  failPolicyCopy(context);
   const partial = await f.setup(["install", "--yes"]);
   assert.equal(partial.status, "partial");
-  assert.equal(partial.steps.some((step) => step.component === "plugin" && step.status === "changed"), true);
-  f.state.fail = null;
+  assert.equal(partial.steps.some((step) => step.component === "skill" && step.status === "failed"), true);
+  assert.equal(fs.existsSync(f.config), false);
+  context.mock.restoreAll();
   f.calls.length = 0;
   const recovered = await f.setup(["install", "--yes"]);
   assert.equal(recovered.exit_code, 0, JSON.stringify(recovered));
@@ -176,7 +180,7 @@ test("JSONC uninstall integration after update keeps valid syntax and DB", async
   const { parse } = await import("jsonc-parser");
   const errors = [];
   const text = fs.readFileSync(f.config, "utf8");
-  assert.deepEqual(parse(text, errors, { allowTrailingComma: true }), { plugin: [["other", { nested: [1, 2] }]], model: "keep" });
+  assert.deepEqual(parse(text, errors, { allowTrailingComma: true }), { plugin: [["other", { nested: [1, 2] }]], model: "keep", skills: { paths: [] } });
   assert.deepEqual(errors, []);
   assert.equal(text.includes("/* user,comment */"), true);
   assert.equal(fs.readFileSync(database, "utf8"), "synthetic core");

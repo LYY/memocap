@@ -28,6 +28,7 @@ fn npm_package_has_independent_opencode_identity() {
         package["files"],
         json!([
             "bin",
+            "lib",
             "plugin",
             "skills",
             "scripts/setup.mjs",

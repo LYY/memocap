@@ -17,7 +17,7 @@ function pathArguments(raw) {
   return paths;
 }
 
-export function createCommands(operations, runtime) {
+export function createCommands(operations, runtime, policy) {
   let registered = false;
   const definition = { description: "Inspect memory status, scopes, list, recent, why; scope, recall, or request remember.",
     template: "memocap /memory request; command hook supplies the actual structured receipt." };
@@ -27,7 +27,8 @@ export function createCommands(operations, runtime) {
       reason: "permission_aware_tool_required" };
     if (command === "scope") return operations.scope({ paths: pathArguments(raw) }, context);
     if (command === "recall") return operations.recall({ query: raw }, context);
-    return operations.inspect(command || "status", pathArguments(raw), context);
+    const payload = await operations.inspect(command || "status", pathArguments(raw), context);
+    return (!command || command === "status") && policy ? { ...payload, policy } : payload;
   }
 
   return {

@@ -49,7 +49,8 @@ async function sandbox() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'memocap-v1-plugin-'));
   for (const directory of ['bin', 'plugin', 'skills/memocap', 'A', 'B']) fs.mkdirSync(path.join(root, directory), { recursive: true });
   fs.cpSync(path.join(__dirname, '../plugin'), path.join(root, 'plugin'), { recursive: true });
-  fs.copyFileSync(path.join(__dirname, '../skills/memocap/SKILL.md'), path.join(root, 'skills/memocap/SKILL.md'));
+  fs.cpSync(path.join(__dirname, '../skills'), path.join(root, 'skills'), { recursive: true });
+  fs.cpSync(path.join(__dirname, '../lib'), path.join(root, 'lib'), { recursive: true });
   fs.symlinkSync(path.resolve(__dirname, '../node_modules'), path.join(root, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ type: 'module', version }));
   fs.writeFileSync(path.join(root, 'bin/cli.cjs'), `
