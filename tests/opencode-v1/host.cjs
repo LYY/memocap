@@ -22,8 +22,9 @@ function execute(binary, args, options = {}) {
 
 async function prepare(root, evidence) {
   const packaged = lifecycleFixture(repo, evidence);
+  let prepared;
   try {
-    const prepared = await packaged.prepare();
+    prepared = await packaged.prepare();
     const installed = await runLifecycle(packaged, prepared, evidence);
     const { env, host, version } = packaged;
     const native = path.resolve(process.env.MEMOCAP_TEST_NATIVE || path.join(repo, 'target/debug',
@@ -46,7 +47,55 @@ async function prepare(root, evidence) {
     const cli = (args) => JSON.parse(execute(native, ['--json', ...args], { env, cwd: directories.outside }));
     return { env, host, native, version, directories, cli, ...installed, packaged,
       async cleanup() { return packaged.cleanup(); } };
-  } catch (error) { evidence.cleanup.package = await packaged.cleanup(); throw error; }
+  } catch (error) {
+    try {
+      if (process.platform === 'win32' && prepared) await probeWindowsMetadata(packaged, prepared, evidence);
+    } finally { evidence.cleanup.package = await packaged.cleanup(); }
+    throw error;
+  }
+}
+
+async function probeWindowsMetadata(packaged, prepared, evidence) {
+  const { inspectWindowsMetadata } = await import(pathToFileURL(path.join(prepared.runnerRoot, 'lib/windows-policy-metadata.mjs')));
+  let invocation;
+  inspectWindowsMetadata(path.join(prepared.runnerRoot, 'skills/memocap'), (...args) => {
+    invocation = args;
+    return { status: 0, signal: null, stdout: Buffer.from('{"status":"ok"}'), stderr: Buffer.alloc(0) };
+  });
+  const [executable, argv, options] = invocation;
+  const mark = (phase) => `[Console]::Error.WriteLine('MP18:${phase}')\n`;
+  const script = mark('engine') + Buffer.from(argv[3], 'base64').toString('utf16le')
+    .replace('  $request = ConvertFrom-Json -InputObject $reader.ReadToEnd()',
+      mark('input') + '$raw = $reader.ReadToEnd()\n' + mark('json') + '$request = ConvertFrom-Json -InputObject $raw\n' + mark('parsed'))
+    .replace('    $attributes =', mark('attributes') + '    $attributes =')
+    .replace('      foreach ($entry', mark('enumerate') + '      foreach ($entry')
+    .replace("  $writer.WriteLine('{\"status\":\"ok\"}')", mark('complete') + "  $writer.WriteLine('{\"status\":\"ok\"}')");
+  const small = path.join(packaged.root, 'metadata-control');
+  fs.mkdirSync(path.join(small, 'references'), { recursive: true });
+  fs.writeFileSync(path.join(small, 'SKILL.md'), 'fixture');
+  fs.writeFileSync(path.join(small, 'references/policy.md'), 'fixture');
+  const { isolatedEnvironment } = require('../packaged-runtime.cjs');
+  evidence.windows_metadata_probe = [];
+  for (const [name, directory, inherited, explicitImport] of [
+    ['bundle-isolated', path.join(prepared.runnerRoot, 'skills/memocap'), false, false],
+    ['small-isolated', small, false, false],
+    ['bundle-inherited', path.join(prepared.runnerRoot, 'skills/memocap'), true, false],
+    ['bundle-explicit-os-module', path.join(prepared.runnerRoot, 'skills/memocap'), false, true],
+  ]) {
+    const env = inherited ? process.env : name === 'bundle-isolated' ? packaged.env : isolatedEnvironment(path.join(packaged.root, name));
+    const prefix = explicitImport ? mark('import') + "Import-Module ($PSHOME + '\\Modules\\Microsoft.PowerShell.Utility\\Microsoft.PowerShell.Utility.psd1')\n" + mark('imported') : '';
+    const encoded = Buffer.from(mark('started') + prefix + script, 'utf16le').toString('base64');
+    const started = Date.now();
+    const scanned = spawnSync(executable, [...argv.slice(0, -1), encoded], {
+      ...options, input: Buffer.from(JSON.stringify({ root: directory })), env,
+    });
+    evidence.windows_metadata_probe.push({ name, deadline_ms: options.timeout, elapsed_ms: Date.now() - started,
+      status: scanned.status, signal: scanned.signal, error: scanned.error?.code || null,
+      phases: scanned.stderr?.toString('utf8').match(/MP18:[a-z]+/g) || [],
+      stdout: scanned.stdout?.toString('utf8') === '{"status":"ok"}\r\n' ? 'ok' : 'other',
+      environment: inherited ? 'inherited' : 'fresh packaged isolated profile; PSModulePath absent',
+      root: name.startsWith('small') ? 'two-file-control' : 'runner/node_modules/@lyy-gh/memocap/skills/memocap' });
+  }
 }
 
 async function wireProvider() {
