@@ -40,6 +40,31 @@ test("native Windows scans ordinary nested hidden/system Unicode entries through
   assert.equal(inspected.files[1].size, binary.length);
 });
 
+test("native Windows scans hidden/system payload on first use in a fresh packaged profile", nativeWindows, (context) => {
+  const { root, source } = fixture(context);
+  const { isolatedEnvironment } = require("./packaged-runtime.cjs");
+  const env = isolatedEnvironment(path.join(root, "fresh-profile"));
+  const moduleURL = require("node:url").pathToFileURL(path.resolve(__dirname, "../lib/policy.mjs")).href;
+  const driver = "import(process.argv[1]).then(({inspectPolicy}) => console.log(JSON.stringify(inspectPolicy(process.argv[2]).files)))";
+
+  const output = execFileSync(process.execPath, ["-e", driver, moduleURL, source], {
+    env, encoding: "utf8", timeout: 15000, windowsHide: true,
+  });
+
+  assert.deepEqual(JSON.parse(output).map((file) => file.path), ["SKILL.md", "隐藏 目录/中文 reference.bin"]);
+});
+
+test("native Windows reports missing root attributes without success", nativeWindows, async (context) => {
+  const { root } = fixture(context);
+  const { inspectWindowsMetadata } = await import("../lib/windows-policy-metadata.mjs");
+
+  assert.throws(() => inspectWindowsMetadata(path.join(root, "missing")), (error) => {
+    assert.equal(error.diagnostics.status, 1);
+    assert.equal(JSON.parse(error.diagnostics.stdout.toString("utf8")).operation, "attributes");
+    return true;
+  });
+});
+
 test("native Windows copies the complete hidden Unicode payload byte for byte without link privileges", nativeWindows, async (context) => {
   const { source, destination } = fixture(context);
   const { inspectPolicy } = await import("../lib/policy.mjs");

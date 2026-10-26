@@ -59,6 +59,7 @@ const failures = [
   ["relative reparse path", response('{"status":"reparse","path":"child"}')],
   ["outside reparse path", response('{"status":"reparse","path":"D:\\\\outside"}')],
   ["invalid UTF-8", response("", { stdout: Buffer.from([255]) })],
+  ["partial UTF-8 after JSON", response("", { stdout: Buffer.concat([Buffer.from('{"status":"ok"}'), Buffer.from([0xc3])]) })],
   ["nonzero exit", response('{"status":"ok"}', { status: 9, stderr: Buffer.from("native diagnostic") })],
   ["signal termination", response('{"status":"ok"}', { status: null, signal: "SIGTERM" })],
   ...["ENOENT", "ETIMEDOUT", "ENOBUFS"].map((code) => [code, response('{"status":"ok"}', { error: Object.assign(new Error(`actual ${code}`), { code }) })]),
