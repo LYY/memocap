@@ -56,7 +56,7 @@ for (const target of ["unknown", "missing", "directory"]) test(`readonly ${targe
   } finally { Object.defineProperty(process, "platform", platform); }
 });
 
-for (const origin of ["native", "homebrew", "explicit"]) test(`readonly ${origin} host keeps package or receipt metadata without execution`, async (context) => {
+for (const origin of ["native", "homebrew"]) test(`readonly ${origin} host keeps package or receipt metadata without execution`, async (context) => {
   const setup = fixture(context);
   const { inspectHost } = await import("../scripts/setup/host.mjs");
   const directory = path.join(setup.root, "installed host");
@@ -68,13 +68,34 @@ for (const origin of ["native", "homebrew", "explicit"]) test(`readonly ${origin
   fs.writeFileSync(metadata, JSON.stringify(origin === "homebrew"
     ? { source: { tap: "anomalyco/tap", path: "Formula/opencode.rb", versions: { stable: "1.19.3" } } }
     : { name: "opencode-ai", version: "1.19.3" }));
-  const launcher = origin === "explicit" ? path.join(setup.root, process.platform === "win32" ? "opencode.cmd" : "opencode") : binary;
-  if (origin === "explicit") fs.writeFileSync(launcher, `# cmd-shim-target=${binary}\n`, { mode: 0o755 });
+  const launcher = binary;
   const runtime = { ...setup.runtime, env: { ...setup.env, PATH: path.dirname(launcher) },
     run: () => assert.fail("metadata inspection must not execute a child") };
   const before = snapshot([setup.root]);
   const observed = inspectHost(runtime);
   assert.deepEqual(observed, { executable_path: launcher, version: "1.19.3", source: fs.realpathSync(metadata) });
+  assert.deepEqual(snapshot([setup.root]), before);
+});
+
+for (const origin of ["native", "homebrew"]) test(`readonly ${origin} metadata does not require readable executable bytes`, { skip: process.platform === "win32" }, async (context) => {
+  const setup = fixture(context);
+  const { inspectHost } = await import("../scripts/setup/host.mjs");
+  const directory = path.join(setup.root, "executable only host");
+  const binary = path.join(directory, "bin/opencode");
+  fs.mkdirSync(path.dirname(binary), { recursive: true });
+  fs.copyFileSync(process.execPath, binary);
+  const metadata = path.join(directory, origin === "homebrew" ? "INSTALL_RECEIPT.json" : "package.json");
+  fs.writeFileSync(metadata, JSON.stringify(origin === "homebrew"
+    ? { source: { tap: "anomalyco/tap", path: "Formula/opencode.rb", versions: { stable: "1.19.3" } } }
+    : { name: "opencode-ai", version: "1.19.3" }));
+  const before = snapshot([setup.root]);
+  fs.chmodSync(binary, 0o111);
+  const runtime = { ...setup.runtime, env: { ...setup.env, PATH: path.dirname(binary) },
+    run: () => assert.fail("metadata inspection must not execute a child") };
+  try {
+    assert.throws(() => fs.readFileSync(binary), { code: "EACCES" });
+    assert.deepEqual(inspectHost(runtime), { executable_path: binary, version: "1.19.3", source: fs.realpathSync(metadata) });
+  } finally { fs.chmodSync(binary, 0o755); }
   assert.deepEqual(snapshot([setup.root]), before);
 });
 

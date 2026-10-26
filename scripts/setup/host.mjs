@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import { SetupError } from "./arguments.mjs";
 import { readJSON } from "./files.mjs";
 import { checked, executable, launcherScript } from "./process.mjs";
@@ -6,7 +7,8 @@ import { checked, executable, launcherScript } from "./process.mjs";
 export function inspectHost(runtime) {
   const filename = executable("opencode", runtime.env);
   if (!filename) throw new SetupError("missing_host", "OpenCode 1.19.3 must already be installed and available on PATH");
-  const target = launcherScript(filename);
+  const real = fs.realpathSync(filename);
+  const target = /\.(cmd|bat)$/i.test(real) ? launcherScript(real) : real;
   let directory = target && path.dirname(target);
   for (let depth = 0; directory && depth < 7; depth++) {
     const metadata = readJSON(path.join(directory, "package.json"));
