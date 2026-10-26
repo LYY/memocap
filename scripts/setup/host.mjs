@@ -1,14 +1,14 @@
-import fs from "node:fs";
 import path from "node:path";
 import { SetupError } from "./arguments.mjs";
 import { readJSON } from "./files.mjs";
-import { checked, executable } from "./process.mjs";
+import { checked, executable, launcherScript } from "./process.mjs";
 
 export function inspectHost(runtime) {
   const filename = executable("opencode", runtime.env);
   if (!filename) throw new SetupError("missing_host", "OpenCode 1.19.3 must already be installed and available on PATH");
-  let directory = path.dirname(fs.realpathSync(filename));
-  for (let depth = 0; depth < 7; depth++) {
+  const target = launcherScript(filename);
+  let directory = target && path.dirname(target);
+  for (let depth = 0; directory && depth < 7; depth++) {
     const metadata = readJSON(path.join(directory, "package.json"));
     if (metadata && (metadata.name === "opencode-ai" || /^opencode-(darwin|linux|windows)-/.test(metadata.name || ""))) return { executable_path: filename, version: metadata.version, source: path.join(directory, "package.json") };
     const receipt = readJSON(path.join(directory, "INSTALL_RECEIPT.json"));
