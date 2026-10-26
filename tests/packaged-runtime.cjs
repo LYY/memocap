@@ -76,18 +76,63 @@ function denyLinks(root, env) {
   const log = path.join(root, "denied-links.jsonl");
   const preload = path.join(root, "deny-links.cjs");
   write(preload, `const fs = require('node:fs');
-const denied = (name) => {
-  fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ api: name }) + '\\n');
+const crypto = require('node:crypto');
+const roots = ${JSON.stringify([fs.realpathSync(root), root].map((value) => value.replaceAll("\\", "/")))};
+const sanitize = value => {
+  if (typeof value !== 'string') return null;
+  value = value.replaceAll('\\\\', '/');
+  for (const root of roots) value = value.split(root).join('<sandbox>').split(encodeURI(root)).join('<sandbox>');
+  return value;
+};
+const denied = (name, args) => {
+  const stack = new Error().stack.split('\\n').slice(2).map(sanitize);
+  fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ api: name, pid: process.pid,
+    ppid: process.ppid, phase: process.env.MEMOCAP_LINK_PHASE || 'unknown',
+    source: sanitize(args[0]), destination: sanitize(args[1]), stack,
+    entry: sanitize(process.argv[1]),
+    entry_sha256: process.argv[1] && fs.existsSync(process.argv[1]) ?
+      crypto.createHash('sha256').update(fs.readFileSync(process.argv[1])).digest('hex') : null }) + '\\n');
   return Object.assign(new Error('fixture denies link creation'), { code: 'EPERM' });
 };
 for (const name of ['symlink', 'link']) {
-  fs[name + 'Sync'] = () => { throw denied(name + 'Sync'); };
-  fs[name] = (...args) => args.at(-1)(denied(name));
-  fs.promises[name] = async () => { throw denied('promises.' + name); };
+  fs[name + 'Sync'] = (...args) => { throw denied(name + 'Sync', args); };
+  fs[name] = (...args) => args.at(-1)(denied(name, args));
+  fs.promises[name] = async (...args) => { throw denied('promises.' + name, args); };
 }
 `);
   env.NODE_OPTIONS = `--require=${JSON.stringify(preload)}`;
   return log;
+}
+
+function linkEvents(log) {
+  const raw = fs.existsSync(log) ? fs.readFileSync(log, "utf8") : "";
+  return { raw, events: raw.trim() ? raw.trim().split("\n").map((line) => {
+    try { return JSON.parse(line); }
+    catch (error) { return { phase: "unknown", parse_error: error.message, line }; }
+  }) : [] };
+}
+
+function assertManagedLinks(log) {
+  const { events } = linkEvents(log);
+  for (const event of events) {
+    const entry = event.entry;
+    const official = event.phase === "official-host-bootstrap" && event.api === "linkSync" &&
+      event.entry_sha256 === "5a7c990fe552e76b16422cdba3f4b0550590c7a487f7932c773362f74317c87b" &&
+      /^<sandbox>\/tools\/(lib\/)?node_modules\/opencode-ai\/postinstall\.mjs$/.test(entry) &&
+      event.destination === entry.replace("postinstall.mjs", "bin/opencode.exe") &&
+      event.source?.startsWith("<sandbox>/tools/") &&
+      event.stack?.some((frame) => frame.includes(`at copyBinary (`) && frame.includes(`${entry}:151:8`));
+    assert.ok(official, `unexpected link attempt in ${event.phase || "unknown"}: ${JSON.stringify(event)}`);
+  }
+  return { link_creation_denied_by_fixture: true, attempted_links: 0,
+    bootstrap_attempted_links: events.length, unattributed_attempted_links: 0,
+    token_elevation: "not asserted; hosted Windows runner account may be elevated", symlink_privilege_required: false };
+}
+
+function retainLinkEvents(log, evidence, filename) {
+  evidence.link_guard = linkEvents(log);
+  write(filename, `${JSON.stringify(evidence, null, 2)}\n`);
+  assert.equal(fs.readFileSync(filename, "utf8"), `${JSON.stringify(evidence, null, 2)}\n`);
 }
 
 function runner(env, evidence, active, defaultCwd) {
@@ -125,4 +170,5 @@ function terminate(child) {
   } catch (error) { if (error.code !== "ESRCH") throw error; }
 }
 
-module.exports = { digest, write, snapshot, isolatedEnvironment, mergeHostConfig, denyLinks, runner, terminate };
+module.exports = { digest, write, snapshot, isolatedEnvironment, mergeHostConfig, denyLinks,
+  linkEvents, assertManagedLinks, retainLinkEvents, runner, terminate };

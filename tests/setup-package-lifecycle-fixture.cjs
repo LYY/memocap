@@ -6,7 +6,7 @@ const http = require("node:http");
 const os = require("node:os");
 const path = require("node:path");
 const crypto = require("node:crypto");
-const { digest, write, snapshot, isolatedEnvironment, denyLinks, runner, terminate } = require("./packaged-runtime.cjs");
+const { digest, write, snapshot, isolatedEnvironment, denyLinks, assertManagedLinks, retainLinkEvents, runner, terminate } = require("./packaged-runtime.cjs");
 
 function lifecycleFixture(workspace, evidence) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap packaged acceptance "));
@@ -20,6 +20,7 @@ function lifecycleFixture(workspace, evidence) {
   const runtimeBin = path.join(root, "runtime-bin");
   const guardLog = path.join(root, "forbidden-skills.jsonl");
   const deniedLinks = process.platform === "win32" ? denyLinks(root, env) : undefined;
+  env.MEMOCAP_LINK_PHASE = "current-managed";
   const version = JSON.parse(fs.readFileSync(path.join(workspace, "package.json"))).version;
   const installedRoot = path.join(prefix, process.platform === "win32" ? "node_modules/@lyy-gh/memocap" : "lib/node_modules/@lyy-gh/memocap");
   const npmCli = process.platform === "win32" ? path.join(path.dirname(process.execPath), "node_modules/npm/bin/npm-cli.js") :
@@ -40,10 +41,13 @@ function lifecycleFixture(workspace, evidence) {
     process.platform === "win32" ? tools : path.join(tools, "bin"), runtimeBin, env.PATH].join(path.delimiter);
 
   async function command(executable, args, options) {
-    if (executable === "npm") return run(process.execPath, [npmCli, ...args], options);
-    if (executable === "memocap") return run(process.execPath, [path.join(installedRoot, "bin/cli.cjs"), ...args], options);
-    if (executable === "memocap-setup") return run(process.execPath, [path.join(installedRoot, "scripts/setup.mjs"), ...args], options);
-    return run(executable, args, options);
+    let result;
+    if (executable === "npm") result = await run(process.execPath, [npmCli, ...args], options);
+    else if (executable === "memocap") result = await run(process.execPath, [path.join(installedRoot, "bin/cli.cjs"), ...args], options);
+    else if (executable === "memocap-setup") result = await run(process.execPath, [path.join(installedRoot, "scripts/setup.mjs"), ...args], options);
+    else result = await run(executable, args, options);
+    if (deniedLinks) assertManagedLinks(deniedLinks);
+    return result;
   }
 
   async function prepare() {
@@ -91,7 +95,8 @@ function lifecycleFixture(workspace, evidence) {
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     env.npm_config_registry = `http://127.0.0.1:${server.address().port}`;
     evidence.registry_requests = requests;
-    await command("npm", ["install", "--global", "--prefix", tools, "opencode-ai@1.19.3", "--registry", "https://registry.npmjs.org"]);
+    await command("npm", ["install", "--global", "--prefix", tools, "opencode-ai@1.19.3", "--registry", "https://registry.npmjs.org"],
+      { env: { MEMOCAP_LINK_PHASE: "official-host-bootstrap" } });
     const hostRoot = path.join(tools, process.platform === "win32" ? "node_modules" : "lib/node_modules");
     const hostPlatform = { "darwin-arm64": "opencode-darwin-arm64", "linux-x64": "opencode-linux-x64", "win32-x64": "opencode-windows-x64" }[`${process.platform}-${process.arch}`];
     host = path.join(hostRoot, "opencode-ai/node_modules", hostPlatform, "bin", process.platform === "win32" ? "opencode.exe" : "opencode");
@@ -120,6 +125,9 @@ function lifecycleFixture(workspace, evidence) {
   async function cleanup() {
     for (const child of active) terminate(child);
     if (server) { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); }
+    if (deniedLinks) retainLinkEvents(deniedLinks, evidence,
+      process.env.MEMOCAP_TEST_HOST_EVIDENCE || process.env.MEMOCAP_TEST_LIFECYCLE_EVIDENCE ||
+      path.join(workspace, ".omo/evidence/memocap-unified-skill/task-8-lifecycle.json"));
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     return { sandbox_removed: !fs.existsSync(root), registry_closed: !server?.listening,
       active_children: active.size, personal_config_or_memory_used: false };

@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { lifecycleFixture, write, snapshot } = require("./setup-package-lifecycle-fixture.cjs");
+const { assertManagedLinks } = require("./packaged-runtime.cjs");
 
 async function runLifecycle(fixture, prepared, evidence) {
   const { home, prefix, project, env, command, version, installedRoot } = fixture;
@@ -135,9 +136,7 @@ async function runLifecycle(fixture, prepared, evidence) {
   assert.equal(fs.existsSync(fixture.guardLog), false, "default lifecycle must make zero npx/skills calls");
   evidence.default_skills_cli = { fail_guard_enabled: true, calls: 0 };
   if (fixture.deniedLinks) {
-    assert.equal(fs.existsSync(fixture.deniedLinks), false, "Windows managed lifecycle must succeed with link creation denied");
-    evidence.windows_copy = { link_creation_denied_by_fixture: true, attempted_links: 0,
-      token_elevation: "not asserted; hosted Windows runner account may be elevated", symlink_privilege_required: false };
+    evidence.windows_copy = assertManagedLinks(fixture.deniedLinks);
   }
   return { setup, config, managed, bundled, manifestFile };
 }
