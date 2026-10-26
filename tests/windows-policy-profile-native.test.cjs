@@ -60,7 +60,7 @@ async function scanDriver() {
     if (mode === "malformed") assert.equal(native.stdout.toString(), "{");
   }
   assert.equal(fs.existsSync(owned), false);
-  assert.deepEqual(process.env, originalEnv);
+  assert.deepEqual({ ...process.env }, originalEnv);
   assert.deepEqual(snapshot([process.env.HOME, source]), before);
   console.log(JSON.stringify({ mode, powershell: folders[2], known_folders_owned: true, cache_files: cacheFiles,
     owned_removed: true, parent_home_unchanged: true, payload_unchanged: true, parent_env_unchanged: true,
