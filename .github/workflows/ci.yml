@@ -37,15 +37,24 @@ jobs:
         run: cargo test
       - name: Test Node contracts
         run: node --test tests/*.test.cjs
-      - name: Test official OpenCode 1.19.3 integration
-        if: runner.os == 'Linux'
+      - name: Build native packaged acceptance binary
+        run: cargo build --bin memocap
+      - name: Test packaged lifecycle and official OpenCode 1.19.3
         shell: bash
+        env:
+          MEMOCAP_OPENCODE_INTEGRATION: "1"
+          MEMOCAP_TEST_LINUX_OFFLINE: ${{ runner.os == 'Linux' && '1' || '0' }}
+          MEMOCAP_TEST_HOST_EVIDENCE: ${{ runner.temp }}/task-8-${{ runner.os }}.json
         run: |
-          npm install --prefix "$RUNNER_TEMP/memocap-opencode" --no-audit --no-fund opencode-ai@1.19.3
-          cargo build --bin memocap
-          MEMOCAP_OPENCODE_INTEGRATION=1 \
-            MEMOCAP_TEST_OPENCODE="$RUNNER_TEMP/memocap-opencode/node_modules/.bin/opencode" \
-            node --test tests/opencode-v1.integration.test.cjs
+          node --test tests/opencode-v1.integration.test.cjs
+      - name: Upload native packaged acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: task-8-${{ runner.os }}
+          path: ${{ runner.temp }}/task-8-${{ runner.os }}.json
+          if-no-files-found: error
+          retention-days: 7
 
   release-build:
     name: build (${{ matrix.target }})
@@ -98,7 +107,7 @@ jobs:
           "$RUNNER_TEMP/actionlint" .github/workflows/ci.yml .github/workflows/release.yml
       - name: Check release contract
         env:
-          RELEASE_TAG: v0.2.1
+          RELEASE_TAG: v0.3.0
         run: node scripts/check-release.mjs
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:

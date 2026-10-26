@@ -3,186 +3,163 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { lifecycleFixture, digest, write, snapshot } = require("./setup-package-lifecycle-fixture.cjs");
+const { pathToFileURL } = require("node:url");
+const { lifecycleFixture, write, snapshot } = require("./setup-package-lifecycle-fixture.cjs");
 
-const workspace = path.resolve(__dirname, "..");
-const packageVersion = require("../package.json").version;
-const evidencePath = path.join(workspace, ".omo/evidence/memocap-v020-single-database/task-6-tracked-lifecycle.json");
-const evidence = { format_version: 1, started_at: new Date().toISOString(), commands: [], assertions: [], failures: [],
-  scope: "manual Darwin arm64 / invoking Node 24 / package 0.2.0 / schema 2.0; prepublication local fixture",
-  source_hashes: Object.fromEntries([__filename, path.join(__dirname, "setup-package-lifecycle-fixture.cjs")].map((filename) => [path.relative(workspace, filename), digest(fs.readFileSync(filename))])),
-  boundary: { npm: "loopback registry serves actual npm pack artifact; other package requests redirect to registry.npmjs.org",
-    skills: "real skills@1.7.4; unpublished GitHub release URL rewritten only at git transport to sandbox release refs built from unpacked tarball",
-    binary: "prepublish_local: copied current target/debug/memocap with locally computed checksum; published release asset NOT verified" },
-  not_run: ["published npm/tag/provenance acceptance", "plugin host/runtime", "native Windows/PowerShell", "native Linux", "pnpm installation"],
-  prior_integration: ".omo/evidence/memocap-v020-single-database/task-6-integration.json" };
+async function runLifecycle(fixture, prepared, evidence) {
+  const { home, prefix, project, env, command, version, installedRoot } = fixture;
+  const config = path.join(env.XDG_CONFIG_HOME, "opencode/opencode.json");
+  const original = '{\n // retain operator settings\n "model": "wire/wire-model",\n "share": "disabled",\n "plugin": [],\n "skills": {"paths": []}\n}\n';
+  write(config, original);
+  const setup = async (args, options = {}) => {
+    const entry = path.join(options.bootstrap ? prepared.runnerRoot : installedRoot, "scripts/setup.mjs");
+    const result = await command(process.execPath, [entry, ...args, "--json"], { allowFailure: true, ...options });
+    const report = JSON.parse(result.stdout);
+    assert.equal(result.code, report.exit_code);
+    return report;
+  };
+  const passed = (name) => evidence.assertions.push(name);
+  const successful = (report) => { assert.equal(report.exit_code, 0, JSON.stringify(report)); return report; };
+  let before = snapshot([home, project, prefix, env.MEMOCAP_DATA_DIR]);
+  successful(await setup(["install", "--global", "--dry-run"], { bootstrap: true }));
+  assert.deepEqual(snapshot([home, project, prefix, env.MEMOCAP_DATA_DIR]), before);
+  passed("actual installed tarball runner dry-run preserves HOME/project/prefix/database");
+
+  const preload = path.join(fixture.root, "fail-config.cjs");
+  write(preload, `const fs=require('node:fs');const original=fs.renameSync;fs.renameSync=function(source,destination){if(destination===process.env.MEMOCAP_FIXTURE_CONFIG)throw Object.assign(new Error('fixture config CAS interruption'),{code:'EACCES'});return original.apply(this,arguments);};\n`);
+  const partial = await setup(["install", "--global", "--yes"], { bootstrap: true,
+    env: { NODE_OPTIONS: `${env.NODE_OPTIONS || ""} --require=${JSON.stringify(preload)}`.trim(), MEMOCAP_FIXTURE_CONFIG: config } });
+  assert.equal(partial.status, "partial", JSON.stringify(partial));
+  assert.ok(partial.steps.some((step) => step.component === "cli" && step.status === "changed"));
+  assert.equal(fs.existsSync(env.MEMOCAP_DB), false);
+  const resumed = successful(await setup(["install", "--global", "--yes"]));
+  assert.equal(resumed.readiness, "static_ready");
+  assert.equal(resumed.runtime.status, "not_run");
+  assert.equal(resumed.steps.find((step) => step.component === "cli").status, "unchanged");
+  passed("real setup subprocess recovers config-CAS interruption without reinstalling CLI");
+
+  const { inspectPolicy } = await import(pathToFileURL(path.join(installedRoot, "lib/policy.mjs")));
+  const { createRequire } = require("node:module");
+  const jsonc = createRequire(path.join(installedRoot, "package.json"))("jsonc-parser");
+  const managed = jsonc.parse(fs.readFileSync(config, "utf8")).plugin.find((entry) => Array.isArray(entry) && entry[0] === `@lyy-gh/memocap@${version}`)[1].skillDirectory;
+  const bundled = inspectPolicy(path.join(installedRoot, "skills/memocap"));
+  const observed = inspectPolicy(managed);
+  assert.equal(observed.digest, bundled.digest);
+  assert.deepEqual(observed.files, bundled.files);
+  assert.ok(observed.files.some((file) => file.path.startsWith("references/")));
+  for (const file of observed.files) assert.equal(fs.lstatSync(path.join(managed, file.path)).isSymbolicLink(), false);
+  assert.equal(fs.existsSync(path.join(home, ".agents/skills/memocap")), false);
+  const manifestFile = resumed.manifest_path;
+  assert.equal(JSON.parse(fs.readFileSync(manifestFile)).format_version, 2);
+  evidence.policy = { version, digest: observed.digest, files: observed.files, ordinary_copy: true };
+  assert.equal((await command("memocap", ["--version"])).stdout.trim(), `memocap ${version}`);
+  const resolved = await command(process.execPath, ["-e", "console.log(require.resolve('jsonc-parser',{paths:[process.argv[1]]}))", installedRoot]);
+  assert.ok(fs.realpathSync(resolved.stdout.trim()).startsWith(fs.realpathSync(prefix) + path.sep));
+  passed("actual global package resolves dependencies and full ordinary managed payload without canonical skills");
+
+  const watched = [home, project, prefix, env.MEMOCAP_DATA_DIR];
+  before = snapshot(watched);
+  for (const args of [["check", "--global"], ["doctor", "--global"], ["update", "--to", version, "--global", "--dry-run"], ["update", "--to", version, "--global", "--yes"]]) {
+    successful(await setup(args));
+    assert.deepEqual(snapshot(watched), before, args.join(" "));
+  }
+  passed("check/doctor/exact update preserve all persistent bytes");
+  const reused = successful(await setup(["install", "--project", project, "--yes"]));
+  assert.equal(reused.scopes[0].owner_reused, true, JSON.stringify(reused.scopes));
+  assert.deepEqual(snapshot(watched), before);
+  passed("project install reuses exact global owner without a second payload or registration");
+
+  const remembered = JSON.parse((await command("memocap", ["remember", "packaged lifecycle sentinel", "--repo", project, "--json"])).stdout);
+  assert.equal(remembered.status, "inserted");
+  const recalled = JSON.parse((await command("memocap", ["recall", "packaged lifecycle", "--match", "all", "--repo", project, "--json"])).stdout);
+  assert.ok(recalled.returned_ids.includes(remembered.returned_ids[0]));
+  write(path.join(env.MEMOCAP_DATA_DIR, "backup.sentinel"), "retain backup bytes\n");
+  const memory = snapshot([env.MEMOCAP_DATA_DIR]);
+  successful(await setup(["uninstall", "--global", "--yes"]));
+  assert.deepEqual(snapshot([env.MEMOCAP_DATA_DIR]), memory);
+  assert.deepEqual(jsonc.parse(fs.readFileSync(config, "utf8")), jsonc.parse(original));
+  assert.ok(fs.readFileSync(config, "utf8").includes("// retain operator settings"));
+  assert.equal(fs.existsSync(managed), false);
+  passed("uninstall removes only owned payload and preserves JSONC/settings/database/backup");
+
+  await require("./setup-package-legacy.cjs").legacyMissing(fixture, prepared, evidence);
+  successful(await setup(["uninstall", "--global", "--yes"]));
+
+  const custom = path.join(fixture.root, "custom config directory");
+  successful(await setup(["install", "--global", "--yes"], { env: { OPENCODE_CONFIG_DIR: custom } }));
+  const customConfig = path.join(custom, "opencode.jsonc");
+  const customParsed = jsonc.parse(fs.readFileSync(customConfig, "utf8"));
+  const customPolicy = customParsed.plugin.find((entry) => Array.isArray(entry))[1].skillDirectory;
+  assert.ok(customPolicy.startsWith(fs.realpathSync(custom) + path.sep));
+  assert.equal(inspectPolicy(customPolicy).digest, bundled.digest);
+  successful(await setup(["uninstall", "--global", "--yes"], { env: { OPENCODE_CONFIG_DIR: custom } }));
+  assert.equal(fs.existsSync(customPolicy), false);
+  passed("custom OPENCODE_CONFIG_DIR owns and removes its ordinary payload");
+
+  const projectReport = successful(await setup(["install", "--project", project, "--yes"]));
+  const projectConfig = projectReport.scopes[0].config;
+  const projectParsed = jsonc.parse(fs.readFileSync(projectConfig, "utf8"));
+  const projectPolicy = projectParsed.plugin.find((entry) => Array.isArray(entry))[1].skillDirectory;
+  const otherProject = path.join(fixture.root, "other project");
+  const otherConfig = path.join(otherProject, "opencode.json");
+  fs.mkdirSync(otherProject);
+  fs.copyFileSync(projectConfig, otherConfig);
+  const sharedManifest = JSON.parse(fs.readFileSync(manifestFile));
+  const originalRecord = sharedManifest.installs[projectReport.scopes[0].id];
+  sharedManifest.installs[`project:${fs.realpathSync(otherProject)}`] = {
+    ...structuredClone(originalRecord), directory: fs.realpathSync(otherProject), config: otherConfig,
+  };
+  write(manifestFile, JSON.stringify(sharedManifest));
+  const sharedBytes = snapshot([projectPolicy, otherConfig]);
+  const removed = successful(await setup(["uninstall", "--project", project, "--yes"]));
+  assert.equal(removed.steps.find((step) => step.component === "skill_removal")?.status, "retained_shared", JSON.stringify(removed));
+  assert.deepEqual(snapshot([projectPolicy, otherConfig]), sharedBytes);
+  successful(await setup(["uninstall", "--project", otherProject, "--yes"]));
+  assert.equal(fs.existsSync(projectPolicy), false);
+  fs.rmSync(otherProject, { recursive: true });
+  passed("actual project uninstall retains seeded second-owner bytes then removes the final reference");
+
+  successful(await setup(["install", "--project", project, "--yes"]));
+  const reference = bundled.files.find((file) => file.path.startsWith("references/"));
+  fs.appendFileSync(path.join(projectPolicy, reference.path), "\nfixture operator modification\n");
+  const modified = snapshot([projectPolicy]);
+  const doctor = await setup(["doctor", "--project", project]);
+  assert.equal(doctor.error.code, "skill_modified");
+  const retained = successful(await setup(["uninstall", "--project", project, "--yes"]));
+  assert.ok(retained.steps.some((step) => step.status === "retained_modified"));
+  assert.deepEqual(snapshot([projectPolicy]), modified);
+  fs.rmSync(projectPolicy, { recursive: true });
+  passed("reference-only tampering fails doctor and uninstall retains modified bytes");
+
+  successful(await setup(["install", "--global", "--yes"]));
+  assert.equal(fs.existsSync(fixture.guardLog), false, "default lifecycle must make zero npx/skills calls");
+  evidence.default_skills_cli = { fail_guard_enabled: true, calls: 0 };
+  if (fixture.deniedLinks) {
+    assert.equal(fs.existsSync(fixture.deniedLinks), false, "Windows managed lifecycle must succeed with link creation denied");
+    evidence.windows_copy = { link_creation_denied_by_fixture: true, attempted_links: 0,
+      token_elevation: "not asserted; hosted Windows runner account may be elevated", symlink_privilege_required: false };
+  }
+  return { setup, config, managed, bundled, manifestFile };
+}
 
 async function main() {
+  const workspace = path.resolve(__dirname, "..");
+  const evidence = { format_version: 1, started_at: new Date().toISOString(), platform: process.platform,
+    arch: process.arch, node: process.version, commands: [], assertions: [], cleanup: {}, status: "running" };
   const fixture = lifecycleFixture(workspace, evidence);
-  const { home, prefix, project, localSkillProject, env, command } = fixture;
-
-  async function scenario(name, action) {
-    try { await action(); evidence.assertions.push({ name, status: "passed" }); }
-    catch (error) { evidence.failures.push({ name, message: error.message, stack: error.stack }); }
-  }
-
   try {
-    const { payload, failClone, gitLog } = await fixture.prepare();
-    const config = path.join(env.XDG_CONFIG_HOME, "opencode/opencode.jsonc");
-    const originalConfig = '{\n // preserve operator settings\n "model": "fixture/model",\n "plugin": [["other-plugin@1", {"enabled": true}]]\n}\n';
-    write(config, originalConfig);
-    const bootstrap = ["--yes", "--package", `@lyy-gh/memocap@${packageVersion}`, "memocap-setup"];
-    const setup = async (args, options = {}) => {
-      const receipt = await command(options.bootstrap ? "npx" : "memocap-setup", options.bootstrap ? [...bootstrap, ...args, "--json"] : [...args, "--json"], { allowFailure: true });
-      const report = JSON.parse(receipt.stdout);
-      assert.equal(receipt.code, report.exit_code);
-      return report;
-    };
-    let installed;
-    await scenario("real npx pinned runner dry-run before global install leaves core/config/skill/manifest unchanged", async () => {
-      const watched = [home, project];
-      const before = snapshot(watched);
-      const report = await setup(["install", "--global", "--dry-run"], { bootstrap: true });
-      assert.equal(report.exit_code, 0, JSON.stringify(report));
-      assert.equal(report.runner_version, packageVersion);
-      assert.deepEqual(snapshot(watched), before);
-      evidence.bootstrap_cache = { path: env.npm_config_cache, excluded_from_core_snapshot: true, exists: fs.existsSync(env.npm_config_cache) };
-    });
-    await scenario("actual setup subprocess installs CLI/plugin then fails on external skill clone and resumes", async () => {
-      write(failClone, "external transport failure");
-      const partial = await setup(["install", "--global", "--yes"], { bootstrap: true });
-      assert.equal(partial.status, "partial", JSON.stringify(partial));
-      assert.equal(partial.shared_cli.executable_version, packageVersion);
-      assert.equal(partial.scopes[0].plugin.status, "configured");
-      assert.ok(partial.steps.some((step) => step.component === "skill" && ["failed", "outcome_unknown"].includes(step.status)));
-      assert.equal(fs.existsSync(env.MEMOCAP_DB), false);
-      assert.equal(partial.steps.some((step) => step.component === "backend" && step.status === "changed"), false);
-      const packageBefore = snapshot([path.join(prefix, "lib/node_modules/@lyy-gh/memocap")]);
-      fs.unlinkSync(failClone);
-      installed = await setup(["install", "--global", "--yes"]);
-      assert.equal(installed.exit_code, 0, JSON.stringify(installed));
-      assert.equal(installed.readiness, "static_ready");
-      assert.deepEqual(snapshot([path.join(prefix, "lib/node_modules/@lyy-gh/memocap")]), packageBefore);
-      assert.equal(installed.steps.find((step) => step.component === "cli").status, "unchanged");
-      assert.equal(installed.runtime.status, "not_run");
-      assert.equal(fs.existsSync(env.MEMOCAP_DB), true);
-      const inspected = JSON.parse((await command("memocap", ["status", "--read-only", "--json"])).stdout);
-      assert.equal(inspected.inspection.core_status, "ready");
-      assert.equal(inspected.inspection.schema_version, "2.0");
-      assert.equal(inspected.inspection.activity_status, "ready");
-      assert.equal(fs.existsSync(`${env.MEMOCAP_DB}.activity.sqlite`), false);
-      evidence.partial_resume = { partial, resumed: installed };
-    });
-    const installedRoot = path.join(prefix, "lib/node_modules/@lyy-gh/memocap");
-    const watched = [home, project, prefix];
-    await scenario("installed package resolves dependencies without checkout node_modules and actual bin/wrapper preserve argv", async () => {
-      assert.equal(fs.realpathSync(path.join(prefix, "bin/memocap-setup")), fs.realpathSync(path.join(installedRoot, "scripts/setup.mjs")));
-      const resolved = await command("node", ["-e", "console.log(require.resolve('jsonc-parser',{paths:[process.argv[1]]}))", installedRoot]);
-      assert.ok(resolved.stdout.trim().startsWith(fs.realpathSync(prefix) + path.sep), resolved.stdout);
-      const version = await command("memocap", ["--version"]);
-      assert.equal(version.stdout.trim(), `memocap ${packageVersion}`);
-      await command("sh", ["-n", path.join(installedRoot, "scripts/install.sh")]);
-      const literal = "literal'\"$(touch SHOULD_NOT_EXIST); with spaces";
-      const wrapped = await command("sh", [path.join(installedRoot, "scripts/install.sh"), "install", "--project", project, literal, "--json"], { allowFailure: true });
-      assert.equal(wrapped.code, 1);
-      assert.ok(JSON.parse(wrapped.stdout).error.message.includes(literal));
-      assert.equal(fs.existsSync(path.join(project, "SHOULD_NOT_EXIST")), false);
-      const help = await command("sh", [path.join(installedRoot, "scripts/install.sh"), "--help", "--json"]);
-      assert.equal(JSON.parse(help.stdout).runner_version, packageVersion);
-    });
-    await scenario("installed check/doctor/exact update no-op preserve all home/project/prefix bytes", async () => {
-      const before = snapshot(watched);
-      for (const args of [["check", "--global"], ["doctor", "--global"], ["update", "--to", packageVersion, "--global", "--dry-run"], ["update", "--to", packageVersion, "--global", "--yes"]]) {
-        const report = await setup(args);
-        assert.equal(report.exit_code, 0, JSON.stringify(report));
-        if (args[0] === "update" && args.includes("--yes")) assert.equal(report.status, "unchanged");
-        assert.deepEqual(snapshot(watched), before, args.join(" "));
-      }
-      evidence.checkNoMutation = { watched: ["entire sandbox HOME (memory/config/skills/manifest)", "project", "npm prefix"], unchanged: true,
-        excluded: ["npm/npx cache outside HOME, explicitly allowed runner loader cache", "temporary process files"], core: "schema 2.0 created by explicit install preparation; read-only checks and exact update preserve bytes" };
-    });
-    await scenario("real pinned skills installs directly from unpacked tarball local directory", async () => {
-      await command("npx", ["--yes", "skills@1.7.4", "add", payload, "--skill", "memocap", "--agent", "opencode", "--yes"], { cwd: localSkillProject });
-      const canonical = path.join(localSkillProject, ".agents/skills/memocap/SKILL.md");
-      assert.equal(fs.readFileSync(canonical, "utf8"), fs.readFileSync(path.join(payload, "skills/memocap/SKILL.md"), "utf8"));
-      const listed = await command("npx", ["--yes", "skills@1.7.4", "list", "--json"], { cwd: localSkillProject });
-      assert.ok(JSON.parse(listed.stdout).some((skill) => skill.name === "memocap"));
-    });
-    await scenario("human/agent project commands install scoped config and owned skill then uninstall preserving unrelated config", async () => {
-      const report = await setup(["install", "--project", project, "--yes"]);
-      assert.equal(report.exit_code, 0, JSON.stringify(report));
-      assert.equal(report.scopes[0].kind, "project");
-      const filename = report.scopes[0].config;
-      const contents = JSON.parse(fs.readFileSync(filename));
-      contents.model = "project/keep";
-      write(filename, JSON.stringify(contents));
-      const removed = await setup(["uninstall", "--project", project, "--yes"]);
-      assert.equal(removed.exit_code, 0, JSON.stringify(removed));
-      assert.equal(JSON.parse(fs.readFileSync(filename)).model, "project/keep");
-      assert.equal(fs.existsSync(path.join(project, ".agents/skills/memocap")), false);
-      assert.equal(fs.existsSync(path.join(prefix, "bin/memocap")), true);
-    });
-    await scenario("actual memory write/recall then uninstall retains database and unrelated global config", async () => {
-      const remembered = await command("memocap", ["remember", "packaged lifecycle unique receipt", "--repo", project, "--json"]);
-      const receipt = JSON.parse(remembered.stdout);
-      assert.equal(receipt.status, "inserted", remembered.stdout);
-      const recalled = await command("memocap", ["recall", "packaged lifecycle", "--match", "all", "--repo", project, "--json"]);
-      assert.ok(JSON.parse(recalled.stdout).returned_ids.length > 0);
-      await command("node", ["-e", "const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync(process.argv[1]);try{db.exec('PRAGMA journal_mode=DELETE;')}finally{db.close();}", env.MEMOCAP_DB]);
-      const rollbackBefore = snapshot([path.dirname(env.MEMOCAP_DB)]);
-      const checked = await setup(["check", "--to", packageVersion, "--global"]);
-      assert.equal(checked.exit_code, 0, JSON.stringify(checked));
-      assert.equal(checked.readiness, "static_ready");
-      assert.deepEqual(snapshot([path.dirname(env.MEMOCAP_DB)]), rollbackBefore);
-      evidence.rollback_journal_inspection = { status: "passed", fixture_owned: true, core_schema: checked.backend.core_schema, memory_directory_unchanged: true };
-      const database = snapshot([path.dirname(env.MEMOCAP_DB)]);
-      const removed = await setup(["uninstall", "--global", "--yes"]);
-      assert.equal(removed.exit_code, 0, JSON.stringify(removed));
-      assert.deepEqual(snapshot([path.dirname(env.MEMOCAP_DB)]), database);
-      const text = fs.readFileSync(config, "utf8");
-      assert.ok(text.includes("// preserve operator settings"));
-      const { createRequire } = require("node:module");
-      const jsonc = createRequire(path.join(installedRoot, "package.json"))("jsonc-parser");
-      assert.deepEqual(jsonc.parse(text), jsonc.parse(originalConfig));
-      evidence.database_preserved = { sha256: digest(fs.readFileSync(env.MEMOCAP_DB)), uninstall: "full memory directory including activity unchanged" };
-    });
-    await scenario("shared real agent skill prevents destructive CLI removal", async () => {
-      env.MEMOCAP_DB = path.join(home, "second missing/core.db");
-      const report = await setup(["install", "--global", "--yes"]);
-      assert.equal(report.exit_code, 0, JSON.stringify(report));
-      await command("npx", ["--yes", "skills@1.7.4", "add", `https://github.com/LYY/memocap/tree/v${packageVersion}`, "--skill", "memocap", "--agent", "claude-code", "--global", "--yes"]);
-      const skill = path.join(home, ".agents/skills/memocap");
-      const before = snapshot([skill, path.join(home, ".claude/skills/memocap")]);
-      const removed = await setup(["uninstall", "--global", "--remove-cli", "--yes"]);
-      assert.equal(removed.exit_code, 1, JSON.stringify(removed));
-      assert.equal(removed.error.code, "duplicate_skill");
-      assert.deepEqual(snapshot([skill, path.join(home, ".claude/skills/memocap")]), before);
-      assert.equal(fs.existsSync(path.join(prefix, "bin/memocap")), true);
-      evidence.observations = [{ code: "actual_skills_copied_agent_layout", behavior: "skills@1.7.4 copies Claude Code skill; default external discovery yields duplicate_skill before uninstall and preserves both copies and CLI", status: "safe refusal; shared uninstall requires resolving duplicate discovery" }];
-      env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS = "1";
-      const retained = await setup(["uninstall", "--global", "--remove-cli", "--yes"]);
-      assert.equal(retained.error.code, "cli_references_remain", JSON.stringify(retained));
-      assert.ok(retained.steps.some((step) => step.status === "retained_shared"));
-      assert.deepEqual(snapshot([skill, path.join(home, ".claude/skills/memocap")]), before);
-      evidence.shared_retention = { status: "retained_shared", claude_external_discovery_disabled: true, inventory_real: true, canonical_and_other_agent_unchanged: true };
-      await command("npx", ["--yes", "skills@1.7.4", "remove", "memocap", "--agent", "claude-code", "--global", "--yes"]);
-      const final = await setup(["uninstall", "--global", "--remove-cli", "--yes"]);
-      assert.equal(final.exit_code, 0, JSON.stringify(final));
-      assert.equal(fs.existsSync(path.join(prefix, "bin/memocap")), false);
-    });
-    evidence.git_transport_calls = fs.existsSync(gitLog) ? fs.readFileSync(gitLog, "utf8").trim().split("\n").map(JSON.parse) : [];
-  } catch (error) {
-    evidence.failures.push({ name: "harness prerequisite", message: error.message, stack: error.stack });
-  } finally {
+    await runLifecycle(fixture, await fixture.prepare(), evidence);
+    evidence.status = "passed";
+  } catch (error) { evidence.status = "failed"; evidence.failure = { message: error.message, stack: error.stack }; process.exitCode = 1; }
+  finally {
     evidence.cleanup = await fixture.cleanup();
-    evidence.DoneClaim = { packaging: evidence.failures.length === 0 ? "passed_prepublication_local_boundary" : "failed_see_receipts", runtime_verified: false,
-      release_ready: false, changed_files: ["tests/setup-package-lifecycle.cjs", "tests/setup-package-lifecycle-fixture.cjs"], evidence: path.relative(workspace, evidencePath) };
     evidence.finished_at = new Date().toISOString();
-    write(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
-    assert.equal(JSON.parse(fs.readFileSync(evidencePath)).finished_at, evidence.finished_at);
-    console.log(JSON.stringify({ assertions: evidence.assertions, failures: evidence.failures.map(({ name, message }) => ({ name, message: message.slice(0, 1500) })), evidence: evidencePath, cleanup: evidence.cleanup }, null, 2));
-    process.exitCode = evidence.failures.length ? 1 : 0;
+    const filename = process.env.MEMOCAP_TEST_LIFECYCLE_EVIDENCE || path.join(workspace, ".omo/evidence/memocap-unified-skill/task-8-lifecycle.json");
+    write(filename, `${JSON.stringify(evidence, null, 2)}\n`);
+    assert.equal(JSON.parse(fs.readFileSync(filename)).status, evidence.status);
+    console.log(JSON.stringify({ status: evidence.status, assertions: evidence.assertions.length, failure: evidence.failure?.message, evidence: filename }));
   }
 }
 
-if (require.main === module) main().catch((error) => { console.error(error); process.exitCode = 1; });
+module.exports = { runLifecycle };
+if (require.main === module) main();

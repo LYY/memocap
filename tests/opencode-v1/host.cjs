@@ -6,6 +6,9 @@ const crypto = require('node:crypto');
 const { spawn, spawnSync } = require('node:child_process');
 const { once } = require('node:events');
 const { pathToFileURL } = require('node:url');
+const { lifecycleFixture } = require('../setup-package-lifecycle-fixture.cjs');
+const { runLifecycle } = require('../setup-package-lifecycle.cjs');
+const { mergeHostConfig } = require('../packaged-runtime.cjs');
 
 const repo = path.resolve(__dirname, '../..');
 const officialVersion = '1.19.3';
@@ -17,66 +20,33 @@ function execute(binary, args, options = {}) {
   return result.stdout.trim();
 }
 
-function isolated(root) {
-  const env = {};
-  for (const key of ['PATH', 'SystemRoot', 'WINDIR', 'COMSPEC', 'PATHEXT', 'TMP', 'TEMP', 'TMPDIR']) {
-    if (process.env[key]) env[key] = process.env[key];
-  }
-  Object.assign(env, {
-    HOME: path.join(root, 'home'), USERPROFILE: path.join(root, 'home'),
-    XDG_CONFIG_HOME: path.join(root, 'config'), XDG_CACHE_HOME: path.join(root, 'cache'),
-    XDG_DATA_HOME: path.join(root, 'data'), XDG_STATE_HOME: path.join(root, 'state'),
-    LOCALAPPDATA: path.join(root, 'local'), APPDATA: path.join(root, 'appdata'),
-    MEMOCAP_HOME: path.join(root, 'home'), MEMOCAP_DB: path.join(root, 'memory', 'core.db'),
-    MEMOCAP_DATA_DIR: path.join(root, 'memory'), CI: 'true',
-    OPENCODE_DISABLE_AUTOUPDATE: 'true', OPENCODE_DISABLE_MODELS_FETCH: 'true',
-    OPENCODE_DISABLE_PROJECT_CONFIG: 'true', OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: 'true',
-    OPENCODE_CONFIG_DIR: path.join(root, 'config', 'opencode'),
-  });
-  for (const directory of [env.HOME, env.XDG_CONFIG_HOME, env.XDG_CACHE_HOME,
-    env.XDG_DATA_HOME, env.XDG_STATE_HOME, env.LOCALAPPDATA, env.APPDATA,
-    env.MEMOCAP_DATA_DIR, env.OPENCODE_CONFIG_DIR]) fs.mkdirSync(directory, { recursive: true });
-  return env;
-}
-
-function prepare(root, evidence) {
-  const env = isolated(root);
-  const host = process.env.MEMOCAP_TEST_OPENCODE || 'opencode';
-  evidence.host = { binary: host, version: execute(host, ['--version'], { env }) };
-  assert.equal(evidence.host.version, officialVersion, 'integration requires exact official OpenCode 1.19.3');
-  const version = JSON.parse(fs.readFileSync(path.join(repo, 'package.json'))).version;
-  const native = path.resolve(process.env.MEMOCAP_TEST_NATIVE || path.join(repo, 'target/debug',
-    process.platform === 'win32' ? 'memocap.exe' : 'memocap'));
-  const nativeVersion = execute(native, ['--version'], { env });
-  evidence.native = { version: nativeVersion, package_version: version,
-    origin: 'prepublish_local_build_not_published_release_asset' };
-  assert.equal(nativeVersion, `memocap ${version}`, 'rebuild native binary after package version changes');
-  const assets = { 'darwin-arm64': 'memocap-aarch64-apple-darwin',
-    'linux-x64': 'memocap-x86_64-unknown-linux-gnu', 'win32-x64': 'memocap-x86_64-pc-windows-msvc.exe' };
-  const asset = assets[`${process.platform}-${process.arch}`];
-  assert.ok(asset, 'unsupported release platform');
-  const base = process.platform === 'darwin' ? path.join(env.HOME, 'Library/Caches') :
-    process.platform === 'win32' ? env.LOCALAPPDATA : env.XDG_CACHE_HOME;
-  const cache = path.join(base, 'memocap', version);
-  fs.mkdirSync(cache, { recursive: true });
-  const cached = path.join(cache, asset);
-  fs.copyFileSync(native, cached);
-  fs.chmodSync(cached, 0o755);
-  const checksum = crypto.createHash('sha256').update(fs.readFileSync(cached)).digest('hex');
-  fs.writeFileSync(`${cached}.sha256`, `${checksum}  ${asset}\n`);
-  evidence.native.sha256 = checksum;
-  evidence.native.launcher_version = execute(process.execPath, [path.join(repo, 'bin/cli.cjs'), '--version'], { env });
-  assert.equal(evidence.native.launcher_version, nativeVersion);
-  evidence.native.official_host_launcher_probe = execute(host, [path.join(repo, 'bin/cli.cjs'), '--version'], { env });
-  evidence.sdk = Object.fromEntries(['plugin', 'sdk'].map((name) => {
-    const installed = JSON.parse(fs.readFileSync(path.join(repo, 'node_modules/@opencode-ai', name, 'package.json'))).version;
-    assert.equal(installed, officialVersion);
-    return [name, installed];
-  }));
-  const directories = Object.fromEntries(['outside', 'A', 'B'].map((name) => [name, path.join(root, name)]));
-  for (const directory of Object.values(directories)) fs.mkdirSync(directory);
-  const cli = (args) => JSON.parse(execute(native, ['--json', ...args], { env, cwd: directories.outside }));
-  return { env, host, native, version, directories, cli };
+async function prepare(root, evidence) {
+  const packaged = lifecycleFixture(repo, evidence);
+  try {
+    const prepared = await packaged.prepare();
+    const installed = await runLifecycle(packaged, prepared, evidence);
+    const { env, host, version } = packaged;
+    const native = path.resolve(process.env.MEMOCAP_TEST_NATIVE || path.join(repo, 'target/debug',
+      process.platform === 'win32' ? 'memocap.exe' : 'memocap'));
+    const cache = path.join(env.XDG_CACHE_HOME, 'opencode/packages', `@lyy-gh/memocap@${version}`);
+    await packaged.command('npm', ['install', '--prefix', cache, '--ignore-scripts', prepared.tarball]);
+    const pluginRoot = path.join(cache, 'node_modules/@lyy-gh/memocap');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(pluginRoot, 'package.json'))).version, version);
+    const { inspectPolicy } = await import(pathToFileURL(path.join(pluginRoot, 'lib/policy.mjs')));
+    assert.equal(inspectPolicy(path.join(pluginRoot, 'skills/memocap')).digest, installed.bundled.digest);
+    evidence.plugin_package = { version, cache: 'actual_tarball_installed_at_official_exact_spec_cache',
+      sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(pluginRoot, 'plugin/index.js'))).digest('hex') };
+    evidence.sdk = Object.fromEntries(['plugin', 'sdk'].map((name) => {
+      const installedVersion = JSON.parse(fs.readFileSync(path.join(cache, 'node_modules/@opencode-ai', name, 'package.json'))).version;
+      assert.equal(installedVersion, officialVersion);
+      return [name, installedVersion];
+    }));
+    const directories = { outside: path.join(root, 'outside'), A: path.join(root, 'A'), B: path.join(root, 'B') };
+    for (const directory of Object.values(directories)) fs.mkdirSync(directory, { recursive: true });
+    const cli = (args) => JSON.parse(execute(native, ['--json', ...args], { env, cwd: directories.outside }));
+    return { env, host, native, version, directories, cli, ...installed, packaged,
+      async cleanup() { return packaged.cleanup(); } };
+  } catch (error) { evidence.cleanup.package = await packaged.cleanup(); throw error; }
 }
 
 async function wireProvider() {
@@ -117,19 +87,20 @@ async function wireProvider() {
     async close() { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); } };
 }
 
-async function startHost(fixture, provider, evidence, plugin = path.join(repo, 'plugin/index.js')) {
+async function startHost(fixture, provider, evidence) {
   const config = {
-    plugin: [pathToFileURL(plugin).href], model: 'wire/wire-model', small_model: 'wire/wire-model',
+    model: 'wire/wire-model', small_model: 'wire/wire-model',
     enabled_providers: ['wire'], share: 'disabled', autoupdate: false,
-    permission: { '*': 'deny', memocap_scope: 'allow', memocap_recall: 'allow', memocap_remember: 'allow' },
+    permission: { '*': 'deny', skill: 'allow', read: 'allow', external_directory: 'allow',
+      memocap_scope: 'allow', memocap_recall: 'allow', memocap_remember: 'allow' },
     provider: { wire: { npm: '@ai-sdk/openai-compatible', name: 'Local deterministic wire fixture',
       options: { baseURL: provider.url, apiKey: 'local-fixture-only', timeout: 10000 },
       models: { 'wire-model': { name: 'Local fixture', tool_call: true,
         limit: { context: 64000, output: 1024 }, cost: { input: 0, output: 0 } } } } },
   };
-  const configFile = path.join(fixture.env.OPENCODE_CONFIG_DIR, 'opencode.json');
-  fs.writeFileSync(configFile, JSON.stringify(config));
-  const env = { ...fixture.env, OPENCODE_CONFIG: configFile };
+  const configFile = fixture.config;
+  mergeHostConfig(configFile, config);
+  const env = fixture.env;
   const reservation = require('node:net').createServer();
   reservation.listen(0, '127.0.0.1');
   await once(reservation, 'listening');
@@ -181,7 +152,7 @@ async function startHost(fixture, provider, evidence, plugin = path.join(repo, '
     const [code, signal] = await exited;
     clearTimeout(timer);
     evidence.host.exit = { code, signal };
-    evidence.host.log_tail = output.slice(-12000);
+    evidence.host.log_tail = output.slice(-2000);
   } };
 }
 
