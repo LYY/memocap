@@ -49,7 +49,7 @@ if (process.platform === 'win32') {
     const { expected } = fixture(context);
     const short = expected.map((directory) => {
       const child = spawnSync(path.join(process.env.SystemRoot, 'System32', 'cmd.exe'),
-        ['/d', '/c', `for %I in ("${directory}") do @echo %~sI`], { encoding: 'utf8', timeout: 10000 });
+        ['/d', '/c', 'for %I in (.) do @echo %~fsI'], { cwd: directory, encoding: 'utf8', timeout: 10000 });
       assert.equal(child.status, 0, child.stderr);
       return child.stdout.trim();
     });
