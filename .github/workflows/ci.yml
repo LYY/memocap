@@ -21,9 +21,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
+        env:
+          npm_config_cache: ${{ runner.temp }}/memocap-npm-download-cache
         with:
           node-version: "24"
+          cache: npm
+          cache-dependency-path: package-lock.json
       - name: Install Node dependencies
+        env:
+          npm_config_cache: ${{ runner.temp }}/memocap-npm-download-cache
         run: npm ci --ignore-scripts --no-audit --no-fund
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -40,12 +46,13 @@ jobs:
         run: cargo test
       - name: Test Node contracts
         if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
-        run: node --test tests/*.test.cjs
+        run: node scripts/test-node-contracts.mjs
       - name: Test packaged lifecycle and official OpenCode 1.19.3
         if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
         shell: bash
         env:
           MEMOCAP_OPENCODE_INTEGRATION: "1"
+          MEMOCAP_TEST_NPM_CACHE: ${{ runner.temp }}/memocap-npm-download-cache
           MEMOCAP_TEST_LINUX_OFFLINE: ${{ runner.os == 'Linux' && '1' || '0' }}
           MEMOCAP_TEST_HOST_EVIDENCE: ${{ runner.temp }}/task-8-${{ runner.os }}.json
         run: |

@@ -52,7 +52,7 @@ fn package_contract_runs_release_gates_before_packaging() {
     assert!(
         package_contract.find("actionlint").unwrap() < package_contract.find("npm pack").unwrap()
     );
-    assert!(!package_contract.contains("node --test tests/*.test.cjs"));
+    assert!(!package_contract.contains("node scripts/test-node-contracts.mjs"));
 }
 
 #[test]
@@ -88,13 +88,79 @@ fn windows_workflow(workflow: &str) -> String {
     workflow.replace("\r\n", "\n").replace('\n', "\r\n")
 }
 
+#[test]
+fn npm_download_cache_is_shared_by_setup_install_and_official_fixture() {
+    assert_npm_cache_contract(CI_WORKFLOW);
+}
+
+#[test]
+fn npm_download_cache_contract_accepts_crlf_checkout() {
+    assert_npm_cache_contract(&windows_workflow(CI_WORKFLOW));
+}
+
+#[test]
+fn npm_download_cache_contract_rejects_setup_node_resolving_a_different_cache() {
+    assert_npm_cache_contract(CI_WORKFLOW);
+    let mismatched = CI_WORKFLOW.replacen(
+        "npm_config_cache: ${{ runner.temp }}/memocap-npm-download-cache",
+        "npm_config_cache: ${{ runner.temp }}/different-npm-cache",
+        1,
+    );
+
+    assert!(std::panic::catch_unwind(|| assert_npm_cache_contract(&mismatched)).is_err());
+}
+
+fn assert_npm_cache_contract(workflow: &str) {
+    let test = job(workflow, "test").replace("\r\n", "\n");
+    let (settings, _) = test.split_once("    steps:").unwrap();
+    assert!(!settings.contains("env:"), "cache must remain step-local");
+    let setup = test
+        .split("\n      - ")
+        .find(|step| step.starts_with("uses: actions/setup-node@v7\n"))
+        .expect("missing test job setup-node");
+    for required in [
+        "          node-version: \"24\"",
+        "          cache: npm",
+        "          cache-dependency-path: package-lock.json",
+    ] {
+        assert!(
+            setup.lines().any(|line| line == required),
+            "missing {required}"
+        );
+    }
+    let install = step_running(&test, "npm ci --ignore-scripts --no-audit --no-fund");
+    for step in [setup, install] {
+        assert!(
+            step.contains(
+                "\n        env:\n          npm_config_cache: ${{ runner.temp }}/memocap-npm-download-cache\n"
+            ),
+            "setup-node and npm ci must resolve the same step-local npm cache"
+        );
+    }
+    let host = step_running(&test, "node --test tests/opencode-v1.integration.test.cjs");
+    assert!(host.contains(
+        "\n          MEMOCAP_TEST_NPM_CACHE: ${{ runner.temp }}/memocap-npm-download-cache\n"
+    ));
+    assert!(host.contains("\n        env:\n"));
+    assert_eq!(test.matches("npm_config_cache:").count(), 2);
+    assert_eq!(test.matches("MEMOCAP_TEST_NPM_CACHE:").count(), 1);
+    let node = step_running(&test, "node scripts/test-node-contracts.mjs");
+    assert!(!node.contains("env:"));
+    let package_contract = job(workflow, "package-contract");
+    assert!(!package_contract.contains("cache:"));
+    assert!(!package_contract.contains("cache-dependency-path:"));
+}
+
 fn assert_node_contract(workflow: &str) {
     let test = job(workflow, "test").replace("\r\n", "\n");
 
     assert!(test.contains("os: [ubuntu-latest, macos-latest, windows-latest]"));
     assert!(test.contains("node-version: \"24\""));
-    assert!(test.find("npm ci --ignore-scripts").unwrap() < test.find("node --test").unwrap());
-    assert!(step_running(&test, "node --test tests/*.test.cjs")
+    assert!(
+        test.find("npm ci --ignore-scripts").unwrap()
+            < test.find("node scripts/test-node-contracts.mjs").unwrap()
+    );
+    assert!(step_running(&test, "node scripts/test-node-contracts.mjs")
         .contains("if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}"));
 }
 
@@ -118,7 +184,7 @@ fn native_build_precedes_rust_tests_and_node_feedback() {
     let commands = [
         "cargo build --bin memocap",
         "cargo test",
-        "node --test tests/*.test.cjs",
+        "node scripts/test-node-contracts.mjs",
         "node --test tests/opencode-v1.integration.test.cjs",
     ];
     for pair in commands.windows(2) {
@@ -134,7 +200,7 @@ fn node_and_host_feedback_require_successful_native_build_without_cancellation()
     let test = job(CI_WORKFLOW, "test").replace("\r\n", "\n");
 
     for command in [
-        "node --test tests/*.test.cjs",
+        "node scripts/test-node-contracts.mjs",
         "node --test tests/opencode-v1.integration.test.cjs",
     ] {
         let step = step_running(&test, command);
