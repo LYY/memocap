@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { repo, prepare, wireProvider, startHost, portClosed } = require('./opencode-v1/host.cjs');
-const { observe, retain } = require('./opencode-v1/phases.cjs');
+const { observe, retain, recordCleanupFailure } = require('./opencode-v1/phases.cjs');
 
 function reference(message) {
   const parts = typeof message.content === 'string' ? [message.content] :
@@ -214,7 +214,7 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       if (provider) {
         evidence.request_count = provider.requests.length;
         await observe(evidence, 'provider_cleanup', () => provider.close())
-          .catch((error) => { evidence.cleanup.provider_error = error.message; failure ||= error; });
+          .catch((error) => { evidence.cleanup.provider_error = error.message; failure = recordCleanupFailure(evidence, failure, error); });
         evidence.cleanup.provider_port_closed = await portClosed(provider.url);
       }
       evidence.cleanup.provider_closed = Boolean(provider);
@@ -239,7 +239,7 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
         } catch (error) { failure = error; evidence.status = 'failed'; evidence.error = error.stack; }
       } else evidence.linux_offline = { status: 'not_run', reason: 'Linux network namespace acceptance runs in the native Linux CI job; macOS/Windows outbound denial is not claimed' };
       if (fixture) evidence.cleanup.package = await observe(evidence, 'package_cleanup', () => fixture.cleanup())
-        .catch((error) => { evidence.cleanup.package_error = error.message; failure ||= error; });
+        .catch((error) => { evidence.cleanup.package_error = error.message; failure = recordCleanupFailure(evidence, failure, error); });
       retain(evidenceFile, evidence, [[root, '<isolated-root>'], [repo, '<repository>']]);
       fs.rmSync(root, { recursive: true, force: true });
       evidence.cleanup.isolated_root_removed = !fs.existsSync(root);

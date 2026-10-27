@@ -28,4 +28,12 @@ function retain(filename, evidence, roots) {
   require('node:assert/strict').equal(JSON.parse(fs.readFileSync(filename)).status, evidence.status);
 }
 
-module.exports = { enter, finish, observe, retain };
+function recordCleanupFailure(evidence, failure, error) {
+  if (!failure) {
+    evidence.status = 'failed';
+    evidence.blocker = { message: error.message, stack: error.stack };
+  }
+  return failure || error;
+}
+
+module.exports = { enter, finish, observe, retain, recordCleanupFailure };
