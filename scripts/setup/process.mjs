@@ -84,22 +84,47 @@ export async function runProcess(command, args, options = {}) {
       captureDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-inventory-"));
       stdoutDescriptor = fs.openSync(path.join(captureDirectory, "stdout"), "wx+", 0o600);
     }
-    const execution = await new Promise((resolve) => {
+    const execution = await new Promise((resolve, reject) => {
       const child = spawn(program, argumentsList, { cwd: options.cwd, env, shell: false, windowsHide: true, detached: process.platform !== "win32", stdio: ["ignore", stdoutDescriptor ?? "pipe", "pipe"] });
       let stdout = "";
       let stderr = "";
       let forceTimer;
+      let exited = false;
+      let pendingError;
+      const clearTimers = () => { clearTimeout(timer); clearTimeout(forceTimer); clearInterval(captureTimer); };
+      const fail = (error) => { pendingError = undefined; clearTimers(); reject(error); };
+      const signalGroup = (signal) => {
+        try { killTree(child, signal, options.env || process.env); }
+        catch (error) {
+          if (process.platform === "darwin" && signal === "SIGTERM" && error.code === "EPERM" && !exited) pendingError = error;
+          else fail(error);
+        }
+      };
       const stop = () => {
         if (forceTimer) return;
-        killTree(child, "SIGTERM", options.env || process.env);
-        forceTimer = setTimeout(() => killTree(child, "SIGKILL", options.env || process.env), 250);
+        forceTimer = setTimeout(() => {
+          signalGroup("SIGKILL");
+          if (pendingError) fail(pendingError);
+        }, 250);
+        signalGroup("SIGTERM");
       };
       const timer = setTimeout(stop, options.timeout || 180_000);
-      const captureTimer = stdoutDescriptor === undefined ? undefined : setInterval(() => { if (fs.fstatSync(stdoutDescriptor).size > 4_000_000) stop(); }, 25);
+      const captureTimer = stdoutDescriptor === undefined ? undefined : setInterval(() => {
+        try { if (fs.fstatSync(stdoutDescriptor).size > 4_000_000) stop(); }
+        catch (error) { fail(error); }
+      }, 25);
       child.stdout?.on("data", (chunk) => { stdout += chunk; if (stdout.length > 4_000_000) stop(); });
       child.stderr.on("data", (chunk) => { stderr += chunk; if (stderr.length > 4_000_000) stop(); });
-      child.once("error", (error) => { clearTimeout(timer); clearTimeout(forceTimer); clearInterval(captureTimer); resolve({ code: 127, stdout, stderr: `${stderr}${error.message}` }); });
-      child.once("close", (code, signal) => { clearTimeout(timer); clearTimeout(forceTimer); clearInterval(captureTimer); resolve({ code: forceTimer ? 1 : code ?? 1, stdout, stderr, signal }); });
+      child.once("exit", () => {
+        exited = true;
+        if (pendingError) { pendingError = undefined; signalGroup("SIGTERM"); }
+      });
+      child.once("error", (error) => { clearTimers(); resolve({ code: 127, stdout, stderr: `${stderr}${error.message}` }); });
+      child.once("close", (code, signal) => {
+        if (pendingError) { fail(pendingError); return; }
+        clearTimers();
+        resolve({ code: forceTimer ? 1 : code ?? 1, stdout, stderr, signal });
+      });
     });
     if (stdoutDescriptor !== undefined) {
       const output = Buffer.alloc(Math.min(fs.fstatSync(stdoutDescriptor).size, 4_000_001));
