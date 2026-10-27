@@ -1,4 +1,5 @@
 use memocap::{server, store};
+use receipt_server::Termination;
 use serde_json::{json, Value};
 const REPO: &str = "repository:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 #[path = "support/receipt_cli.rs"]
@@ -10,6 +11,26 @@ fn request(command: Value) -> Value {
     json!({"operation_id":"00000000-0000-0000-0000-000000000311",
         "targets":[{"repository_id":REPO,"canonical_path":null,"identity_source":"explicit","placements":[]}],
         "command":command,"caller":{"actor":"cli","session_id":null,"message_id":null}})
+}
+
+#[test]
+fn receipt_server_survives_delayed_real_cli_startup() {
+    let dir = tempfile::tempdir().unwrap();
+    let database = dir.path().join("core.db");
+    let (address, fixture) =
+        receipt_server::start(database.clone(), receipt_server::Mode::Normal, 2);
+
+    std::thread::sleep(std::time::Duration::from_millis(4200));
+    let attempts = receipt_cli::run(dir.path(), &address, &[&["status", "--read-only"]]);
+    let report = fixture.join();
+    eprintln!("{}", json!({"cli": attempts, "server": report}));
+
+    assert_eq!(attempts.len(), 1);
+    assert!(attempts[0].success, "{:?}", attempts[0]);
+    assert!(matches!(report.termination, Termination::Completed));
+    assert_eq!(report.paths(), ["/v1/capabilities", "/v1/receipt"]);
+    assert!(!database.exists());
+    assert!(!dir.path().join("client-must-not-exist.db").exists());
 }
 
 #[test]
@@ -26,7 +47,9 @@ fn failed_cli_records_wire_evidence_without_replay_or_followup() {
             &["recall", "wire"],
         ],
     );
-    let observed = serde_json::to_value(handle.join()).unwrap();
+    let report = handle.join();
+    assert_eq!(report.paths(), ["/v1/capabilities", "/v1/receipt"]);
+    let observed = serde_json::to_value(report).unwrap();
     eprintln!("{}", json!({"cli":attempts,"server":observed}));
     assert_eq!(attempts.len(), 1);
     assert_eq!(
@@ -39,14 +62,15 @@ fn failed_cli_records_wire_evidence_without_replay_or_followup() {
     assert_eq!(receipt["error"]["code"], "outcome_unknown");
     assert!(!attempts[0].stderr.is_empty());
     assert!(attempts[0].elapsed_us > 0);
-    assert_eq!(observed["termination"], "idle_expired");
+    assert_eq!(observed["termination"], "stopped");
     let events = observed["events"].as_array().unwrap();
-    assert_eq!(events.last().unwrap()["stage"]["name"], "idle_expired");
+    assert_eq!(events.len(), 13);
+    assert_eq!(events.last().unwrap()["stage"]["name"], "stopped");
     assert!(events
         .windows(2)
         .all(|pair| pair[0]["elapsed_us"].as_u64().unwrap()
             <= pair[1]["elapsed_us"].as_u64().unwrap()));
-    for request in events[..12].chunks_exact(6) {
+    for request in events[..12].as_chunks::<6>().0 {
         let stages: Vec<_> = request
             .iter()
             .map(|event| event["stage"]["name"].as_str().unwrap())
@@ -159,10 +183,7 @@ fn old_server_is_refused_before_sending_a_write() {
     let observed = handle.join();
     eprintln!("{}", serde_json::to_string(&observed).unwrap());
     assert!(receipt.is_err());
-    assert!(matches!(
-        observed.termination,
-        receipt_server::Termination::Completed
-    ));
+    assert!(matches!(observed.termination, Termination::Completed));
     assert_eq!(observed.paths(), vec!["/v1/capabilities"]);
     assert!(!db.exists());
 }
@@ -178,10 +199,7 @@ fn malformed_write_response_reports_unknown_without_replaying() {
     let observed = handle.join();
     eprintln!("{}", serde_json::to_string(&observed).unwrap());
     let receipt = receipt.unwrap();
-    assert!(matches!(
-        observed.termination,
-        receipt_server::Termination::Completed
-    ));
+    assert!(matches!(observed.termination, Termination::Completed));
     assert_eq!(receipt.status, memocap::receipt::Status::OutcomeUnknown);
     assert!(!serde_json::to_string(&receipt)
         .unwrap()
@@ -217,10 +235,7 @@ fn real_remote_cli_supports_any_match_inventory_and_server_activity() {
         "{}",
         json!({"cli":attempts,"server":observed})
     );
-    assert!(matches!(
-        observed.termination,
-        receipt_server::Termination::Completed
-    ));
+    assert!(matches!(observed.termination, Termination::Completed));
     assert_eq!(attempts.len(), 4);
     let _: Value = serde_json::from_str(&attempts[0].stdout).unwrap();
     let recalled: Value = serde_json::from_str(&attempts[1].stdout).unwrap();
@@ -241,5 +256,8 @@ fn real_remote_cli_supports_any_match_inventory_and_server_activity() {
     assert_eq!(activity["events"].as_array().unwrap().len(), 1);
     assert_eq!(activity["events"][0]["context"]["origin"], "server");
     assert!(!dir.path().join("client-must-not-exist.db").exists());
-    assert_eq!(observed.paths().len(), 8);
+    assert_eq!(
+        observed.paths(),
+        ["/v1/capabilities", "/v1/receipt"].repeat(4)
+    );
 }

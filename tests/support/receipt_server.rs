@@ -2,7 +2,11 @@ use serde::{Deserialize, Serialize};
 use std::{
     io,
     path::PathBuf,
-    sync::mpsc::{self, Receiver, Sender},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, Receiver, Sender},
+        Arc,
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -32,7 +36,7 @@ pub enum Stage {
     Dispatched,
     Responding { http: u16, receipt: ReceiptMetadata },
     Responded { error: Option<String> },
-    IdleExpired,
+    Stopped,
 }
 
 #[derive(Debug, Serialize)]
@@ -63,7 +67,7 @@ impl Observer {
 #[serde(rename_all = "snake_case")]
 pub enum Termination {
     Completed,
-    IdleExpired,
+    Stopped,
     IoError(String),
     Panicked(String),
 }
@@ -86,13 +90,15 @@ impl Report {
                 | Stage::Dispatched
                 | Stage::Responding { .. }
                 | Stage::Responded { .. }
-                | Stage::IdleExpired => None,
+                | Stage::Stopped => None,
             })
             .collect()
     }
 }
 
 pub struct Fixture {
+    server: Arc<Server>,
+    stop: Arc<AtomicBool>,
     handle: Option<thread::JoinHandle<io::Result<Termination>>>,
     receiver: Receiver<Event>,
     started: Instant,
@@ -104,6 +110,8 @@ impl Fixture {
     }
 
     fn finish(&mut self) -> Report {
+        self.stop.store(true, Ordering::SeqCst);
+        self.server.unblock();
         let termination = match self.handle.take().unwrap().join() {
             Ok(Ok(termination)) => termination,
             Ok(Err(error)) => Termination::IoError(error.to_string()),
@@ -132,16 +140,24 @@ impl Drop for Fixture {
 }
 
 pub fn start(database: PathBuf, mode: Mode, count: usize) -> (String, Fixture) {
-    let server = Server::http("127.0.0.1:0").unwrap();
+    let server = Arc::new(Server::http("127.0.0.1:0").unwrap());
+    let stop = Arc::new(AtomicBool::new(false));
     let address = format!("http://{}", server.server_addr());
     let started = Instant::now();
     let (sender, receiver) = mpsc::channel();
     let observer = Observer { sender, started };
+    let worker_server = Arc::clone(&server);
+    let worker_stop = Arc::clone(&stop);
     let handle = thread::spawn(move || -> io::Result<Termination> {
         for _ in 0..count {
-            let Some(mut request) = server.recv_timeout(Duration::from_secs(4))? else {
-                observer.record(None, Stage::IdleExpired);
-                return Ok(Termination::IdleExpired);
+            let mut request = loop {
+                if let Some(request) = worker_server.recv_timeout(Duration::from_secs(4))? {
+                    break request;
+                }
+                if worker_stop.load(Ordering::SeqCst) {
+                    observer.record(None, Stage::Stopped);
+                    return Ok(Termination::Stopped);
+                }
             };
             let path = request.url().to_owned();
             observer.record(Some(&path), Stage::Received);
@@ -194,6 +210,8 @@ pub fn start(database: PathBuf, mode: Mode, count: usize) -> (String, Fixture) {
     (
         address,
         Fixture {
+            server,
+            stop,
             handle: Some(handle),
             receiver,
             started,
@@ -203,14 +221,16 @@ pub fn start(database: PathBuf, mode: Mode, count: usize) -> (String, Fixture) {
 
 #[test]
 fn body_read_error_retains_received_path_after_join() {
-    use std::io::Write;
+    use std::io::{Read, Write};
     let dir = tempfile::tempdir().unwrap();
     let db = dir.path().join("core.db");
     let (address, handle) = start(db.clone(), Mode::Normal, 1);
     let mut stream =
         std::net::TcpStream::connect(address.strip_prefix("http://").unwrap()).unwrap();
-    stream.write_all(b"POST /v1/receipt HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n\r\ninvalid-chunk\r\n").unwrap();
-    drop(stream);
+    stream.write_all(b"POST /v1/receipt HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\nTransfer-Encoding: chunked\r\n\r\ninvalid-chunk\r\n").unwrap();
+    let mut response = String::new();
+    stream.read_to_string(&mut response).unwrap();
+    assert!(response.starts_with("HTTP/1.1 500"), "{response}");
     let observed = handle.join();
     eprintln!("{}", serde_json::to_string(&observed).unwrap());
     assert_eq!(observed.paths(), ["/v1/receipt"]);
