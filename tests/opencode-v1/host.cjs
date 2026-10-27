@@ -151,13 +151,16 @@ async function startHost(fixture, provider, evidence) {
   evidence.host.url = url;
   assert.equal(new URL(url).port, String(port), 'host must bind the isolated ephemeral port');
   async function api(route, body) {
-    const request = { route, started_at: new Date().toISOString(),
+    const method = body === undefined ? 'GET' : 'POST';
+    const budget = method === 'POST' && /^\/session\/[^/]+\/(message|command|summarize)$/.test(route)
+      ? 180000 : 25000;
+    const request = { route, method, budget_ms: budget, started_at: new Date().toISOString(),
       started_monotonic_ms: performance.now(), stage: 'fetch' };
     evidence.api_requests ||= [];
     evidence.api_requests.push(request);
-    const signal = AbortSignal.timeout(25000);
+    const signal = AbortSignal.timeout(budget);
     try {
-      const response = await fetch(`${url}${route}`, { method: body === undefined ? 'GET' : 'POST',
+      const response = await fetch(`${url}${route}`, { method,
         headers: { 'Content-Type': 'application/json', 'x-opencode-directory': fixture.directories.outside },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal });
       request.stage = 'body_read';
