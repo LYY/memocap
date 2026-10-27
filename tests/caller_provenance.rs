@@ -111,7 +111,12 @@ fn http_caller_is_provenance_and_preserves_actual_server_origin() {
     );
     assert_eq!(history["events"][0]["context"]["backend"], "remote");
     assert_eq!(history["events"][0]["context"]["origin"], "server");
-    assert_eq!(server.join().unwrap().len(), 4);
+    let report = server.join();
+    assert!(
+        matches!(&report.termination, receipt_server::Termination::Completed),
+        "{report:?}"
+    );
+    assert_eq!(report.paths().len(), 4);
 }
 
 #[test]
@@ -215,7 +220,12 @@ fn unknown_remote_write_keeps_reported_caller_without_replay() {
     let receipt: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(receipt["status"], "outcome_unknown");
     assert_eq!(receipt["caller"]["session_id"], "session-typed");
-    assert_eq!(server.join().unwrap().len(), 2);
+    let report = server.join();
+    assert!(
+        matches!(&report.termination, receipt_server::Termination::Completed),
+        "{report:?}"
+    );
+    assert_eq!(report.paths().len(), 2);
     let core = memocap::store::open(&f.database).unwrap();
     assert_eq!(
         core.query_row("SELECT count(*) FROM memories", [], |row| row
@@ -244,6 +254,11 @@ fn capability_refusal_keeps_caller_without_a_write() {
     assert!(!output.status.success());
     let receipt: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(receipt["caller"]["message_id"], "message-typed");
-    assert_eq!(server.join().unwrap(), ["/v1/capabilities"]);
+    let report = server.join();
+    assert!(
+        matches!(&report.termination, receipt_server::Termination::Completed),
+        "{report:?}"
+    );
+    assert_eq!(report.paths(), ["/v1/capabilities"]);
     assert!(!f.database.exists());
 }
