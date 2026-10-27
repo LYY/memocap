@@ -10,7 +10,7 @@ const { digest, write, snapshot, isolatedEnvironment, denyLinks, assertManagedLi
 
 function lifecycleFixture(workspace, evidence) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap packaged acceptance "));
-  const env = isolatedEnvironment(root);
+  const env = isolatedEnvironment(root, process.env.MEMOCAP_TEST_NPM_CACHE);
   const home = env.HOME;
   const prefix = env.npm_config_prefix;
   const project = path.join(root, "project with spaces");

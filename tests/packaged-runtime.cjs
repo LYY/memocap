@@ -13,7 +13,7 @@ function write(filename, contents) {
   fs.writeFileSync(filename, contents);
 }
 
-function isolatedEnvironment(root) {
+function isolatedEnvironment(root, npmCache) {
   const env = {};
   for (const key of ["SystemRoot", "WINDIR", "COMSPEC", "PATHEXT", "LANG"]) {
     if (process.env[key]) env[key] = process.env[key];
@@ -31,7 +31,7 @@ function isolatedEnvironment(root) {
     LOCALAPPDATA: path.join(root, process.platform === "win32" ? "home/AppData/Local" : "home/local"),
     TMPDIR: path.join(root, "tmp"), TMP: path.join(root, "tmp"), TEMP: path.join(root, "tmp"),
     MEMOCAP_DB: path.join(root, "memory/core.db"), MEMOCAP_DATA_DIR: path.join(root, "memory"),
-    npm_config_prefix: path.join(root, "prefix"), npm_config_cache: path.join(root, "npm-cache"),
+    npm_config_prefix: path.join(root, "prefix"), npm_config_cache: npmCache || path.join(root, "npm-cache"),
     npm_config_userconfig: path.join(root, "npmrc"), npm_config_globalconfig: path.join(root, "global-npmrc"),
     npm_config_audit: "false", npm_config_fund: "false", npm_config_update_notifier: "false",
     GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: path.join(root, "gitconfig"), GIT_TERMINAL_PROMPT: "0",
@@ -39,6 +39,7 @@ function isolatedEnvironment(root) {
     OPENCODE_DISABLE_AUTOUPDATE: "true", OPENCODE_DISABLE_MODELS_FETCH: "true",
     OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
   });
+  if (npmCache) env.npm_config_prefer_offline = "true";
   for (const directory of [env.HOME, env.XDG_CONFIG_HOME, env.XDG_CACHE_HOME, env.XDG_DATA_HOME,
     env.XDG_STATE_HOME, env.APPDATA, env.LOCALAPPDATA, env.TMPDIR, env.MEMOCAP_DATA_DIR, env.npm_config_prefix]) {
     fs.mkdirSync(directory, { recursive: true });
