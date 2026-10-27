@@ -94,5 +94,76 @@ fn assert_node_contract(workflow: &str) {
     assert!(test.contains("os: [ubuntu-latest, macos-latest, windows-latest]"));
     assert!(test.contains("node-version: \"24\""));
     assert!(test.find("npm ci --ignore-scripts").unwrap() < test.find("node --test").unwrap());
-    assert!(test.contains("- name: Test Node contracts\n        run: node --test tests/*.test.cjs"));
+    assert!(step_running(&test, "node --test tests/*.test.cjs")
+        .contains("if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}"));
+}
+
+fn step_running<'a>(section: &'a str, command: &str) -> &'a str {
+    section
+        .split("\n      - ")
+        .find(|step| {
+            step.lines()
+                .any(|line| line.trim() == format!("run: {command}") || line.trim() == command)
+        })
+        .unwrap_or_else(|| panic!("missing command {command}"))
+}
+
+#[test]
+fn native_build_precedes_rust_tests_and_node_feedback() {
+    let test = job(CI_WORKFLOW, "test").replace("\r\n", "\n");
+
+    let build = step_running(&test, "cargo build --bin memocap");
+
+    assert!(build.lines().any(|line| line.trim() == "id: native_build"));
+    let commands = [
+        "cargo build --bin memocap",
+        "cargo test",
+        "node --test tests/*.test.cjs",
+        "node --test tests/opencode-v1.integration.test.cjs",
+    ];
+    for pair in commands.windows(2) {
+        assert!(test.find(pair[0]).unwrap() < test.find(pair[1]).unwrap());
+    }
+    for command in commands {
+        assert_eq!(test.matches(command).count(), 1);
+    }
+}
+
+#[test]
+fn node_and_host_feedback_require_successful_native_build_without_cancellation() {
+    let test = job(CI_WORKFLOW, "test").replace("\r\n", "\n");
+
+    for command in [
+        "node --test tests/*.test.cjs",
+        "node --test tests/opencode-v1.integration.test.cjs",
+    ] {
+        let step = step_running(&test, command);
+        let conditions: Vec<_> = step
+            .lines()
+            .filter(|line| line.trim().starts_with("if:"))
+            .map(str::trim)
+            .collect();
+
+        assert_eq!(
+            conditions,
+            ["if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}"]
+        );
+    }
+}
+
+#[test]
+fn rust_gates_retain_default_failure_semantics() {
+    let test = job(CI_WORKFLOW, "test").replace("\r\n", "\n");
+
+    for command in [
+        "cargo fmt --check",
+        "cargo clippy --all-targets -- -D warnings",
+        "cargo build --bin memocap",
+        "cargo test",
+    ] {
+        let step = step_running(&test, command);
+
+        assert!(!step.lines().any(|line| line.trim().starts_with("if:")));
+    }
+    assert!(!CI_WORKFLOW.contains("continue-on-error:"));
 }

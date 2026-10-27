@@ -33,13 +33,16 @@ jobs:
         run: cargo fmt --check
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
+      - name: Build native packaged acceptance binary
+        id: native_build
+        run: cargo build --bin memocap
       - name: Test
         run: cargo test
       - name: Test Node contracts
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
         run: node --test tests/*.test.cjs
-      - name: Build native packaged acceptance binary
-        run: cargo build --bin memocap
       - name: Test packaged lifecycle and official OpenCode 1.19.3
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
         shell: bash
         env:
           MEMOCAP_OPENCODE_INTEGRATION: "1"
