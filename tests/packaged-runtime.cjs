@@ -20,6 +20,7 @@ function isolatedEnvironment(root) {
   }
   env.PATH = process.platform === "win32" ? [path.dirname(process.execPath),
     path.join(env.SystemRoot, "System32"), env.SystemRoot,
+    path.join(env.SystemRoot, "System32", "WindowsPowerShell", "v1.0"),
     path.join(process.env.ProgramFiles || "C:\\Program Files", "Git/cmd"),
     path.join(process.env.ProgramFiles || "C:\\Program Files", "Git/usr/bin")].join(path.delimiter) : "/usr/bin:/bin:/usr/sbin:/sbin";
   Object.assign(env, {
