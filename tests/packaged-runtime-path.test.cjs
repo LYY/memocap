@@ -57,7 +57,8 @@ for (const platform of ["darwin", "linux"]) {
 test("runner passes the isolated Windows PATH and explicit override to a real Node child", async (context) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap path child "));
   context.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const runtime = createRuntime("win32", { SystemRoot: "D:\\System Root", PATH: "Z:\\Personal" });
+  const systemRoot = process.platform === "win32" ? process.env.SystemRoot : "D:\\System Root";
+  const runtime = createRuntime("win32", { SystemRoot: systemRoot, PATH: "Z:\\Personal" });
   const env = runtime.isolatedEnvironment("R:\\Sandbox");
   const active = new Set();
   const evidence = { commands: [] };
@@ -67,7 +68,8 @@ test("runner passes the isolated Windows PATH and explicit override to a real No
     { env: { TASK25_MARKER: "explicit-child-override" } });
 
   const childEnv = JSON.parse(result.stdout);
-  assert.ok(childEnv.PATH.split(";").includes("D:\\System Root\\System32\\WindowsPowerShell\\v1.0"));
+  assert.ok(childEnv.PATH.split(";").includes(path.win32.join(systemRoot, "System32", "WindowsPowerShell", "v1.0")));
+  assert.equal(childEnv.SystemRoot, systemRoot);
   assert.equal(childEnv.PATH, env.PATH);
   assert.equal(childEnv.TASK25_MARKER, "explicit-child-override");
   assert.equal(childEnv.PATH.includes("Personal"), false);
@@ -81,7 +83,9 @@ test("runner dispatches an executable .exe control with known arguments and reje
   const executable = path.join(root, "powershell.exe");
   fs.copyFileSync(process.execPath, executable);
   fs.chmodSync(executable, 0o755);
-  const runtime = createRuntime("win32", { SystemRoot: "D:\\System Root" });
+  const runtime = createRuntime("win32", {
+    SystemRoot: process.platform === "win32" ? process.env.SystemRoot : "D:\\System Root",
+  });
   const active = new Set();
   const run = runtime.runner(runtime.isolatedEnvironment("R:\\Sandbox"), { commands: [] }, active, root);
 
