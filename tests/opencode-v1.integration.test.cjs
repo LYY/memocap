@@ -6,6 +6,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { repo, prepare, wireProvider, startHost, portClosed } = require('./opencode-v1/host.cjs');
 const { observe, retain, recordCleanupFailure } = require('./opencode-v1/phases.cjs');
+const { assertDirectoryTargets } = require('./opencode-v1/paths.cjs');
 
 function reference(message) {
   const parts = typeof message.content === 'string' ? [message.content] :
@@ -122,7 +123,7 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       const seedID = seeded.returned_ids[0];
       evidence.seed = { content: seededContent, id: seedID };
       evidence.scope_command_result = await command(`scope "${fixture.directories.A}" "${fixture.directories.B}"`);
-      assert.deepEqual(evidence.scope_command_result.targets.map((target) => target.canonical_path),
+      assertDirectoryTargets(evidence.scope_command_result.targets.map((target) => target.canonical_path),
         [fixture.directories.A, fixture.directories.B]);
       const answer = await prompt('wireseedquartz');
       assert.equal(answer.info.error, undefined, JSON.stringify(answer.info.error));
@@ -140,7 +141,7 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       evidence.scope = fixture.directories;
       const why = await command('why');
       assert.deepEqual(why.current.returned_ids, [seedID]);
-      assert.deepEqual(why.current.targets, [fixture.directories.A, fixture.directories.B]);
+      assertDirectoryTargets(why.current.targets, [fixture.directories.A, fixture.directories.B]);
       assert.ok(why.events.some((event) => event.detail.phase === 'injection_prepared'));
       await command('scopes');
       const beforeB = fixture.cli(['list', '--repo', fixture.directories.B]);
