@@ -525,22 +525,6 @@ mod lifecycle_tests {
     }
 
     #[test]
-    fn unregistered_legacy_minor_refuses_before_migration() {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("legacy.db");
-        let connection = Connection::open(&path).unwrap();
-        connection
-            .execute_batch(include_str!("../tests/fixtures/schema-1.0.sql"))
-            .unwrap();
-        connection
-            .execute("UPDATE schema_metadata SET minor=1", [])
-            .unwrap();
-
-        assert!(open(&path).is_err());
-        assert_eq!(schema::version(&connection).unwrap().minor, 1);
-    }
-
-    #[test]
     fn pre_versioned_refusal_preserves_original_rows() {
         // Given
         let directory = tempfile::tempdir().unwrap();

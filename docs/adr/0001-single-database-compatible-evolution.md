@@ -1,11 +1,22 @@
 # ADR-0001：单数据库与兼容演进
 
-**状态：** Accepted
-**日期：** 2026-10-24
+**状态：** Accepted；当前兼容范围于 2026-10-28 更新，原始决策保留为历史记录
+**原始日期：** 2026-10-24
+**最近更新：** 2026-10-28
 **决策者：** 用户
-**实现状态：** 当前分支已实现 package 0.2.0 / schema 2.0；发布状态见 release workflow
+**当前目标：** package 0.4.0 / schema 2.1；发布状态见 release workflow
 
-## 背景
+## 当前决策（2026-10-28）
+
+用户当前只需管理自己的单一 SQLite 数据库。此前关于通用同主版本 minor 兼容、schema `1.0` 桥接和旧 baseline 二进制互操作的承诺已被本节取代。
+
+- 新数据库直接使用 schema `2.1`。唯一支持的升级是精确 schema `2.0` 到 `2.1`，事务性地新增 nullable `memories.organized_at` 并更新 schema metadata。现有记忆内容、ID、placement、type、tags、topic、时间、provenance、extensions、FTS、activity 和 operation ledger 均须保留。
+- schema `1.0`、预版本、损坏、不兼容和未来版本均明确拒绝，不做 reset 或自动重建。只读检查不执行升级。`2.1` 之后不承诺读取任意更高 minor；具体支持范围以 [当前 schema contract](../SCHEMA-VERSIONING.md) 为准。
+- 不作旧二进制打开 schema `2.1` 的互操作承诺。package `0.4.0`、schema `2.1` 和 receipt format `1` 是彼此独立的标识。
+- 记忆整理只支持本地数据库。配置了 remote target 时拒绝该功能，不回退到本地或新增网络协议；这不改变已有远程操作。
+- 本次决策保留原 ADR 对原子迁移、保留 core 数据、拒绝不确定结构和不以 reset 修复的原则。下文原始决策中的其他兼容承诺是历史背景，不是当前支持合同。
+
+## 原始背景（2026-10-24）
 
 当前已发布 CLI 为 0.1.0，core schema 为 1.0；原始 0.0.10 使用相同的 core 形状。
 package 版本、core schema 版本和 receipt 格式是彼此独立的标识。
@@ -16,7 +27,7 @@ package 版本、core schema 版本和 receipt 格式是彼此独立的标识。
 本决策需要说明未来 core schema 如何兼容演进，以及辅助库如何退出，
 但本 ADR 不实施迁移、删除数据、撤回发布或改变任何已发布版本行为。
 
-## 决策
+## 原始决策内容（历史）
 
 ### 数据库边界
 
@@ -81,7 +92,7 @@ tags、topics、时间、FTS、domains、attachments、provenance 和 operation 
 package 0.2.0 是未来目标，尚未发布。是否发布、是否撤回或弃用旧版，
 都是独立的运营决策；本 ADR 不表示它们已经完成，也不要求现在删除任何用户数据。
 
-## 考虑过的替代方案
+## 考虑过的替代方案（原始决策）
 
 1. **继续严格 fingerprint，并拒绝每个更高 minor。** 行为简单，但新增兼容结构仍会阻断旧 baseline，
    无法达成同一数据库跨 minor 演进的目标。
@@ -90,7 +101,7 @@ package 0.2.0 是未来目标，尚未发布。是否发布、是否撤回或弃
 3. **保留双库作为长期架构。** 可隔离辅助历史，但维护两套生命周期与协调边界，
    也无法消除 core schema 对严格 fingerprint 的限制。选择单库并不等于承诺 activity 绝不丢失。
 
-## 后果与风险
+## 后果与风险（原始决策）
 
 - 同主版本更高 minor 的旧 baseline 可继续执行已知功能，但不能获得新功能语义。
 - 兼容性需要针对真实 SQL、trigger、约束、枚举和未知结构验证，不能只测试 DDL 成功。
@@ -98,7 +109,7 @@ package 0.2.0 是未来目标，尚未发布。是否发布、是否撤回或弃
 - 回滚到 0.0.10 或 0.1.0 不受本 ADR 保证；它们仍可能因更高 minor 拒绝打开数据库。
 - 本决策先确立演进规则，不替代尚未确定的 0.2.0 迁移步骤或 activity 历史处置选择。
 
-## 验收依据
+## 验收依据（原始决策）
 
 实现同主版本兼容演进后，至少验证以下场景：
 
@@ -108,8 +119,9 @@ package 0.2.0 是未来目标，尚未发布。是否发布、是否撤回或弃
 4. 验证只读检查遇到未来兼容 minor 时不执行 DDL、初始化、prune 或 activity 写入，并能报告升级需要。
 5. 验证未知、损坏以及更高 major 的数据明确拒绝且不 reset；验证新功能不会被旧 baseline 假称支持。
 
-## 当前行为说明
+## 原始决策时的行为说明
 
-当前分支的实现行为由 [schema 2.0 contract](../SCHEMA-VERSIONING.md) 描述；已发布
-v0.1.0 的历史行为见 [v0.1.0 schema contract](https://github.com/LYY/memocap/blob/v0.1.0/docs/SCHEMA-VERSIONING.md)。
-本 ADR 只记录决策，不表示 package 0.2.0 已发布、用户数据库已升级或个人辅助库已弃用或删除。
+原始决策时的目标是 package `0.2.0` 和 schema `2.0`；当前 contract 见
+[schema versioning 文档](../SCHEMA-VERSIONING.md)。已发布 v0.1.0 的历史行为见
+[v0.1.0 schema contract](https://github.com/LYY/memocap/blob/v0.1.0/docs/SCHEMA-VERSIONING.md)。
+这些记录不表示 package 0.2.0 已发布，也不表示用户数据库已升级或个人辅助库已弃用或删除。

@@ -15,7 +15,7 @@ pub struct SchemaVersion {
 
 impl SchemaVersion {
     pub fn needs_upgrade(self) -> bool {
-        self == Self { major: 1, minor: 0 }
+        self == Self { major: 2, minor: 0 }
     }
 }
 
@@ -42,11 +42,8 @@ pub fn version(connection: &Connection) -> Result<SchemaVersion> {
 pub fn validate(connection: &Connection) -> Result<SchemaVersion> {
     let version = version(connection)?;
     match version {
-        SchemaVersion { major: 1, minor: 0 } => ensure!(
-            validation::exact_legacy(connection)?,
-            "database schema is not the registered legacy 1.0 schema"
-        ),
-        SchemaVersion { major: 2, .. } => validation::current(connection)?,
+        SchemaVersion { major: 2, minor: 0 } => validation::current(connection, false)?,
+        SchemaVersion { major: 2, minor: 1 } => validation::current(connection, true)?,
         _ => bail!(
             "database schema version {}.{} is not supported",
             version.major,
@@ -88,20 +85,19 @@ fn prepare(connection: &mut Connection) -> Result<super::SchemaLifecycle> {
         super::SchemaLifecycle::Created
     } else {
         match validate(&transaction)? {
-            SchemaVersion { major: 1, minor: 0 } => {
-                transaction.execute_batch(baseline::ACTIVITY)?;
-                transaction.execute(
-                    "UPDATE schema_metadata SET major=2,minor=0 WHERE singleton=1",
-                    [],
+            SchemaVersion { major: 2, minor: 0 } => {
+                transaction.execute_batch(
+                    "ALTER TABLE memories ADD COLUMN organized_at TEXT DEFAULT NULL;",
                 )?;
+                transaction.execute("UPDATE schema_metadata SET minor=1 WHERE singleton=1", [])?;
                 super::SchemaLifecycle::Upgraded
             }
-            SchemaVersion { major: 2, .. } => super::SchemaLifecycle::Opened,
+            SchemaVersion { major: 2, minor: 1 } => super::SchemaLifecycle::Opened,
             _ => bail!("no registered schema migration"),
         }
     };
     ensure!(
-        validate(&transaction)?.major == 2,
+        validate(&transaction)? == SchemaVersion { major: 2, minor: 1 },
         "schema preparation did not reach baseline"
     );
     transaction.commit()?;
