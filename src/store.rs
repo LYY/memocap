@@ -20,6 +20,7 @@ pub use transfers::{
     copy_move, operation_status, replay_copy_move, CopyMoveAction, CopyMoveInput, CopyMoveRequest,
     CopyMoveResult,
 };
+pub(crate) use visible::budget_targeted_memories;
 pub use visible::{
     list_inventory, merge_recalled, recall_targets, recall_visible, recall_visible_with_options,
     single_visible_source, visible_inventory, visible_sources, visible_status, InventoryMemory,

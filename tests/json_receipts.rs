@@ -121,3 +121,85 @@ fn multi_target_receipt_preserves_applicability_and_global_budget() {
     let limited = f.json(&["recall", "release", "--limit", "1", "--json"], true);
     assert_eq!(limited["returned_ids"].as_array().unwrap().len(), 1);
 }
+
+#[test]
+fn recall_receipt_preserves_complete_matches_and_applicability_across_budgets() {
+    let f = Fixture::new();
+    let shared = f.json(&["remember", "fruit 中", "--universal", "--json"], true);
+    let local = f.json(&["remember", "fruit 文", "--json"], true);
+    let shared_id = shared["returned_ids"][0].clone();
+    let local_id = local["returned_ids"][0].clone();
+    let matched = serde_json::json!([local_id, shared_id]);
+
+    for (limit, max_chars, count) in [
+        ("20", "14", 2),
+        ("20", "13", 1),
+        ("20", "0", 1),
+        ("1", "14", 1),
+        ("0", "14", 0),
+    ] {
+        let receipt = f.json(
+            &[
+                "recall",
+                "fruit",
+                "--repo",
+                f.a.to_str().unwrap(),
+                "--repo",
+                f.b.to_str().unwrap(),
+                "--limit",
+                limit,
+                "--max-chars",
+                max_chars,
+                "--json",
+            ],
+            true,
+        );
+
+        assert_eq!(receipt["matched_ids"], matched);
+        assert_eq!(
+            receipt["returned_ids"].as_array().unwrap().as_slice(),
+            &matched.as_array().unwrap()[..count]
+        );
+        assert_eq!(receipt["truncated"], count < 2);
+        assert_eq!(receipt["status"], if count == 0 { "empty" } else { "ok" });
+        if count == 2 {
+            let repositories = receipt["targets"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|target| target["repository_id"].clone())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                receipt["results"][1]["applicable_repositories"]
+                    .as_array()
+                    .unwrap(),
+                &repositories
+            );
+        }
+    }
+}
+
+#[test]
+fn recall_receipt_rejects_out_of_sqlite_range_limit_after_recording_matches() {
+    let f = Fixture::new();
+    let saved = f.json(&["remember", "range boundary", "--json"], true);
+
+    let receipt = f.json(
+        &[
+            "recall",
+            "boundary",
+            "--limit",
+            "18446744073709551615",
+            "--json",
+        ],
+        false,
+    );
+
+    assert_eq!(receipt["status"], "failed");
+    assert_eq!(receipt["matched_ids"], saved["returned_ids"]);
+    assert_eq!(receipt["returned_ids"], serde_json::json!([]));
+    assert_eq!(
+        receipt["error"]["message"],
+        "memory limit exceeds SQLite range"
+    );
+}
