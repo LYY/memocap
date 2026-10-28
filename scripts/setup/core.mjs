@@ -36,12 +36,11 @@ function refreshReadback(context) {
 function componentAvailability(context, inspections) {
   const { report, target } = context;
   const versions = [report.shared_cli.version, ...inspections.flatMap(({ plugin, skill }) => [
-    ...plugin.entries.map((entry) => pluginSource(entry).slice(`${packageName}@`.length)), skill.managed?.version || skill.lock.entry?.ref?.replace(/^v/, ""),
+    ...plugin.entries.map((entry) => pluginSource(entry).slice(`${packageName}@`.length)), skill.managed?.version,
   ])].filter(Boolean);
   report.update_available = versions.some((version) => version !== target);
   report.repair_required = !report.shared_cli.version || !report.shared_cli.executable_path || inspections.some(({ plugin, skill }) =>
     plugin.entries.length !== 1 || pluginSource(plugin.entries[0]) !== `${packageName}@${target}` || !skill.selected?.discovery_path || skill.managed?.version !== target || skill.observed?.digest !== context.bundle.digest || skill.inspectionError || !Array.isArray(plugin.entries[0]) || plugin.entries[0][1]?.skillDirectory !== skill.observed?.directory);
-  report.migration_required = context.manifest.format_version === 1 || inspections.some(({ skill }) => Boolean(skill.migration) || (!skill.managed && (skill.selected || skill.lock.entry)));
 }
 
 async function inspectCurrentState(context) {
@@ -67,7 +66,7 @@ function checkComponentVersions(context, inspections) {
   refuseDowngrade(context.report.shared_cli.version, context.target);
   for (const { plugin, skill } of inspections) {
     for (const entry of plugin.entries) { const version = pluginSource(entry).slice(`${packageName}@`.length); if (version) refuseDowngrade(version, context.target); }
-    const version = skill.managed?.version || skill.lock.entry?.ref?.replace(/^v/, "");
+    const version = skill.managed?.version;
     if (version) refuseDowngrade(version, context.target);
   }
 }

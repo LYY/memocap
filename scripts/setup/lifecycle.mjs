@@ -5,9 +5,8 @@ import { prepareBackend } from "./backend.mjs";
 import { prepareBackups } from "./backups.mjs";
 import { isMemocap, managedConfigText, parseConfig, writeManagedConfig } from "./config.mjs";
 import { digest, readText } from "./files.mjs";
-import { lockManifest, saveManifest, step, upgradeManifest } from "./manifest.mjs";
+import { lockManifest, saveManifest, step } from "./manifest.mjs";
 import { installCLI, removeCLI } from "./packages.mjs";
-import { cleanupLegacy } from "./skill-legacy.mjs";
 import { inspectOwner, installIntent, preflightOwner, resolveOwners } from "./skill-owner.mjs";
 import { installSkill, removeSkill } from "./skills.mjs";
 
@@ -21,19 +20,19 @@ export function scopeReports(inspections, target) {
   return inspections.map(({ scope, plugin, skill, record, owner_id, owner_reused }) => ({ id: scope.id, kind: scope.kind, directory: scope.directory, config: scope.config,
     owner_id, owner_reused, higher_precedence: scope.higher_precedence, effective_layers: scope.layers.filter((filename) => fs.existsSync(filename)),
     plugin: { status: plugin.conflicts.length ? "conflict" : plugin.entries.length ? "configured" : "missing", entries: plugin.entries, conflicts: plugin.conflicts, registrations: plugin.registrations, target_pin: `${packageName}@${target}` },
-    skill: { status: skill.selected?.discovery_path ? "discovered" : "missing", kind: skill.managed ? "managed" : "legacy", installed: skill.selected,
-      source: skill.managed ? { kind: "bundle", version: skill.managed.source_version, digest: skill.managed.digest } : skill.lock.entry,
+    skill: { status: skill.selected?.discovery_path ? "discovered" : "missing", kind: skill.managed ? "managed" : "unmanaged", installed: skill.selected,
+      source: skill.managed ? { kind: "bundle", version: skill.managed.source_version, digest: skill.managed.digest } : null,
       plugin_expected_path: Array.isArray(plugin.entries[0]) ? plugin.entries[0][1]?.skillDirectory || null : null,
       host_expected_path: skill.selected?.path || null, digest: skill.observed?.digest || null, other_discovery: skill.discovered, checked_roots: skill.roots,
-      agent_references: skill.references, uninspected_projects: skill.uninspected_projects, migration: skill.migration || record?.migration || null, drift: skill.inspectionError || (skill.observed && skill.observed.digest !== skill.managed?.digest ? "digest_mismatch" : null) },
-    manifest_owned: Boolean(record), adoption: record?.adoption || null }));
+      agent_references: skill.references, uninspected_projects: skill.uninspected_projects, drift: skill.inspectionError || (skill.observed && skill.observed.digest !== skill.managed?.digest ? "digest_mismatch" : null) },
+    manifest_owned: Boolean(record), adoption: record?.adoption?.plugin ? { plugin: record.adoption.plugin } : null }));
 }
 
 export function preflight(context, inspections) {
   context.adoptions = new Map();
   for (const inspection of inspections) {
     preflightOwner(inspection, context);
-    if (inspection.adoption || inspection.skill.adoption) context.adoptions.set(inspection.scope.id, { plugin: inspection.adoption || null, skill: inspection.skill.adoption || null });
+    if (inspection.adoption) context.adoptions.set(inspection.scope.id, { plugin: inspection.adoption });
     if (context.options.command === "uninstall" && !inspection.owner_reused && !inspection.record) throw new SetupError("unowned_installation", `No setup ownership for ${inspection.scope.id}`);
   }
   context.report.scopes = scopeReports(inspections, context.target);
@@ -59,7 +58,7 @@ function persistIntent(context, inspection) {
     }
     return intent;
   }
-  if (intent.after_digest === intent.before_digest && inspection.skill.observed?.digest === intent.skill.digest && inspection.record?.skill?.version === context.target && !intent.legacy) return null;
+  if (intent.after_digest === intent.before_digest && inspection.skill.observed?.digest === intent.skill.digest && inspection.record?.skill?.version === context.target) return null;
   context.manifest.installs[scope.id] ||= { kind: scope.kind, directory: scope.directory, config: scope.config, version: context.target, steps: {} };
   const record = context.manifest.installs[scope.id];
   record.steps ||= {};
@@ -88,7 +87,6 @@ export async function mutateInstall(context) {
   try {
     const inspections = lockedReadback(context).filter((inspection) => !inspection.owner_reused);
     prepareBackups(context, inspections);
-    upgradeManifest(context);
     for (const inspection of inspections) persistIntent(context, inspection);
     await step(context, "cli", null, () => installCLI(context));
     for (const inspection of inspections) {
@@ -96,11 +94,6 @@ export async function mutateInstall(context) {
       preflight(context, inspectScopes(context));
       await step(context, "skill", scope, () => installSkill(scope, context));
       const record = context.manifest.installs[scope.id];
-      if (record.intent?.legacy) {
-        await step(context, "legacy_cleanup", scope, () => cleanupLegacy(record.intent.legacy));
-        record.migration = { legacy_state: record.intent.legacy.legacy_state, status: "cleaned" };
-        saveManifest(context);
-      }
       await step(context, "plugin", scope, () => switchConfig(context, scope));
       const previous = record.intent?.previous_skill;
       if (previous?.kind === "managed" && previous.path !== record.skill.path) await step(context, "retired_policy", scope, () => removeSkill(scope, context, { skill: previous }));
@@ -123,7 +116,6 @@ export async function mutateUninstall(context, original) {
   const unlock = lockManifest(context);
   try {
     const inspections = lockedReadback(context).filter((inspection) => !inspection.owner_reused);
-    upgradeManifest(context);
     for (const { scope } of inspections) {
       const record = context.manifest.installs[scope.id];
       record.steps ||= {};
@@ -135,7 +127,6 @@ export async function mutateUninstall(context, original) {
       }
       await step(context, "plugin", scope, () => switchConfig(context, scope));
       const removed = await step(context, "skill_removal", scope, () => removeSkill(scope, context, record));
-      if (removed.status === "retained_legacy") context.report.warnings.push({ code: "legacy_skill_retained", path: removed.path });
       if (removed.status === "retained_shared" && !removed.known_owners.length) { record.state = "retained_shared"; delete record.intent; }
       else delete context.manifest.installs[scope.id];
       saveManifest(context);

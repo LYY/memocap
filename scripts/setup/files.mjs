@@ -19,24 +19,6 @@ export function digest(contents) {
   return contents === null ? null : createHash("sha256").update(contents).digest("hex");
 }
 
-export function fingerprint(directory) {
-  if (!fs.existsSync(directory)) return null;
-  const hash = createHash("sha256");
-  function walk(current, relative) {
-    for (const name of fs.readdirSync(current).sort()) {
-      if ([".git", "node_modules", ".DS_Store"].includes(name)) continue;
-      const filename = path.join(current, name);
-      const local = relative ? `${relative}/${name}` : name;
-      const stat = fs.lstatSync(filename);
-      if (stat.isSymbolicLink()) throw new SetupError("skill_symlink_content", `Unexpected symlink inside skill: ${filename}`);
-      if (stat.isDirectory()) walk(filename, local);
-      else if (stat.isFile()) hash.update(local).update(fs.readFileSync(filename));
-    }
-  }
-  walk(fs.realpathSync(directory), "");
-  return hash.digest("hex");
-}
-
 export function atomicWrite(filename, contents, previous) {
   if (readText(filename) !== previous) throw new SetupError("concurrent_change", `File changed while planning: ${filename}`);
   fs.mkdirSync(path.dirname(filename), { recursive: true });

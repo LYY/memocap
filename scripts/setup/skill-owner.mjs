@@ -58,7 +58,7 @@ export function preflightOwner(inspection, context) {
   const existing = plugin.entries[0];
   if (existing && !inspection.effectiveRecord?.plugin) {
     const version = Array.isArray(existing) ? existing[0].slice(`${packageName}@`.length) : existing.slice(`${packageName}@`.length);
-    if (!context.report.shared_cli.package_root || version !== context.report.shared_cli.version || !["0.0.10", "0.1.0", "0.2.1", context.target].includes(version) || (Array.isArray(existing) && existing[1]?.skillDirectory)) throw new SetupError("unowned_plugin", "Cannot prove installed package owns this plugin", { existing });
+    if (!context.report.shared_cli.package_root || version !== context.report.shared_cli.version || (Array.isArray(existing) && existing[1]?.skillDirectory)) throw new SetupError("unowned_plugin", "Cannot prove installed package owns this plugin", { existing });
     inspection.adoption = { version, source: context.report.shared_cli.package_root };
   }
   if (context.options.command !== "uninstall") {
@@ -75,7 +75,7 @@ export function preflightOwner(inspection, context) {
 
 export function installIntent(inspection, context) {
   if (inspection.record?.intent) return inspection.record.intent;
-  const { scope, plugin, skill, record } = inspection;
+  const { scope, plugin, record } = inspection;
   const desired = targetPolicy(scope, context);
   const existingPaths = plugin.config.skills?.paths || [];
   desired.owned_paths = existingPaths.includes(desired.path) ? record?.skill?.owned_paths?.filter((directory) => directory === desired.path) || [] : [desired.path];
@@ -83,5 +83,5 @@ export function installIntent(inspection, context) {
   const removePaths = record?.skill?.kind === "managed" ? record.skill.owned_paths : [];
   const after = managedConfigText(scope, entry, removePaths);
   return { operation: "install", target: context.target, entry, previous_entry: plugin.entries[0] || null, skill: desired, remove_paths: removePaths,
-    before_digest: digest(scope.text), after_digest: digest(after), legacy: skill.migration || null };
+    before_digest: digest(scope.text), after_digest: digest(after) };
 }

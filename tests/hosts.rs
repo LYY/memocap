@@ -34,15 +34,6 @@ fn plugin_uses_official_default_export() {
 }
 
 #[test]
-fn package_keeps_legacy_skill_files() {
-    let pkg = include_str!("../package.json");
-    assert!(pkg.contains("\"skills\""));
-
-    let skill = include_str!("../skills/memocap/SKILL.md");
-    assert!(skill.contains("memocap remember"));
-}
-
-#[test]
 fn package_json_has_bin_launcher() {
     let pkg = include_str!("../package.json");
     assert!(pkg.contains("\"memocap\": \"bin/cli.cjs\""));

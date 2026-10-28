@@ -83,9 +83,6 @@ async function runLifecycle(fixture, prepared, evidence) {
   assert.equal(fs.existsSync(managed), false);
   passed("uninstall removes only owned payload and preserves JSONC/settings/database/backup");
 
-  await require("./setup-package-legacy.cjs").legacyMissing(fixture, prepared, evidence);
-  successful(await setup(["uninstall", "--global", "--yes"]));
-
   const custom = path.join(fixture.root, "custom config directory");
   successful(await setup(["install", "--global", "--yes"], { env: { OPENCODE_CONFIG_DIR: custom } }));
   const customConfig = path.join(custom, "opencode.jsonc");

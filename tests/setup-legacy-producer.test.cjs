@@ -16,26 +16,19 @@ else { console.error('unsupported inspection interface'); process.exit(2); }
   return setup;
 }
 
-for (const command of ["check", "update"]) test(`${command} defers local 0.0.10 inspection until a newer target is installed`, async (context) => {
+for (const command of ["check", "update"]) test(`${command} rejects unavailable obsolete producer inspection without mutation`, async (context) => {
   const setup = legacy(context);
   const report = await setup.setup([command, "--to", "0.1.0", ...(command === "update" ? ["--dry-run"] : [])]);
-  assert.equal(report.error, null, JSON.stringify(report));
-  assert.equal(report.readiness, "inspection_deferred");
-  assert.equal(report.backend.core_schema.observed, undefined);
-  assert.equal(report.backend.reason, "legacy_inspection_unavailable_until_target_install");
-  assert.equal(setup.calls.some(({ args }) => args[0] === "status"), false);
+  assert.equal(report.error?.code, "backend_receipt_invalid");
+  assert.equal(setup.calls.some(({ args }) => args[0] === "install" || args.includes("prepare")), false);
   assert.equal(fs.existsSync(path.join(setup.home, ".memocap")), false);
 });
 
-test("authorized update replaces local 0.0.10 before strictly inspecting and preparing its target", async (context) => {
+test("authorized update refuses an obsolete producer before installing its target", async (context) => {
   const setup = legacy(context);
   const report = await setup.setup(["update", "--to", "0.1.0", "--yes"]);
-  assert.equal(report.exit_code, 0, JSON.stringify(report));
-  assert.equal(report.readiness, "static_ready");
-  assert.equal(report.backend.core_schema.observed, "2.0");
-  const installed = setup.calls.findIndex(({ command, args }) => command === "npm" && args[0] === "install");
-  const inspected = setup.calls.findIndex(({ args }) => args[0] === "status");
-  assert.ok(installed >= 0 && inspected > installed);
+  assert.equal(report.error?.code, "backend_receipt_invalid");
+  assert.equal(setup.calls.some(({ args }) => args[0] === "install" || args.includes("prepare")), false);
 });
 
 test("local 0.0.10 cannot defer a mismatched executable identity", async (context) => {
