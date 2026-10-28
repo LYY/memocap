@@ -87,28 +87,6 @@ export function inspectConfig(scope, record, runtime) {
   return { config, entries, registrations, conflicts, digest: digest(scope.text) };
 }
 
-export function writePlugin(scope, entry) {
-  const current = parseConfig(scope.config, scope.text);
-  const entries = current.plugin || [];
-  const index = entries.findIndex(isMemocap);
-  const tuple = index >= 0 && Array.isArray(entries[index]);
-  const location = current.plugin ? ["plugin", index < 0 ? -1 : index, ...(tuple ? [0] : [])] : ["plugin"];
-  const replacement = tuple ? pluginSource(entry) : current.plugin ? entry : [entry];
-  const edits = modify(scope.text ?? "{}\n", location, replacement, { formattingOptions: { insertSpaces: true, tabSize: 2, eol: scope.text?.includes("\r\n") ? "\r\n" : "\n" } });
-  const changed = applyEdits(scope.text ?? "{}\n", edits);
-  return atomicWrite(scope.config, changed, scope.text);
-}
-
-export function removePlugin(scope, record) {
-  const current = parseConfig(scope.config, scope.text);
-  const index = (current.plugin || []).findIndex(isMemocap);
-  if (index < 0) return { backup: null };
-  if (!record?.plugin || JSON.stringify(current.plugin[index]) !== JSON.stringify(record.plugin.entry)) throw new SetupError("plugin_modified", `Preserving unowned or changed plugin: ${scope.config}`);
-  const changed = removeArrayEntry(scope.text, ["plugin", index]);
-  parseConfig(scope.config, changed);
-  return atomicWrite(scope.config, changed, scope.text);
-}
-
 function removeArrayEntry(text, location) {
   const tree = parseTree(text, [], { allowTrailingComma: true });
   const node = findNodeAtLocation(tree, location);

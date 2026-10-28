@@ -1,6 +1,7 @@
 "use strict";
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const { fixture } = require("./setup-fixtures.cjs");
@@ -64,4 +65,39 @@ test("second CAS check keeps a concurrent user config edit before rename", async
   });
   assert.throws(() => writeManagedConfig({ config: f.config, text: "{}\n" }, { entry: ["@lyy-gh/memocap@0.1.0", { skillDirectory: "/new" }], remove_paths: [] }), { code: "concurrent_change" });
   assert.equal(fs.readFileSync(f.config, "utf8"), concurrent);
+});
+
+test("repeated managed removal returns unchanged without filesystem writes", async (context) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-config-"));
+  context.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const config = path.join(directory, "opencode.jsonc");
+  const { writeManagedConfig } = await import("../scripts/setup/config.mjs");
+  const entry = ["@lyy-gh/memocap@0.2.0", { skillDirectory: "/owned" }];
+  const text = JSON.stringify({ plugin: [["other", { enabled: true }], entry], skills: { paths: ["/other", "/owned"] } });
+  fs.writeFileSync(config, text);
+  const intent = { entry: null, previous_entry: entry, remove_paths: ["/owned"] };
+  const removed = writeManagedConfig({ config, text }, intent);
+  const current = fs.readFileSync(config, "utf8");
+  assert.equal(removed.status, "changed");
+  assert.deepEqual(JSON.parse(current), { plugin: [["other", { enabled: true }]], skills: { paths: ["/other"] } });
+  assert.equal(fs.readFileSync(removed.backup, "utf8"), text);
+  context.mock.method(fs, "writeFileSync", () => assert.fail("unchanged removal must not write"));
+  context.mock.method(fs, "renameSync", () => assert.fail("unchanged removal must not commit"));
+  const repeated = writeManagedConfig({ config, text: current }, intent);
+  assert.equal(repeated.status, "unchanged");
+  assert.equal(repeated.backup, null);
+  assert.equal(fs.readFileSync(config, "utf8"), current);
+});
+
+test("managed writer refuses modified plugin options before changing either reference", async (context) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-config-"));
+  context.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const config = path.join(directory, "opencode.jsonc");
+  const { writeManagedConfig } = await import("../scripts/setup/config.mjs");
+  const entry = ["@lyy-gh/memocap@0.2.0", { skillDirectory: "/owned", automatic: true }];
+  const text = JSON.stringify({ plugin: [[entry[0], { ...entry[1], automatic: false }]], skills: { paths: ["/owned"] } });
+  fs.writeFileSync(config, text);
+  context.mock.method(fs, "writeFileSync", () => assert.fail("modified plugin must not write"));
+  assert.throws(() => writeManagedConfig({ config, text }, { entry: null, previous_entry: entry, remove_paths: ["/owned"] }), { code: "plugin_modified" });
+  assert.equal(fs.readFileSync(config, "utf8"), text);
 });

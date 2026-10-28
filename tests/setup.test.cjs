@@ -117,10 +117,9 @@ for (const owned of ['"@lyy-gh/memocap@0.2.0"', '["@lyy-gh/memocap@0.2.0", {"aut
   for (const position of ["sole", "first", "middle", "last"]) {
     for (const layout of ["compact", "multiline", "CRLF", "comments"]) {
       for (const trailing of [false, true]) {
-        test(`JSONC uninstall preserves bytes: ${position}/${layout}/trailing=${trailing}/tuple=${owned[0] === "["}`, async (context) => {
-          const f = fixture(context);
+        test(`JSONC uninstall preserves bytes: ${position}/${layout}/trailing=${trailing}/tuple=${owned[0] === "["}`, async () => {
           const { parse } = await import("jsonc-parser");
-          const { removePlugin } = await import("../scripts/setup/config.mjs");
+          const { managedConfigText } = await import("../scripts/setup/config.mjs");
           const others = ['"other,\\"plugin"', '["unicode-\u4e2d\ud83d\ude00", {"nested":[{"text":",]"},[1,2]],"enabled":true}]'];
           const entries = position === "sole" ? [owned] : [...others];
           const index = { sole: 0, first: 0, middle: 1, last: 2 }[position];
@@ -134,37 +133,36 @@ for (const owned of ['"@lyy-gh/memocap@0.2.0"', '["@lyy-gh/memocap@0.2.0", {"aut
           if (separators[index]) separators[index] = "";
           else if (index > 0) separators[index - 1] = "";
           const expected = render();
-          fs.mkdirSync(path.dirname(f.config), { recursive: true });
-          fs.writeFileSync(f.config, text);
-          const record = { plugin: { entry: JSON.parse(owned) } };
-          removePlugin({ config: f.config, text }, record);
-          const changed = fs.readFileSync(f.config, "utf8");
+          const changed = managedConfigText({ config: "/fixture.jsonc", text }, null);
           const errors = [];
           const remaining = parse(changed, errors, { allowTrailingComma: true });
           assert.deepEqual(errors, [], changed);
           assert.deepEqual(remaining, { plugin: position === "sole" ? [] : others.map((entry) => JSON.parse(entry)), model: "keep,setting" });
           assert.equal(changed, expected);
-          assert.deepEqual(removePlugin({ config: f.config, text: changed }, record), { backup: null });
-          assert.equal(fs.readFileSync(f.config, "utf8"), changed);
+          assert.equal(managedConfigText({ config: "/fixture.jsonc", text: changed }, null), changed);
         });
       }
     }
   }
 }
 
-test("JSONC uninstall after compact 0.1 to 0.2 source update preserves unrelated tuple", async (context) => {
-  const f = fixture(context);
-  const { writePlugin, removePlugin } = await import("../scripts/setup/config.mjs");
+test("JSONC uninstall after compact 0.1 to 0.2 source update preserves unrelated tuple", async () => {
+  const { managedEntry, managedConfigText } = await import("../scripts/setup/config.mjs");
   const { parse } = await import("jsonc-parser");
   const text = '{"plugin":[["other",{"enabled":true}],"@lyy-gh/memocap@0.1.0"]}';
-  fs.mkdirSync(path.dirname(f.config), { recursive: true });
-  fs.writeFileSync(f.config, text);
-  writePlugin({ config: f.config, text }, "@lyy-gh/memocap@0.2.0");
-  removePlugin({ config: f.config, text: fs.readFileSync(f.config, "utf8") }, { plugin: { entry: "@lyy-gh/memocap@0.2.0" } });
-  const changed = fs.readFileSync(f.config, "utf8");
+  const entry = managedEntry(parse(text).plugin[1], "0.2.0", "/managed policy");
+  const updated = managedConfigText({ config: "/fixture.jsonc", text }, entry);
+  const updateErrors = [];
+  const config = parse(updated, updateErrors, { allowTrailingComma: true });
+  assert.deepEqual(updateErrors, []);
+  assert.deepEqual(config.plugin, [["other", { enabled: true }], entry]);
+  assert.deepEqual(config.skills.paths, ["/managed policy"]);
+  const changed = managedConfigText({ config: "/fixture.jsonc", text: updated }, null, ["/managed policy"]);
   const errors = [];
   assert.deepEqual(parse(changed, errors, { allowTrailingComma: true }).plugin, [["other", { enabled: true }]]);
   assert.deepEqual(errors, []);
+  assert.equal(changed.includes('["other",{"enabled":true}]'), true);
+  assert.deepEqual(parse(changed).skills.paths, []);
 });
 
 test("JSONC uninstall integration after update keeps valid syntax and DB", async (context) => {
