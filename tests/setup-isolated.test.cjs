@@ -59,7 +59,8 @@ test("skill discovery prunes dependencies and bounds canonical symlink cycles", 
   fs.symlinkSync(canonical, path.join(root, "alias"), "junction");
   const { skillFiles } = await import("../scripts/setup/files.mjs");
   const files = skillFiles(root);
-  assert.equal(files.length, 1);
+  assert.equal(files.length, 2);
+  assert.equal(new Set(files.map((filename) => fs.realpathSync(filename))).size, 1);
   assert.equal(fs.realpathSync(files[0]), fs.realpathSync(path.join(canonical, "SKILL.md")));
 });
 

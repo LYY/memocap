@@ -1,8 +1,9 @@
 # Agent Install and Update Guide
 
 Use this guide only when the user has authorized a memocap installation or
-update. It covers package target v0.2.1. Keep the CLI, plugin, and runtime skill
-on one release. For the human-facing explanation, see [Install and Update](INSTALL.md).
+update. It covers package target `0.3.0` and tag target `v0.3.0`. Keep the CLI,
+plugin, and runtime skill on one release. For the human-facing explanation, see
+[Install and Update](INSTALL.md).
 
 ## Authorization boundary
 
@@ -25,13 +26,13 @@ Use read-only checks before choosing a command:
 ```sh
 node --version
 npm --version
-git --version
 opencode --version
 ```
 
 Require Node.js 22.20 or later and OpenCode 1.19.3. The setup command does not
-install or upgrade the host, Node.js, or Git. If OpenCode is absent or has an
-unsupported version, report that and ask for authorization before changing it.
+install or upgrade OpenCode, Node.js, or Git. Git is not required for the
+package-managed skill copy. If OpenCode is absent or has an unsupported version,
+report that and ask for authorization before changing it.
 The version-pinned host install, when authorized, is documented in the
 [user guide](INSTALL.md#requirements).
 
@@ -39,45 +40,57 @@ The version-pinned host install, when authorized, is documented in the
 
 An installed skill provides policy and guide links, not the CLI or OpenCode
 plugin. If the user authorized the full integration, bootstrap it with the
-version-pinned setup runner instead of assuming `memocap` or
-`memocap-setup` is already installed:
+version-pinned setup runner instead of assuming `memocap` or `memocap-setup` is
+already installed:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup install --global --yes --json
 ```
 
 For project scope, use the same command with
 `--project "/absolute/path/to/repo"` instead of `--global`. If the user's
 authorization covered only the skill, stop after the skill installation and
-report that the runtime integration is not installed.
+report that the runtime integration is not installed. The standalone skill path
+is optional and separate; see [the user guide](INSTALL.md#optional-standalone-skill-for-another-agent).
 
 ## Install
 
 For a new global install:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup install --global --yes --json
 ```
 
 For a project install, substitute the user's concrete path:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --project "/absolute/path/to/repo" --yes --json
+npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
 ```
+
+The exact npm package is the setup worker and contains the full skill, including
+references. Setup copies it to
+`<config-root>/memocap/policies/<target>-<full-digest>/memocap`, then registers
+that same absolute directory in plugin `skillDirectory` and `skills.paths`. No
+separate skills installation or GitHub skill fetch is part of the default flow.
+The registry and outer npx bootstrap may use the network.
 
 The installer performs the write steps for the selected scope and returns JSON
 on stdout. For a local missing or exact legacy schema, after prerequisites and
 authorization it explicitly prepares the main database and verifies the result
 by readback. Back up a schema `1.0` database with SQLite's backup API or another
 WAL-aware method before authorizing its bridge. Keep diagnostics from stderr
-separate. Do not add a manual `skills` installation or plugin edit after a
-successful setup unless the report names a missing component.
+separate. Do not add a manual skill installation or plugin edit after successful
+setup.
 
-Setup may adopt a manually installed v0.1.0 integration only when package,
-plugin, skill source, and ownership are verifiable. This was validated with a
-real global pnpm 12 CLI and release skill/plugin without setup ownership
-metadata. Preserve detected package-manager ownership; report conflicts or
-unproven state without overwriting it.
+An inherited project reuses one exact known global owner without creating a
+project plugin entry, path, or manifest owner. Different or unknown versions,
+changed or duplicate payloads, ambiguous registrations, remote `skills.urls`,
+and inactive `--config` targets stop preflight before writes. A known format-1
+manifest is upgraded to format 2 only during an explicit mutation under the
+setup lock. If its old canonical skill has already been removed, setup does not
+restore it. A shared legacy install stops with `shared_skill_migration_required`
+and preserves all existing files, links, and locks. `--yes` does not bypass any
+of these checks.
 
 ## Check and update
 
@@ -91,12 +104,12 @@ Read `resolved_version` once from that result. For an authorized update, use
 that exact version for dry-run and execution:
 
 ```sh
-memocap-setup update --to 0.2.1 --global --dry-run --json
-memocap-setup update --to 0.2.1 --global --yes --json
+memocap-setup update --to 0.3.0 --global --dry-run --json
+memocap-setup update --to 0.3.0 --global --yes --json
 ```
 
 Use the exact `resolved_version` returned by `check` in both commands; the
-examples pin the v0.2.1 target. For a project, use
+examples pin the current v0.3.0 target. For a project, use
 `--project "/absolute/path/to/repo"` instead of `--global`. Do not substitute a
 second registry lookup for the version already selected by `check`.
 
@@ -111,13 +124,13 @@ there is no fallback to a different worker target.
 
 If updating an older v0.0.10 installation that has no setup command or new
 read-only status interface, preflight reports `inspection_deferred` only. This
-is not success or readiness. After authorization, use the exact v0.2.1 runner:
+is not success or readiness. After authorization, use the exact v0.3.0 runner:
 
 Before running it against a database that may be schema `1.0`, make a WAL-aware
 backup.
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup update --to 0.2.1 --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup update --to 0.3.0 --global --yes --json
 ```
 
 For a proven v0.1.0 producer, preflight reports schema `1.0` as
@@ -142,9 +155,9 @@ memocap-setup doctor --global --json
 ```
 
 For project scope, pass the same explicit path to `doctor`. Read back the
-installed CLI path and version, plugin entry and effective config source, skill
-version/source/discovery, core schema status, activity status, and any backup or
-conflict details from the actual command output. A component can be
+installed CLI path and version, plugin entry and effective config source, managed
+skill path/version/digest and discovery, core schema status, activity status, and
+any backup or conflict details from the actual command output. A component can be
 `unchanged`; that is not a failure when it already matches the target.
 
 Preserve the actual readiness result. `static_ready` requires matching
@@ -158,7 +171,8 @@ only for `static_ready`. Check, doctor, and dry-run perform no logical database
 writes, initialization, bridge, prune, or activity recording. SQLite
 `READ_ONLY` inspection may still coordinate WAL/SHM sidecars; ordinary WAL
 inspection needs no owner snapshot. Doctor performs no preparation and leaves
-`runtime.status: not_run`.
+`runtime.status: not_run`. A check without `--to` may query the npm registry for
+the stable target version.
 Treat runtime-not-run separately from installation failure. See the
 [readiness table](INSTALL.md#verify) and the
 [schema contract](SCHEMA-VERSIONING.md) before interpreting a report.
@@ -176,7 +190,7 @@ not literal setup JSON payloads:
 {
   "result": "static_ready",
   "scope": "global",
-  "target_version": "0.2.1",
+  "target_version": "0.3.0",
   "cli": "unchanged",
   "plugin": "installed",
   "skill": "installed",
@@ -191,7 +205,7 @@ For a partial failure, name the component and next read-only check:
 {
   "result": "partial",
   "scope": "global",
-  "target_version": "0.2.1",
+  "target_version": "0.3.0",
   "cli": "unchanged",
   "plugin": "installed",
   "skill": "failed",
@@ -201,13 +215,19 @@ For a partial failure, name the component and next read-only check:
 
 ## Runtime verification
 
-Static install readiness does not prove that OpenCode loaded the plugin or that
-a model received recall results. Do not restart OpenCode automatically. After
-the user restarts it, check `/memory status` in a new session and observe a real
-recall receipt before reporting `runtime_verified`. If no provider or session is
-available, report the actual readiness, `runtime.status: not_run`, and `restart_required`
-when applicable. Never claim that model adoption is guaranteed by a hook or
-receipt.
+`doctor` reports configured/static readiness only. It does not prove that a
+running OpenCode process loaded the plugin or skill. Do not restart OpenCode
+automatically. After the user restarts it, `opencode debug skill` must show the
+actual `memocap` skill location. In that session, `/memory status` must report
+`policy.mode: "managed"` and the runtime `policy.directory`, `policy.mainPath`,
+`policy.version`, and `policy.digest`. Resolve the debug location to the
+`SKILL.md` file and compare it with the canonical `policy.mainPath`; compare
+its parent directory with `policy.directory`. The version and full digest must
+match the installed payload. The runtime policy object has no `source` property. Observe a
+real recall receipt before reporting `runtime_verified`. If no provider or live
+session is available, report the static result, `runtime.status: not_run`, and
+`restart_required` when applicable. Policy rules are appended at compaction,
+not forced into every turn; neither a hook nor receipt proves model adoption.
 
 Activity and repository hints share the main database and are bounded operational
 history, not a complete audit. An old `<core filename>.activity.sqlite` file is
@@ -228,11 +248,11 @@ PowerShell uses the same pinned workflow. Quote a project path that contains
 spaces:
 
 ```powershell
-npx --yes --package '@lyy-gh/memocap@0.2.1' memocap-setup install --global --yes --json
-npx --yes --package '@lyy-gh/memocap@0.2.1' memocap-setup install --project 'C:\work\my repo' --yes --json
+npx --yes --package '@lyy-gh/memocap@0.3.0' memocap-setup install --global --yes --json
+npx --yes --package '@lyy-gh/memocap@0.3.0' memocap-setup install --project 'C:\work\my repo' --yes --json
 memocap-setup check --global --json
-memocap-setup update --to 0.2.1 --global --dry-run --json
-memocap-setup update --to 0.2.1 --global --yes --json
+memocap-setup update --to 0.3.0 --global --dry-run --json
+memocap-setup update --to 0.3.0 --global --yes --json
 ```
 
 The source checkout's `scripts/install.sh` and `scripts/install.ps1` only

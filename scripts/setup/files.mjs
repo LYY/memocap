@@ -1,6 +1,6 @@
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { createHash, randomUUID } from "node:crypto";
 import { SetupError } from "./arguments.mjs";
 
 export function readText(filename) {
@@ -68,19 +68,18 @@ export function ancestors(directory) {
 export function skillFiles(directory) {
   if (!fs.existsSync(directory)) return [];
   const found = [];
-  const visited = new Set();
-  function walk(current, depth) {
+  function walk(current, depth, parents) {
     const real = fs.realpathSync(current);
-    if (visited.has(real)) return;
-    visited.add(real);
+    if (parents.has(real)) return;
+    const lineage = new Set([...parents, real]);
     if (depth > 6) throw new SetupError("discovery_depth", `Skill discovery too deep: ${current}`);
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       if (["node_modules", ".pnpm", ".git", "vendor"].includes(entry.name)) continue;
       const filename = path.join(current, entry.name);
       if (entry.name === "SKILL.md" && entry.isFile()) found.push(filename);
-      else if (entry.isDirectory() || (entry.isSymbolicLink() && fs.existsSync(filename) && fs.statSync(filename).isDirectory())) walk(filename, depth + 1);
+      else if (entry.isDirectory() || (entry.isSymbolicLink() && fs.existsSync(filename) && fs.statSync(filename).isDirectory())) walk(filename, depth + 1, lineage);
     }
   }
-  walk(directory, 0);
+  walk(directory, 0, new Set());
   return found;
 }

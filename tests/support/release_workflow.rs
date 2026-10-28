@@ -137,13 +137,19 @@ pub fn release_contract(workflow: &str) -> Result<(), String> {
 
     for reference in workflow
         .lines()
-        .filter_map(|line| line.trim().strip_prefix("- uses: "))
+        .filter_map(|line| line.trim().trim_start_matches("- ").strip_prefix("uses: "))
     {
-        let (_, revision) = reference
-            .split_once('@')
-            .ok_or_else(|| format!("action reference missing @: {reference}"))?;
-        if revision.len() != 40 || !revision.chars().all(|value| value.is_ascii_hexdigit()) {
-            return Err(format!("action is not SHA pinned: {reference}"));
+        if !matches!(
+            reference,
+            "actions/checkout@v7"
+                | "actions/setup-node@v7"
+                | "actions/upload-artifact@v7"
+                | "actions/download-artifact@v8"
+                | "dtolnay/rust-toolchain@stable"
+        ) {
+            return Err(format!(
+                "action must use a verified stable ref: {reference}"
+            ));
         }
     }
     if workflow.contains("workflow_dispatch")

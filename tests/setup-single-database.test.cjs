@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
-const { fixture } = require("./setup-fixtures.cjs");
+const { fixture, failPolicyCopy } = require("./setup-fixtures.cjs");
 
 const capabilities = ["receipt_v1", "recall_match", "multi_target", "inventory", "activity", "read_only_status", "single_database", "schema_2_compatible"];
 
@@ -72,7 +72,7 @@ test("doctor reports observed legacy upgrade even when component repair is neede
 
 test("failed skill installation preserves legacy main until configuration prerequisites finish", async (context) => {
   const setup = backend(context, inspection("upgrade_needed", "1.0"));
-  setup.state.fail = (command, args) => command === "npx" && args.includes("add");
+  failPolicyCopy(context);
   const report = await setup.setup(["install", "--yes"]);
   assert.equal(report.status, "partial", JSON.stringify(report));
   assert.equal(fs.existsSync(setup.env.MEMOCAP_DB), false);

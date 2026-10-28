@@ -56,7 +56,8 @@ test("Windows resolves npm Node shims before extensionless shell launchers and p
 });
 
 test("core installs a local packed fixture through a real isolated npm prefix and reads the executable", async (context) => {
-  const f = fixture(context);
+  const f = fixture(context, { metadata: "native" });
+  assert.equal(Object.hasOwn(f.runtime, "policyMetadata"), false);
   const { runProcess, executable } = await import("../scripts/setup/process.mjs");
   fs.mkdirSync(path.join(f.packageRoot, "bin"));
   const cliSource = `#!/usr/bin/env node
@@ -67,11 +68,11 @@ else if (process.argv.includes('prepare')) { fs.mkdirSync(path.dirname(database)
 else { const ready=fs.existsSync(database); console.log(JSON.stringify({format_version:1,status:'ok',backend:'local',origin:'cli',inspection:{core_status:ready?'ready':'not_initialized',schema_version:ready?'2.0':null,visible:ready?{schema_version:'2.0',placements:[],addressable_total:0,effective_total:0}:null,activity_status:ready?'ready':'not_initialized',activity_error:null,capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status','single_database','schema_2_compatible']}})); }
 `;
   fs.writeFileSync(path.join(f.packageRoot, "bin/cli.cjs"), cliSource, { mode: 0o755 });
-  const cache = path.join(f.home, "Library/Caches/memocap/0.1.0");
+  const cache = path.dirname(f.cacheBinary("0.1.0"));
   fs.mkdirSync(cache, { recursive: true });
-  const binary = path.join(cache, "memocap-aarch64-apple-darwin");
+  const binary = f.cacheBinary("0.1.0");
   fs.writeFileSync(binary, cliSource, { mode: 0o755 });
-  fs.writeFileSync(`${binary}.sha256`, `${crypto.createHash("sha256").update(cliSource).digest("hex")}  memocap-aarch64-apple-darwin\n`);
+  fs.writeFileSync(`${binary}.sha256`, `${crypto.createHash("sha256").update(cliSource).digest("hex")}  ${path.basename(binary)}\n`);
   fs.writeFileSync(path.join(f.packageRoot, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version: "0.1.0", bin: { memocap: "bin/cli.cjs" }, files: ["bin", "skills"] }));
   const npm = executable("npm", process.env);
   assert.ok(npm, "npm must be installed for the packed lifecycle contract");
@@ -138,3 +139,85 @@ test("Windows pnpm 12 cmd wrapper dispatches its installed mjs entry without a s
     assert.deepEqual(JSON.parse(execution.stdout), args);
   } finally { Object.defineProperty(process, "platform", platform); }
 });
+
+for (const layout of ["global", "local"]) {
+  test(`Windows official OpenCode ${layout} shim directly executes its native target with literal arguments`, async (context) => {
+    const f = fixture(context);
+    const { runProcess, launcherScript } = await import("../scripts/setup/process.mjs");
+    const modules = path.join(f.root, "tools with spaces", "node_modules");
+    const directory = layout === "local" ? path.join(modules, ".bin") : path.dirname(modules);
+    const native = path.join(modules, "opencode-ai/bin/opencode.exe");
+    fs.mkdirSync(path.dirname(native), { recursive: true });
+    fs.mkdirSync(directory, { recursive: true });
+    fs.copyFileSync(process.execPath, native);
+    fs.chmodSync(native, 0o755);
+    const shim = path.join(directory, layout === "local" ? "OpEnCoDe.CmD" : "opencode.cmd");
+    fs.writeFileSync(shim, `@echo off\r\n"%~dp0${path.relative(directory, native)}" %*\r\n`, { mode: 0o755 });
+    const env = { ...f.env, Path: directory,
+      ...(process.platform === "darwin" ? { DYLD_LIBRARY_PATH: path.resolve(path.dirname(process.execPath), "../lib") } : {}) };
+    delete env.PATH;
+    const literals = ["quote'\"$() & ; literal", "path with spaces", "%PATH%", "^|<>!", ""];
+    const platform = Object.getOwnPropertyDescriptor(process, "platform");
+    Object.defineProperty(process, "platform", { value: "win32" });
+    try {
+      const execution = await runProcess(layout === "global" ? "opencode" : shim,
+        ["-e", "console.log(JSON.stringify(process.argv.slice(1))); process.exitCode = 23;", "--", ...literals], { env });
+      assert.equal(execution.code, 23, execution.stderr);
+      assert.deepEqual(JSON.parse(execution.stdout), literals);
+      assert.equal(fs.realpathSync(launcherScript(shim)), fs.realpathSync(native));
+    } finally { Object.defineProperty(process, "platform", platform); }
+  });
+}
+
+for (const missing of ["absent", "directory"]) {
+  test(`Windows official OpenCode shim refuses a ${missing} native target without guessing a Node entry`, async (context) => {
+    const f = fixture(context);
+    const { runProcess } = await import("../scripts/setup/process.mjs");
+    const directory = path.join(f.root, "tools with spaces");
+    const bin = path.join(directory, "node_modules/opencode-ai/bin");
+    fs.mkdirSync(bin, { recursive: true });
+    fs.writeFileSync(path.join(directory, "opencode.cmd"), "@echo off\r\n");
+    fs.writeFileSync(path.join(bin, "opencode"), "process.exit(0);\n");
+    if (missing === "directory") fs.mkdirSync(path.join(bin, "opencode.exe"));
+    const platform = Object.getOwnPropertyDescriptor(process, "platform");
+    Object.defineProperty(process, "platform", { value: "win32" });
+    try {
+      const execution = await runProcess(path.join(directory, "opencode.cmd"), [], { env: f.env });
+      assert.equal(execution.code, 126, execution.stderr);
+    } finally { Object.defineProperty(process, "platform", platform); }
+  });
+}
+
+test("Windows unknown shim refuses even a present adjacent native executable", async (context) => {
+  const f = fixture(context);
+  const { runProcess } = await import("../scripts/setup/process.mjs");
+  const native = path.join(f.root, "unknown.exe");
+  fs.copyFileSync(process.execPath, native);
+  const shim = path.join(f.root, "unknown.cmd");
+  fs.writeFileSync(shim, `@echo off\r\n"${native}" %*\r\n`);
+  const platform = Object.getOwnPropertyDescriptor(process, "platform");
+  Object.defineProperty(process, "platform", { value: "win32" });
+  try {
+    const execution = await runProcess(shim, ["--version"], { env: f.env });
+    assert.equal(execution.code, 126, execution.stderr);
+  } finally { Object.defineProperty(process, "platform", platform); }
+});
+
+for (const present of [true, false]) {
+  test(`Windows explicit shim target retains Node dispatch and missing refusal when present=${present}`, async (context) => {
+    const f = fixture(context);
+    const { runProcess } = await import("../scripts/setup/process.mjs");
+    const target = path.join(f.root, "explicit script.exe");
+    if (present) fs.writeFileSync(target, "console.log(JSON.stringify(process.argv.slice(2)));\n");
+    const shim = path.join(f.root, "opencode.cmd");
+    fs.writeFileSync(shim, `@echo off\r\n:: cmd-shim-target=${target}\r\n`);
+    const platform = Object.getOwnPropertyDescriptor(process, "platform");
+    Object.defineProperty(process, "platform", { value: "win32" });
+    try {
+      const args = ["quote'\"$() & ; literal"];
+      const execution = await runProcess(shim, args, { env: f.env });
+      assert.equal(execution.code, present ? 0 : 126, execution.stderr);
+      if (present) assert.deepEqual(JSON.parse(execution.stdout), args);
+    } finally { Object.defineProperty(process, "platform", platform); }
+  });
+}

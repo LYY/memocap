@@ -136,42 +136,24 @@ test("oversized stderr still terminates file capture", async (context) => {
   assert.deepEqual(fs.readdirSync(root), []);
 });
 
-for (const [label, rows, expectedError] of [
-  ["selected shared memocap", [{ name: "other", path: "/other", agents: ["Other"] }, { name: "memocap", path: "/with spaces", agents: ["Claude Code", "OpenCode"] }], null],
-  ["large shared inventory", [...Array.from({ length: 1500 }, (_, index) => ({ name: `other-${index}`, path: `/other/${index}`, agents: ["Other"] })), { name: "memocap", path: "/with spaces", agents: ["Claude Code", "OpenCode"] }], null],
-  ["empty", [], null],
-  ["invalid", "bad JSON", "skills_response"],
-  ["null row", [null], "skills_response"],
-  ["invalid agents", [{ name: "memocap", path: "/skill", agents: [123] }], "skills_response"],
-]) {
-  test(`listSkills validates ${label} through real runProcess`, async (context) => {
-    const root = sandbox(context);
-    const { runProcess } = await import("../scripts/setup/process.mjs");
-    const { listSkills } = await import("../scripts/setup/skills.mjs");
-    const script = path.join(root, "producer.cjs");
-    fs.writeFileSync(script, typeof rows === "string" ? 'console.log("bad JSON")' : inventoryScript(rows));
-    const runtime = { env: process.env, run: (command, args, options) => {
-      assert.equal(command, "npx");
-      assert.deepEqual(args, ["--yes", "skills@1.7.4", "list", "--global", "--json"]);
-      return runProcess(process.execPath, [script], options);
-    } };
-
-    const execution = listSkills({ kind: "global", directory: root }, runtime);
-
-    if (expectedError) await assert.rejects(execution, { code: expectedError });
-    else assert.deepEqual(await execution, rows.filter((row) => row.name === "memocap"));
-    assert.deepEqual(fs.readdirSync(root), ["producer.cjs"]);
-  });
-}
-
-test("listSkills rejects process failure before parsing valid JSON", async (context) => {
+test("local skill discovery reads a large inventory without starting a process", async (context) => {
   const root = sandbox(context);
-  const { runProcess } = await import("../scripts/setup/process.mjs");
-  const { listSkills } = await import("../scripts/setup/skills.mjs");
-  const runtime = { env: process.env, run: (_command, _args, options) => runProcess(process.execPath, ["-e", 'console.log("[]"); process.exitCode=9'], options) };
+  const { inventorySkills } = await import("../scripts/setup/skill-discovery.mjs");
+  const skills = path.join(root, "skills");
+  for (let index = 0; index < 1500; index++) {
+    const directory = path.join(skills, `other-${index}`);
+    fs.mkdirSync(directory, { recursive: true });
+    fs.writeFileSync(path.join(directory, "SKILL.md"), `---\nname: other-${index}\n---\n`);
+  }
+  fs.mkdirSync(path.join(skills, "memocap"));
+  fs.writeFileSync(path.join(skills, "memocap/SKILL.md"), "---\nname: memocap\n---\n");
+  const scope = { directory: root, home: root, config_directories: [root], layers: [], config: path.join(root, "opencode.json") };
+  const inventory = inventorySkills(scope, { env: { OPENCODE_DISABLE_EXTERNAL_SKILLS: "1" }, run: () => assert.fail("discovery cannot start a process") });
+  assert.equal(inventory.discovered.length, 1);
+  assert.equal(inventory.discovered[0].discovery_path, path.join(skills, "memocap"));
+});
 
-  const execution = listSkills({ kind: "global", directory: root }, runtime);
-
-  await assert.rejects(execution, { code: "process_failed" });
-  assert.deepEqual(fs.readdirSync(root), []);
+for (const skills of [null, [], "invalid", { paths: null }, { paths: [null] }, { paths: [123] }]) test(`local config boundary rejects malformed skills ${JSON.stringify(skills)}`, async () => {
+  const { parseConfig } = await import("../scripts/setup/config.mjs");
+  assert.throws(() => parseConfig("fixture.json", JSON.stringify({ skills })), { code: "invalid_skill_config" });
 });

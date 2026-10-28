@@ -32,4 +32,4 @@ For admission examples, similarity checks, scoped CLI commands, and explicit mem
 
 ## Install and update
 
-When asked to install or update memocap, follow the [v0.2.1 agent installation and update guide](https://github.com/LYY/memocap/blob/v0.2.1/docs/INSTALL-AGENT.md). The skill can be installed without the repository's other documentation, so use this versioned official link rather than a relative path. The [user installation guide](https://github.com/LYY/memocap/blob/v0.2.1/docs/INSTALL.md) covers manual steps and recovery.
+When asked to install or update memocap for OpenCode, follow the [v0.3.0 agent installation and update guide](https://github.com/LYY/memocap/blob/v0.3.0/docs/INSTALL-AGENT.md). The package installer copies the full bundled skill, including references, and registers one managed directory for both OpenCode and the plugin. The [v0.3.0 user installation guide](https://github.com/LYY/memocap/blob/v0.3.0/docs/INSTALL.md) covers optional standalone installs and recovery.

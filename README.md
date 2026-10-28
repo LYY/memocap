@@ -14,15 +14,20 @@ remote operation are documented in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Install
 
-Install the v0.2.1 CLI, OpenCode plugin, and runtime skill for your user:
+Install the v0.3.0 CLI, OpenCode plugin, and runtime skill for your user:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup install --global --yes --json
 ```
 
-Requires Node.js 22.20 or later, npm/npx, Git, and OpenCode 1.19.3. The setup
-command does not install or upgrade OpenCode. See [the installation guide](docs/INSTALL.md)
-for project installs, manual setup, checks, updates, recovery, and data handling.
+Requires Node.js 22.20 or later, npm/npx, and OpenCode 1.19.3. The package
+contains the complete skill and its references. Setup copies it into the selected
+OpenCode config root, then points both the plugin and `skills.paths` at that same
+managed directory. The default path does not use Git or the `skills` CLI, though
+npm registry access or an npx package download may be needed. Setup does not
+install or upgrade OpenCode. See [the installation guide](docs/INSTALL.md) for
+project installs, optional standalone skills, checks, updates, recovery, and data
+handling.
 Agents should follow [the agent guide](docs/INSTALL-AGENT.md) for authorized
 non-interactive installation and updates.
 
@@ -35,7 +40,7 @@ mutually exclusive. `<PLACEMENT>` is `repository:<64 lowercase hex>`,
 Global `--repo <PATH>` selects a concrete repository instead of the working
 directory; repeat it only for recall, up to eight targets. Writes have one
 target. Global `--json` returns a format-1 receipt for automation; it is not
-supported by `serve` or `ui`. Package `0.2.1`, core schema `2.0`, and receipt
+supported by `serve` or `ui`. Package `0.3.0`, core schema `2.0`, and receipt
 format `1` are independent identities.
 
 ```text

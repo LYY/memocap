@@ -135,9 +135,9 @@ test("dry run observes ready core and preserves unrelated legacy auxiliary witho
 test("doctor reports static ready with prepared main and never mutates storage", async (context) => {
   const setup = backendFixture(context);
   await setup.setup(["install", "--yes"]);
-  const cache = path.join(setup.home, "Library/Caches/memocap/0.1.0");
+  const cache = path.dirname(setup.cacheBinary("0.1.0"));
   fs.mkdirSync(cache, { recursive: true });
-  const name = "memocap-aarch64-apple-darwin";
+  const name = path.basename(setup.cacheBinary("0.1.0"));
   fs.writeFileSync(path.join(cache, name), "fixture cached binary");
   fs.writeFileSync(path.join(cache, `${name}.sha256`), `${crypto.createHash("sha256").update("fixture cached binary").digest("hex")}  ${name}\n`);
   const before = tree(setup.home);

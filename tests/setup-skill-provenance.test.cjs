@@ -83,7 +83,7 @@ for (const [reason, change] of rejected) test(`refuses ${reason} in ${source} wi
   const before = snapshot(legacy.setup.root);
 
   assert.throws(() => assertSkillOwnership(inspection, null, legacy.ownership), {
-    code: reason === "duplicate copy" ? "duplicate_skill" : "unowned_skill",
+    code: reason === "duplicate copy" ? "shared_skill_migration_required" : "unowned_skill",
   });
 
   assert.equal(inspection.adoption, undefined);

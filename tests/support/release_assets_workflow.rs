@@ -2,7 +2,7 @@ use super::{before, require};
 
 pub(super) fn validate(release: &str) -> Result<(), String> {
     for required in [
-        "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+        "actions/download-artifact@v8",
         "pattern: release-*",
         "merge-multiple: true",
         "present=(release-assets/*)",

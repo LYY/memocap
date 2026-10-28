@@ -1,5 +1,21 @@
 # Changelog
 
+## @lyy-gh/memocap 0.3.0 (2026-10-26)
+
+Implemented outcomes for package target `0.3.0` and Git tag target `v0.3.0`.
+Publication and registry provenance verification are separate release gates;
+this entry does not claim either has completed.
+
+- OpenCode setup now uses the exact npm package worker to copy its complete
+  bundled skill and references into one versioned, full-digest managed directory.
+  The plugin and `skills.paths` select the same absolute path; the default setup
+  no longer requires a separate Skills CLI or GitHub skill fetch.
+- Installation guidance documents config-root resolution, inherited owner reuse,
+  fail-closed handling for ambiguous or shared legacy skills, format-1 manifest
+  migration, static versus runtime verification, and conservative uninstall.
+- Standalone `npx skills` remains an optional, separately sourced and updated path
+  for other agents, not a second step in the OpenCode installation.
+
 ## @lyy-gh/memocap 0.2.1 (2026-10-24)
 
 - Fix setup uninstall removing owned OpenCode plugin entries from JSONC,

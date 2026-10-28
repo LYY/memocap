@@ -7,11 +7,17 @@ const path = require("node:path");
 const test = require("node:test");
 const { fixture } = require("./setup-fixtures.cjs");
 
-test("dry-run exposes exact package and scoped skill commands without executing them", async (context) => {
+test("dry-run exposes exact package command and local policy identity without executing writes", async (context) => {
   const f = fixture(context);
   const report = await f.setup(["install", "--project", f.project, "--dry-run"]);
   assert.deepEqual(report.plan?.cli.command, { executable: "npm", args: ["install", "--global", "@lyy-gh/memocap@0.1.0"] });
-  assert.deepEqual(report.plan.scopes[0].skill.command, { executable: "npx", args: ["--yes", "skills@1.7.4", "add", "https://github.com/LYY/memocap/tree/v0.1.0", "--skill", "memocap", "--agent", "opencode", "--yes"], cwd: fs.realpathSync(f.project) });
+  const { inspectPolicy } = await import("../lib/policy.mjs");
+  const checksBefore = f.metadataChecks.length;
+  const digest = inspectPolicy(path.join(f.packageRoot, "skills/memocap"), f.runtime.policyMetadata).digest;
+  assert.deepEqual(f.metadataChecks.slice(checksBefore), [path.join(f.packageRoot, "skills/memocap")]);
+  assert.equal(report.plan.scopes[0].skill.command, null);
+  assert.equal(report.plan.scopes[0].skill.digest, digest);
+  assert.equal(report.plan.scopes[0].skill.path, path.join(fs.realpathSync(f.project), `.opencode/memocap/policies/0.1.0-${digest}/memocap`));
   assert.equal(report.plan.scopes[0].plugin.pin, "@lyy-gh/memocap@0.1.0");
   assert.equal(report.plan.cli.scope, "current_user_shared");
   assert.equal(f.calls.some((call) => call.command === "npx"), false);
@@ -59,4 +65,17 @@ test("check detects outdated plugin and skill even after the shared CLI reached 
   assert.equal(report.exit_code, 0);
   assert.equal(report.update_available, true);
   assert.equal(report.repair_required, true);
+});
+
+test("a newer runner plans uninstall against the installed owner's actual payload", async (context) => {
+  const f = fixture(context);
+  const installed = await f.setup(["install", "--yes"]);
+  const skill = installed.scopes[0].skill.installed;
+  fs.writeFileSync(path.join(f.packageRoot, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version: "0.2.0" }));
+  const report = await f.setup(["uninstall", "--dry-run"]);
+  assert.equal(report.error, null);
+  assert.equal(report.plan.scopes[0].skill.path, skill.path);
+  assert.equal(report.plan.scopes[0].skill.digest, skill.digest);
+  assert.equal(report.plan.scopes[0].skill.version, "0.1.0");
+  assert.equal(report.plan.scopes[0].plugin.pin, "@lyy-gh/memocap@0.1.0");
 });

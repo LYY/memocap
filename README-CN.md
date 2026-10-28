@@ -12,14 +12,17 @@ OpenCode 是唯一官方支持的集成。插件通过包内绝对路径的 CLI 
 
 ## 安装
 
-为当前用户安装 v0.2.1 CLI、OpenCode 插件和运行时 skill：
+为当前用户安装 v0.3.0 CLI、OpenCode 插件和运行时 skill：
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.2.1 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup install --global --yes --json
 ```
 
-需要 Node.js 22.20 或更高版本、npm/npx、Git 和 OpenCode 1.19.3。安装器不会
-安装或升级 OpenCode。项目安装、手动步骤、检查更新、恢复和数据处理见[安装指南](docs/INSTALL.md)。
+需要 Node.js 22.20 或更高版本、npm/npx 和 OpenCode 1.19.3。npm 包包含完整
+skill 和 references。安装器将它复制到所选 OpenCode 配置根下，并让插件与
+`skills.paths` 指向同一个受管理目录。默认流程不使用 Git 或 `skills` CLI；npm
+registry 或 npx 下载 runner 时仍可能需要网络。安装器不会安装或升级 OpenCode。
+项目安装、可选的独立 skill、检查更新、恢复和数据处理见[安装指南](docs/INSTALL.md)。
 Agent 进行已获授权的非交互安装或更新时，按[Agent 指南](docs/INSTALL-AGENT.md)操作。
 
 ## 命令矩阵
@@ -29,7 +32,7 @@ Agent 进行已获授权的非交互安装或更新时，按[Agent 指南](docs/
 
 全局 `--repo <PATH>` 显式选择真实仓库路径；只有 recall 可重复指定，最多八个目标。
 写操作始终只有一个目标。全局 `--json` 返回 format-1 receipt，供自动化使用；
-`serve` 和 `ui` 不支持它。package `0.2.1`、core schema `2.0`、receipt format
+`serve` 和 `ui` 不支持它。package `0.3.0`、core schema `2.0`、receipt format
 `1` 是独立版本。
 
 ```text

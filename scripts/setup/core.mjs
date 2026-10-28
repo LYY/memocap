@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
+import { inspectPolicy } from "../../lib/policy.mjs";
 import { commands, packageName, parseArguments, SetupError } from "./arguments.mjs";
 import { backendReadiness, backendStatus, backendWarnings } from "./backend.mjs";
 import { configScopes, pluginSource } from "./config.mjs";
@@ -35,11 +36,12 @@ function refreshReadback(context) {
 function componentAvailability(context, inspections) {
   const { report, target } = context;
   const versions = [report.shared_cli.version, ...inspections.flatMap(({ plugin, skill }) => [
-    ...plugin.entries.map((entry) => pluginSource(entry).slice(`${packageName}@`.length)), skill.lock.entry?.ref?.replace(/^v/, ""),
+    ...plugin.entries.map((entry) => pluginSource(entry).slice(`${packageName}@`.length)), skill.managed?.version || skill.lock.entry?.ref?.replace(/^v/, ""),
   ])].filter(Boolean);
   report.update_available = versions.some((version) => version !== target);
   report.repair_required = !report.shared_cli.version || !report.shared_cli.executable_path || inspections.some(({ plugin, skill }) =>
-    plugin.entries.length !== 1 || pluginSource(plugin.entries[0]) !== `${packageName}@${target}` || !skill.selected?.discovery_path || (skill.lock.entry?.ref !== `v${target}` && skill.lock.entry?.sourceUrl !== `https://github.com/LYY/memocap/tree/v${target}`));
+    plugin.entries.length !== 1 || pluginSource(plugin.entries[0]) !== `${packageName}@${target}` || !skill.selected?.discovery_path || skill.managed?.version !== target || skill.observed?.digest !== context.bundle.digest || skill.inspectionError || !Array.isArray(plugin.entries[0]) || plugin.entries[0][1]?.skillDirectory !== skill.observed?.directory);
+  report.migration_required = context.manifest.format_version === 1 || inspections.some(({ skill }) => Boolean(skill.migration) || (!skill.managed && (skill.selected || skill.lock.entry)));
 }
 
 async function inspectCurrentState(context) {
@@ -65,7 +67,8 @@ function checkComponentVersions(context, inspections) {
   refuseDowngrade(context.report.shared_cli.version, context.target);
   for (const { plugin, skill } of inspections) {
     for (const entry of plugin.entries) { const version = pluginSource(entry).slice(`${packageName}@`.length); if (version) refuseDowngrade(version, context.target); }
-    if (skill.lock.entry?.ref) refuseDowngrade(skill.lock.entry.ref.replace(/^v/, ""), context.target);
+    const version = skill.managed?.version || skill.lock.entry?.ref?.replace(/^v/, "");
+    if (version) refuseDowngrade(version, context.target);
   }
 }
 
@@ -73,9 +76,10 @@ function readOnlyResult(context, inspections) {
   const { options, report, target } = context;
   if (!["check", "doctor"].includes(options.command)) return false;
   preflight(context, inspections);
+  report.plan = installationPlan(context, inspections);
   backendWarnings(report);
   if (options.command === "check") { report.status = "ok"; report.readiness = backendReadiness(report); report.exit_code = 0; return true; }
-  const complete = report.prerequisites.opencode === "1.19.3" && report.shared_cli.version === target && report.shared_cli.executable_path && report.shared_cli.cache.status === "verified" && inspections.every(({ plugin, skill }) => !plugin.conflicts.length && plugin.entries.length === 1 && skill.selected?.discovery_path && skill.lock.entry?.ref === `v${target}`);
+  const complete = report.prerequisites.opencode === "1.19.3" && report.shared_cli.version === target && report.shared_cli.executable_path && report.shared_cli.cache.status === "verified" && !report.repair_required && inspections.every(({ plugin }) => !plugin.conflicts.length);
   const readiness = backendReadiness(report);
   report.status = !complete && readiness === "static_ready" ? "incomplete" : readiness;
   report.readiness = report.status;
@@ -85,13 +89,14 @@ function readOnlyResult(context, inspections) {
 
 async function executePlan(context, inspections) {
   const { options, report, runtime } = context;
-  if (options.command !== "uninstall") sharedImpact(context);
   preflight(context, inspections);
+  report.plan = installationPlan(context, inspections);
+  if (options.command !== "uninstall") sharedImpact(context, inspections);
   if (options.dryRun) { report.status = "planned"; report.exit_code = 0; report.dry_run = true; if (options.command !== "uninstall") report.readiness = backendReadiness(report); return; }
   if (!options.yes) throw new SetupError("confirmation_required", "Review --dry-run, then pass --yes to execute the declared scopes");
   if (options.command !== "uninstall") report.prerequisites.opencode = await verifyHost(runtime, report.prerequisites.host);
   if (options.command === "uninstall") await mutateUninstall(context, inspections);
-  else await mutateInstall(context, inspections);
+  else await mutateInstall(context);
   refreshReadback(context);
   report.status = report.steps.some((entry) => entry.status === "changed") ? "changed" : "unchanged";
   report.restart_required = report.status === "changed";
@@ -127,6 +132,7 @@ export async function runSetup(argv, overrides = {}) {
     if (context.options.help) return { ...report, status: "ok", exit_code: 0, usage: "memocap-setup <install|check|update|doctor|uninstall> [--global] [--project PATH ...] [--config FILE] [--to VERSION] [--package-manager npm|pnpm] [--yes] [--dry-run] [--remove-cli] [--json]" };
     if (context.options.worker && context.options.to !== metadata.version) throw new SetupError("worker_version_mismatch", `Worker ${metadata.version} cannot mutate target ${context.options.to}`);
     context.target = await resolveVersion(context.options, runtime, metadata.version);
+    context.bundle = inspectPolicy(path.join(runtime.packageRoot, "skills/memocap"), runtime.policyMetadata);
     report.resolved_version = context.target;
     report.recovery.retry = ["memocap-setup", context.options.command, "--to", context.target, ...(context.options.global ? ["--global"] : []), ...context.options.projects.flatMap((project) => ["--project", project]), ...(context.options.config ? ["--config", context.options.config] : []), "--yes", "--json"];
     const writes = ["install", "update", "uninstall"].includes(context.options.command) && !context.options.dryRun;

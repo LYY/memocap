@@ -5,7 +5,7 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 const fs = require("node:fs");
-const { fixture } = require("./setup-fixtures.cjs");
+const { fixture, failPolicyCopy } = require("./setup-fixtures.cjs");
 
 test("setup exposes help without starting package or host processes", () => {
   const execution = spawnSync(process.execPath, [path.resolve(__dirname, "../scripts/setup.mjs"), "--help", "--json"], {
@@ -25,10 +25,12 @@ test("install preserves JSONC comments, options and unrelated plugins then repea
   const text = fs.readFileSync(f.config, "utf8");
   const { parse } = await import("jsonc-parser");
   assert.equal(text.includes("// keep comment"), true);
-  assert.deepEqual(parse(text).plugin, [["other@1", { enabled: true }], "@lyy-gh/memocap@0.1.0"]);
+  const entry = ["@lyy-gh/memocap@0.1.0", { skillDirectory: first.scopes[0].skill.installed.path }];
+  assert.deepEqual(parse(text).plugin, [["other@1", { enabled: true }], entry]);
+  assert.deepEqual(parse(text).skills.paths, [entry[1].skillDirectory]);
   assert.equal(first.runtime.status, "not_run");
   assert.equal(first.scopes[0].plugin.status, "configured");
-  assert.deepEqual(first.scopes[0].plugin.entries, ["@lyy-gh/memocap@0.1.0"]);
+  assert.deepEqual(first.scopes[0].plugin.entries, [entry]);
   assert.equal(first.restart_required, true);
   f.calls.length = 0;
   const repeat = await f.setup(["install", "--yes", "--json"]);
@@ -53,6 +55,7 @@ test("custom config and project selection preserve explicit scope and report pre
   f.env.OPENCODE_CONFIG = path.join(f.home, "custom file.jsonc");
   f.env.OPENCODE_CONFIG_DIR = path.join(f.home, "higher config");
   const explicit = path.join(f.project, "custom.jsonc");
+  f.env.OPENCODE_CONFIG = explicit;
   const report = await f.setup(["install", "--project", f.project, "--config", explicit, "--yes"]);
   assert.equal(report.exit_code, 0, JSON.stringify(report));
   assert.equal(fs.existsSync(explicit), true);
@@ -77,13 +80,14 @@ for (const conflict of ["memory", "content", "local-plugin"]) {
   });
 }
 
-test("partial skill failure resumes from CLI and plugin readback without repeating package install", async (context) => {
+test("partial policy copy resumes from CLI readback before exposing config without repeating package install", async (context) => {
   const f = fixture(context);
-  f.state.fail = (command, args) => command === "npx" && args.includes("add");
+  failPolicyCopy(context);
   const partial = await f.setup(["install", "--yes"]);
   assert.equal(partial.status, "partial");
-  assert.equal(partial.steps.some((step) => step.component === "plugin" && step.status === "changed"), true);
-  f.state.fail = null;
+  assert.equal(partial.steps.some((step) => step.component === "skill" && step.status === "failed"), true);
+  assert.equal(fs.existsSync(f.config), false);
+  context.mock.restoreAll();
   f.calls.length = 0;
   const recovered = await f.setup(["install", "--yes"]);
   assert.equal(recovered.exit_code, 0, JSON.stringify(recovered));
@@ -113,10 +117,9 @@ for (const owned of ['"@lyy-gh/memocap@0.2.0"', '["@lyy-gh/memocap@0.2.0", {"aut
   for (const position of ["sole", "first", "middle", "last"]) {
     for (const layout of ["compact", "multiline", "CRLF", "comments"]) {
       for (const trailing of [false, true]) {
-        test(`JSONC uninstall preserves bytes: ${position}/${layout}/trailing=${trailing}/tuple=${owned[0] === "["}`, async (context) => {
-          const f = fixture(context);
+        test(`JSONC uninstall preserves bytes: ${position}/${layout}/trailing=${trailing}/tuple=${owned[0] === "["}`, async () => {
           const { parse } = await import("jsonc-parser");
-          const { removePlugin } = await import("../scripts/setup/config.mjs");
+          const { managedConfigText } = await import("../scripts/setup/config.mjs");
           const others = ['"other,\\"plugin"', '["unicode-\u4e2d\ud83d\ude00", {"nested":[{"text":",]"},[1,2]],"enabled":true}]'];
           const entries = position === "sole" ? [owned] : [...others];
           const index = { sole: 0, first: 0, middle: 1, last: 2 }[position];
@@ -130,37 +133,36 @@ for (const owned of ['"@lyy-gh/memocap@0.2.0"', '["@lyy-gh/memocap@0.2.0", {"aut
           if (separators[index]) separators[index] = "";
           else if (index > 0) separators[index - 1] = "";
           const expected = render();
-          fs.mkdirSync(path.dirname(f.config), { recursive: true });
-          fs.writeFileSync(f.config, text);
-          const record = { plugin: { entry: JSON.parse(owned) } };
-          removePlugin({ config: f.config, text }, record);
-          const changed = fs.readFileSync(f.config, "utf8");
+          const changed = managedConfigText({ config: "/fixture.jsonc", text }, null);
           const errors = [];
           const remaining = parse(changed, errors, { allowTrailingComma: true });
           assert.deepEqual(errors, [], changed);
           assert.deepEqual(remaining, { plugin: position === "sole" ? [] : others.map((entry) => JSON.parse(entry)), model: "keep,setting" });
           assert.equal(changed, expected);
-          assert.deepEqual(removePlugin({ config: f.config, text: changed }, record), { backup: null });
-          assert.equal(fs.readFileSync(f.config, "utf8"), changed);
+          assert.equal(managedConfigText({ config: "/fixture.jsonc", text: changed }, null), changed);
         });
       }
     }
   }
 }
 
-test("JSONC uninstall after compact 0.1 to 0.2 source update preserves unrelated tuple", async (context) => {
-  const f = fixture(context);
-  const { writePlugin, removePlugin } = await import("../scripts/setup/config.mjs");
+test("JSONC uninstall after compact 0.1 to 0.2 source update preserves unrelated tuple", async () => {
+  const { managedEntry, managedConfigText } = await import("../scripts/setup/config.mjs");
   const { parse } = await import("jsonc-parser");
   const text = '{"plugin":[["other",{"enabled":true}],"@lyy-gh/memocap@0.1.0"]}';
-  fs.mkdirSync(path.dirname(f.config), { recursive: true });
-  fs.writeFileSync(f.config, text);
-  writePlugin({ config: f.config, text }, "@lyy-gh/memocap@0.2.0");
-  removePlugin({ config: f.config, text: fs.readFileSync(f.config, "utf8") }, { plugin: { entry: "@lyy-gh/memocap@0.2.0" } });
-  const changed = fs.readFileSync(f.config, "utf8");
+  const entry = managedEntry(parse(text).plugin[1], "0.2.0", "/managed policy");
+  const updated = managedConfigText({ config: "/fixture.jsonc", text }, entry);
+  const updateErrors = [];
+  const config = parse(updated, updateErrors, { allowTrailingComma: true });
+  assert.deepEqual(updateErrors, []);
+  assert.deepEqual(config.plugin, [["other", { enabled: true }], entry]);
+  assert.deepEqual(config.skills.paths, ["/managed policy"]);
+  const changed = managedConfigText({ config: "/fixture.jsonc", text: updated }, null, ["/managed policy"]);
   const errors = [];
   assert.deepEqual(parse(changed, errors, { allowTrailingComma: true }).plugin, [["other", { enabled: true }]]);
   assert.deepEqual(errors, []);
+  assert.equal(changed.includes('["other",{"enabled":true}]'), true);
+  assert.deepEqual(parse(changed).skills.paths, []);
 });
 
 test("JSONC uninstall integration after update keeps valid syntax and DB", async (context) => {
@@ -176,7 +178,7 @@ test("JSONC uninstall integration after update keeps valid syntax and DB", async
   const { parse } = await import("jsonc-parser");
   const errors = [];
   const text = fs.readFileSync(f.config, "utf8");
-  assert.deepEqual(parse(text, errors, { allowTrailingComma: true }), { plugin: [["other", { nested: [1, 2] }]], model: "keep" });
+  assert.deepEqual(parse(text, errors, { allowTrailingComma: true }), { plugin: [["other", { nested: [1, 2] }]], model: "keep", skills: { paths: [] } });
   assert.deepEqual(errors, []);
   assert.equal(text.includes("/* user,comment */"), true);
   assert.equal(fs.readFileSync(database, "utf8"), "synthetic core");

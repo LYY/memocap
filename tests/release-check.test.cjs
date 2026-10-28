@@ -13,7 +13,7 @@ function writeFixture(context, overrides = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap-release-check-"));
   const bin = path.join(root, "bin");
   const cargoArguments = path.join(root, "cargo-arguments.json");
-  context.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  context.after(() => fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   fs.mkdirSync(bin);
 
   const version = overrides.version ?? "0.1.0";

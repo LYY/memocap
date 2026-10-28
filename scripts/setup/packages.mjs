@@ -100,7 +100,6 @@ export async function prerequisites(runtime) {
   if (!["linux/x64", "darwin/arm64", "win32/x64"].includes(`${runtime.platform}/${runtime.arch}`)) throw new SetupError("unsupported_platform", `${runtime.platform}/${runtime.arch}`);
   const host = inspectHost(runtime);
   if (host.version && host.version !== "1.19.3") throw new SetupError("unsupported_host", `Verified OpenCode version is 1.19.3; found ${host.version}`);
-  await checked(runtime, "git", ["--version"]);
   return { node: process.versions.node, platform: `${runtime.platform}/${runtime.arch}`, opencode: host.version, host };
 }
 

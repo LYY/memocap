@@ -19,13 +19,19 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        env:
+          npm_config_cache: ${{ runner.temp }}/memocap-npm-download-cache
         with:
           node-version: "24"
+          cache: npm
+          cache-dependency-path: package-lock.json
       - name: Install Node dependencies
+        env:
+          npm_config_cache: ${{ runner.temp }}/memocap-npm-download-cache
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           components: rustfmt, clippy
@@ -33,19 +39,34 @@ jobs:
         run: cargo fmt --check
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
+      - name: Build native packaged acceptance binary
+        id: native_build
+        run: cargo build --bin memocap
       - name: Test
         run: cargo test
       - name: Test Node contracts
-        run: node --test tests/*.test.cjs
-      - name: Test official OpenCode 1.19.3 integration
-        if: runner.os == 'Linux'
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
+        run: node scripts/test-node-contracts.mjs
+      - name: Test packaged lifecycle and official OpenCode 1.19.3
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
         shell: bash
+        env:
+          MEMOCAP_OPENCODE_INTEGRATION: "1"
+          MEMOCAP_TEST_NPM_CACHE: ${{ runner.temp }}/memocap-npm-download-cache
+          MEMOCAP_TEST_LINUX_OFFLINE: ${{ runner.os == 'Linux' && '1' || '0' }}
+          MEMOCAP_TEST_HOST_EVIDENCE: ${{ runner.temp }}/task-8-${{ runner.os }}.json
         run: |
-          npm install --prefix "$RUNNER_TEMP/memocap-opencode" --no-audit --no-fund opencode-ai@1.19.3
-          cargo build --bin memocap
-          MEMOCAP_OPENCODE_INTEGRATION=1 \
-            MEMOCAP_TEST_OPENCODE="$RUNNER_TEMP/memocap-opencode/node_modules/.bin/opencode" \
-            node --test tests/opencode-v1.integration.test.cjs
+          node --test tests/opencode-v1.integration.test.cjs
+      - name: Upload native packaged acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: task-8-${{ runner.os }}
+          path: |
+            ${{ runner.temp }}/task-8-${{ runner.os }}.json
+            ${{ runner.temp }}/memocap-link-journals/
+          if-no-files-found: error
+          retention-days: 7
 
   release-build:
     name: build (${{ matrix.target }})
@@ -63,14 +84,14 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@v7
         with:
           name: memocap-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/memocap*
@@ -82,7 +103,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@v7
       - name: Verify actionlint
         shell: bash
         run: |
@@ -98,9 +119,9 @@ jobs:
           "$RUNNER_TEMP/actionlint" .github/workflows/ci.yml .github/workflows/release.yml
       - name: Check release contract
         env:
-          RELEASE_TAG: v0.2.1
+          RELEASE_TAG: v0.3.0
         run: node scripts/check-release.mjs
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
       - name: Check Node syntax

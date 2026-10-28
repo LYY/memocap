@@ -1,130 +1,96 @@
 import fs from "node:fs";
 import path from "node:path";
+import { inspectPolicy } from "../../lib/policy.mjs";
 import { SetupError } from "./arguments.mjs";
-import { parseConfig } from "./config.mjs";
-import { ancestors, fingerprint, readJSON, readText, skillFiles } from "./files.mjs";
+import { isMemocap, parseConfig } from "./config.mjs";
+import { fingerprint } from "./files.mjs";
+import { copyPolicy, policyDirectory } from "./policy.mjs";
+import { inventorySkills, resolvedSkillPath } from "./skill-discovery.mjs";
+import { legacyPlan, skillLock } from "./skill-legacy.mjs";
 
-export function skillLock(scope, runtime) {
-  const filename = scope.kind === "project" ? path.join(scope.directory, "skills-lock.json")
-    : runtime.env.XDG_STATE_HOME ? path.join(runtime.env.XDG_STATE_HOME, "skills/.skill-lock.json") : path.join(scope.home, ".agents/.skill-lock.json");
-  const lock = readJSON(filename);
-  if (lock && (lock.version !== (scope.kind === "project" ? 1 : 3) || !lock.skills)) throw new SetupError("unsupported_skill_lock", `Refusing to rewrite unknown or old skills lock: ${filename}`);
-  return { filename, entry: lock?.skills.memocap || null };
+export { skillLock } from "./skill-legacy.mjs";
+
+function physicalPath(directory) {
+  if (fs.existsSync(directory)) return fs.realpathSync(directory);
+  return path.join(physicalPath(path.dirname(directory)), path.basename(directory));
 }
 
-function discoveryRoots(scope, runtime) {
-  const roots = [];
-  const enabled = (flag) => flag === "true" || flag === "1";
-  if (!enabled(runtime.env.OPENCODE_DISABLE_EXTERNAL_SKILLS)) {
-    for (const directory of [scope.home, ...ancestors(scope.directory)]) {
-      roots.push(path.join(directory, ".agents/skills"));
-      if (!enabled(runtime.env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS)) roots.push(path.join(directory, ".claude/skills"));
-    }
-  }
-  for (const directory of scope.config_directories) roots.push(path.join(directory, "skills"), path.join(directory, "skill"));
-  for (const filename of [...scope.layers, scope.config]) {
-    if (!fs.existsSync(filename)) continue;
-    const configured = parseConfig(filename).skills?.paths || [];
-    for (const directory of configured) roots.push(path.resolve(scope.directory, directory.startsWith("~/") ? path.join(scope.home, directory.slice(2)) : directory));
-  }
-  return [...new Set(roots)];
+export function targetPolicy(scope, context) {
+  const bundle = context.bundle || inspectPolicy(path.join(context.runtime.packageRoot, "skills/memocap"), context.runtime.policyMetadata);
+  const directory = physicalPath(policyDirectory(scope, context.runtime, context.target, bundle.digest));
+  return { kind: "managed", path: directory, mainPath: path.join(directory, "SKILL.md"), version: context.target, source_version: context.report.runner_version,
+    digest: bundle.digest, payload_root: path.resolve(directory, "../../../.."), owned_paths: [] };
 }
 
 export function discoverSkill(scope, runtime, record) {
-  const lock = skillLock(scope, runtime);
-  const found = new Map();
-  for (const root of discoveryRoots(scope, runtime)) {
-    for (const filename of skillFiles(root)) {
-      const contents = readText(filename);
-      if (!/^name:\s*["']?memocap["']?\s*$/m.test(contents)) continue;
-      const directory = fs.realpathSync(path.dirname(filename));
-      found.set(directory, { path: directory, discovery_path: path.dirname(filename), fingerprint: fingerprint(directory) });
-    }
+  const inventory = inventorySkills(scope, runtime);
+  const canonical = path.join(scope.kind === "global" ? scope.home : scope.directory, ".agents/skills/memocap");
+  const managed = record?.skill?.kind === "managed" ? record.skill : null;
+  const candidates = [...inventory.discovered];
+  if (!managed && fs.existsSync(canonical) && !candidates.some((candidate) => candidate.path === fs.realpathSync(canonical))) candidates.push({ path: fs.realpathSync(canonical), discovery_path: null, registrations: [] });
+  if (!managed) for (const candidate of candidates) candidate.fingerprint = fingerprint(candidate.path);
+  const selected = managed ? candidates.find((candidate) => physicalPath(candidate.path) === physicalPath(managed.path)) || null : candidates[0] || null;
+  let observed = null;
+  let inspectionError = null;
+  if (managed && fs.existsSync(managed.path)) {
+    try { observed = inspectPolicy(managed.path, runtime.policyMetadata); }
+    catch (error) { inspectionError = { code: error.code || "policy_invalid", message: error.message }; }
   }
-  const base = scope.kind === "global" ? scope.home : scope.directory;
-  const canonical = path.join(base, ".agents/skills/memocap");
-  if (fs.existsSync(canonical)) {
-    const real = fs.realpathSync(canonical);
-    if (!found.has(real)) found.set(real, { path: real, discovery_path: null, fingerprint: fingerprint(real) });
-  }
-  const canonicalPath = fs.existsSync(canonical) ? fs.realpathSync(canonical) : null;
-  const local = [...found.values()].filter((skill) => skill.path === canonicalPath || (scope.kind === "global" ? !(skill.discovery_path || skill.path).startsWith(`${scope.directory}${path.sep}.agents${path.sep}`) : (skill.discovery_path || skill.path).startsWith(`${scope.directory}${path.sep}`)));
-  const candidates = local;
-  if (record?.skill?.path) candidates.sort((left, right) => Number(right.path === record.skill.path) - Number(left.path === record.skill.path));
-  return { candidates, discovered: [...found.values()], lock, selected: candidates[0] || null, list: null };
-}
-
-export async function listSkills(scope, runtime) {
-  const args = ["--yes", "skills@1.7.4", "list", ...(scope.kind === "global" ? ["--global"] : []), "--json"];
-  const execution = await runtime.run("npx", args, { cwd: scope.directory, env: { ...runtime.env, DISABLE_TELEMETRY: "1" }, stdoutFile: true });
-  if (execution.code !== 0) throw new SetupError("process_failed", `npx exited ${execution.code}`, { command: "npx", args, stderr: execution.stderr, stdout: execution.stdout });
-  let inventory;
-  try { inventory = JSON.parse(execution.stdout); } catch { throw new SetupError("skills_response", "skills list did not return JSON"); }
-  if (!Array.isArray(inventory) || inventory.some((entry) => !entry || typeof entry.name !== "string" || typeof entry.path !== "string" || !Array.isArray(entry.agents) || entry.agents.some((agent) => typeof agent !== "string"))) throw new SetupError("skills_response", "Invalid skills list inventory");
-  return inventory.filter((entry) => entry.name === "memocap");
-}
-
-export function skillInstallArguments(scope, target) {
-  return ["--yes", "skills@1.7.4", "add", `https://github.com/LYY/memocap/tree/v${target}`, "--skill", "memocap", "--agent", "opencode", ...(scope.kind === "global" ? ["--global"] : []), "--yes"];
+  if (selected && managed) Object.assign(selected, { kind: "managed", digest: observed?.digest || null, mainPath: observed?.mainPath || managed.mainPath, version: managed.version });
+  return { ...inventory, canonical, candidates, selected, observed, inspectionError, managed, lock: skillLock(scope, runtime) };
 }
 
 export function assertSkillOwnership(inspection, record, context) {
-  const selected = inspection.selected;
-  if (inspection.candidates.length > 1) throw new SetupError("duplicate_skill", "Multiple distinct memocap skill contents are discoverable", inspection.candidates);
-  if (!selected) return;
-  if (record?.skill) {
-    if (selected.fingerprint !== record.skill.fingerprint) throw new SetupError("skill_modified", `Preserving changed skill: ${selected.path}`);
+  if (!inspection.managed) {
+    inspection.migration = legacyPlan(inspection, record, context);
     return;
   }
-  const entry = inspection.lock.entry;
-  const sourceVersion = entry?.ref?.replace(/^v/, "");
-  const installed = context.report.shared_cli;
-  const expected = sourceVersion === installed.version && installed.package_root ? fingerprint(path.join(installed.package_root, "skills/memocap")) : null;
-  if (entry?.source !== "LYY/memocap" || entry.sourceType !== "github" || !["0.0.10", "0.1.0", context.target].includes(sourceVersion) ||
-      entry.ref !== `v${sourceVersion}` || (entry.skillPath !== undefined && entry.skillPath !== "skills/memocap/SKILL.md") ||
-      (entry.sourceUrl && !["https://github.com/LYY/memocap.git", `https://github.com/LYY/memocap/tree/v${sourceVersion}`].includes(entry.sourceUrl)) || !expected || selected.fingerprint !== expected || !selected.discovery_path) {
-    throw new SetupError("unowned_skill", `Cannot prove original release contents of ${selected.path}`, { lock: entry });
-  }
-  inspection.adoption = { source: entry.source, ref: entry.ref, fingerprint: expected };
+  const managed = inspection.managed;
+  if (context.options?.command !== "uninstall" && (inspection.inspectionError || (inspection.observed && inspection.observed.digest !== managed.digest))) throw new SetupError("skill_modified", `Preserving changed managed payload: ${managed.path}`, inspection.inspectionError);
+  const extra = inspection.discovered.filter((candidate) => candidate.path !== physicalPath(managed.path) || path.resolve(candidate.discovery_path) !== path.resolve(managed.path));
+  const registrations = inspection.roots.filter((root) => root.kind === "explicit" && resolvedSkillPath(root.declared_path, context.activeScope || { directory: "/", home: "/" }) === managed.path);
+  if (extra.length || inspection.discovered.length > 1 || registrations.length > 1) throw new SetupError("duplicate_skill", "Multiple memocap discovery entries are visible", inspection.discovered);
 }
 
-export async function installSkill(scope, context) {
-  const expected = fingerprint(path.join(context.runtime.packageRoot, "skills/memocap"));
-  if (!expected) throw new SetupError("missing_skill_payload", "Target package has no skill payload");
-  let inspection = discoverSkill(scope, context.runtime, context.manifest.installs[scope.id]);
-  if ((inspection.selected?.fingerprint || null) !== context.skillSnapshots.get(scope.id)) throw new SetupError("skill_modified", "Skill changed since preflight; preserving it");
-  const source = `https://github.com/LYY/memocap/tree/v${context.target}`;
-  const list = await listSkills(scope, context.runtime);
-  const shared = list.flatMap((entry) => entry.agents).filter((agent) => agent !== "OpenCode");
-  const needed = inspection.selected?.fingerprint !== expected || (inspection.lock.entry?.ref !== `v${context.target}` && inspection.lock.entry?.sourceUrl !== source) || !inspection.selected?.discovery_path;
-  if (needed && shared.length) throw new SetupError("shared_skill_conflict", "Updating this canonical skill would change other agents", { agents: [...new Set(shared)], list });
-  let execution = null;
-  if (needed) {
-    const beforeWrite = discoverSkill(scope, context.runtime, context.manifest.installs[scope.id]);
-    if (beforeWrite.selected?.fingerprint !== inspection.selected?.fingerprint) throw new SetupError("skill_modified", "Skill changed during dependency discovery; preserving it");
-    execution = await context.runtime.run("npx", skillInstallArguments(scope, context.target), { cwd: scope.directory, env: { ...context.runtime.env, DISABLE_TELEMETRY: "1" } });
-  }
-  inspection = discoverSkill(scope, context.runtime, context.manifest.installs[scope.id]);
-  const after = await listSkills(scope, context.runtime);
-  if (inspection.selected?.fingerprint !== expected || !inspection.selected.discovery_path || !after.some((entry) => fs.realpathSync(entry.path) === inspection.selected.path)) {
-    throw new SetupError(execution?.code ? "skill_outcome_unknown" : "skill_readback", "Skill source/content/discovery did not match target", { execution, inspection, inventory: after });
-  }
-  const metadata = inspection.lock.entry;
-  if (metadata?.source !== "LYY/memocap" || metadata.sourceType !== "github" || (metadata.ref !== `v${context.target}` && metadata.sourceUrl !== source)) throw new SetupError("skill_source_readback", "Skill lock does not identify the target release", metadata);
-  return { status: needed ? "changed" : "unchanged", path: inspection.selected.path, discovery_path: inspection.selected.discovery_path, fingerprint: expected, source, version: context.target, agents: after.flatMap((entry) => entry.agents), recovered_after_error: Boolean(execution?.code) };
+export function installSkill(scope, context) {
+  const record = context.manifest.installs[scope.id];
+  if (!record.intent) return { ...record.skill, status: "unchanged" };
+  const desired = record.intent.skill;
+  const policy = copyPolicy(path.join(context.runtime.packageRoot, "skills/memocap"), desired.path, desired.digest, context.runtime.policyMetadata);
+  return { ...desired, path: policy.directory, mainPath: policy.mainPath, status: policy.status };
 }
 
-export async function removeSkill(scope, context, record) {
-  const inspection = discoverSkill(scope, context.runtime, record);
-  if (!inspection.selected) return { status: "unchanged" };
-  if (!record?.skill || inspection.selected.fingerprint !== record.skill.fingerprint) throw new SetupError("skill_modified", "Preserving unowned or modified skill", inspection.selected);
-  const inventory = await listSkills(scope, context.runtime);
-  const otherAgents = inventory.flatMap((entry) => entry.agents).filter((agent) => agent !== "OpenCode");
-  if (otherAgents.length) return { status: "retained_shared", agents: otherAgents, path: inspection.selected.path };
-  if (discoverSkill(scope, context.runtime, record).selected?.fingerprint !== inspection.selected.fingerprint) throw new SetupError("skill_modified", "Skill changed during uninstall inventory; preserving it");
-  const execution = await context.runtime.run("npx", ["--yes", "skills@1.7.4", "remove", "memocap", "--agent", "opencode", ...(scope.kind === "global" ? ["--global"] : []), "--yes"], { cwd: scope.directory, env: { ...context.runtime.env, DISABLE_TELEMETRY: "1" } });
-  const after = await listSkills(scope, context.runtime);
-  const remaining = discoverSkill(scope, context.runtime, record);
-  if (remaining.selected?.discovery_path || after.some((entry) => entry.agents.includes("OpenCode"))) throw new SetupError("skill_remove_failed", "OpenCode skill reference remains", { execution, inventory: after, remaining });
-  return { status: "changed", preserved_other_agents: true };
+function remainingReferences(scope, context, skill) {
+  const configs = new Set([...scope.layers, ...Object.values(context.manifest.installs).map((record) => record.config)].filter(Boolean));
+  const references = [];
+  for (const filename of configs) {
+    if (!fs.existsSync(filename)) continue;
+    const config = parseConfig(filename);
+    if ((config.plugin || []).some((entry) => isMemocap(entry) && Array.isArray(entry) && entry[1]?.skillDirectory && physicalPath(entry[1].skillDirectory) === skill.path) || (config.skills?.paths || []).some((directory) => physicalPath(resolvedSkillPath(directory, scope)) === skill.path)) references.push(filename);
+  }
+  for (const [id, record] of Object.entries(context.manifest.installs)) if (id !== scope.id && record.skill?.path === skill.path) references.push(id);
+  for (const reference of inventorySkills(scope, context.runtime).references) if (reference.path === skill.path) references.push(reference.discovery_path);
+  return references;
+}
+
+export function removeSkill(scope, context, record) {
+  const skill = record.skill;
+  if (skill?.kind !== "managed") return { status: "retained_legacy", path: skill?.path || null };
+  const references = remainingReferences(scope, context, skill);
+  if (references.length) return { status: "retained_shared", path: skill.path, references,
+    known_owners: Object.entries(context.manifest.installs).filter(([id, record]) => id !== scope.id && record.skill?.path === skill.path).map(([id]) => id) };
+  if (!fs.existsSync(skill.path)) return { status: "unchanged" };
+  let policy;
+  try { policy = inspectPolicy(skill.path, context.runtime.policyMetadata); }
+  catch (error) {
+    if (!error.code?.startsWith("policy_") && !["ENOENT", "ERR_ENCODING_INVALID_ENCODED_DATA"].includes(error.code)) throw error;
+    context.report.warnings.push({ code: "skill_modified", path: skill.path });
+    return { status: "retained_modified", path: skill.path };
+  }
+  if (policy.digest !== skill.digest) {
+    context.report.warnings.push({ code: "skill_modified", path: skill.path });
+    return { status: "retained_modified", path: skill.path };
+  }
+  fs.rmSync(skill.path, { recursive: true });
+  return { status: "changed", path: skill.path };
 }

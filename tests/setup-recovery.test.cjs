@@ -32,25 +32,29 @@ test("a lost package response is reconciled with actual executable version befor
   assert.equal(report.shared_cli.executable_version, "0.1.0");
 });
 
-test("a lost skill response reconciles actual files and lock instead of replaying add", async (context) => {
+test("a lost policy publication response reconciles actual files without replaying the copy", async (context) => {
   const f = fixture(context);
-  const run = f.runtime.run;
-  f.runtime.run = async (command, args, options) => {
-    const execution = await run(command, args, options);
-    return command === "npx" && args.includes("add") ? { ...execution, code: 1, stderr: "connection lost after commit" } : execution;
-  };
+  const rename = fs.renameSync;
+  let publications = 0;
+  context.mock.method(fs, "renameSync", (source, destination) => {
+    const outcome = rename(source, destination);
+    if (String(source).includes(".memocap-policy-")) { publications++; throw Object.assign(new Error("publication response lost"), { code: "EIO" }); }
+    return outcome;
+  });
   const report = await f.setup(["install", "--yes"]);
   assert.equal(report.exit_code, 0, JSON.stringify(report));
-  assert.equal(report.steps.find((step) => step.component === "skill").recovered_after_error, true);
-  assert.equal(f.calls.filter((call) => call.command === "npx" && call.args.includes("add")).length, 1);
+  assert.equal(publications, 1);
+  assert.equal(fs.existsSync(path.join(f.managedPath(), "SKILL.md")), true);
+  assert.equal(f.calls.some((call) => call.command === "npx"), false);
 });
 
 test("same-version repair restores missing owned plugin and skill", async (context) => {
   const f = fixture(context);
   const initial = await f.setup(["install", "--yes"]);
   assert.equal(initial.exit_code, 0, JSON.stringify(initial));
+  const directory = f.managedPath();
   fs.writeFileSync(f.config, '{"model":"keep"}\n');
-  fs.rmSync(f.skillPaths(f.project, true).canonical, { recursive: true });
+  fs.rmSync(directory, { recursive: true });
   const report = await f.setup(["update", "--to", "0.1.0", "--yes"]);
   assert.equal(report.exit_code, 0, JSON.stringify(report));
   assert.equal(JSON.parse(fs.readFileSync(f.config)).model, "keep");
@@ -91,14 +95,17 @@ test("user changes to managed plugin options are preserved without package write
   assert.equal(f.calls.some((call) => call.args[0] === "install"), false);
 });
 
-test("uninstall retains skill content and CLI when another agent shares canonical files", async (context) => {
+test("uninstall retains managed content and CLI when another agent references it", async (context) => {
   const f = fixture(context);
   await f.setup(["install", "--yes"]);
-  f.state.agents = ["OpenCode", "Codex"];
-  const before = fs.readFileSync(path.join(f.skillPaths(f.project, true).canonical, "SKILL.md"), "utf8");
+  const directory = f.managedPath();
+  const alias = path.join(f.home, ".codex/skills/memocap");
+  fs.mkdirSync(path.dirname(alias), { recursive: true });
+  fs.symlinkSync(directory, alias, "dir");
+  const before = fs.readFileSync(path.join(directory, "SKILL.md"), "utf8");
   const report = await f.setup(["uninstall", "--remove-cli", "--yes"]);
   assert.equal(report.error.code, "cli_references_remain");
-  assert.equal(fs.readFileSync(path.join(f.skillPaths(f.project, true).canonical, "SKILL.md"), "utf8"), before);
+  assert.equal(fs.readFileSync(path.join(directory, "SKILL.md"), "utf8"), before);
   assert.equal(f.calls.some((call) => call.command === "npx" && call.args.includes("remove")), false);
 });
 
@@ -109,7 +116,7 @@ test("exact target worker freezes stable once even if registry changes later", a
   assert.equal(report.exit_code, 0, JSON.stringify(report));
   assert.equal(report.resolved_version, "0.1.0");
   assert.equal(f.calls.filter((call) => call.args[0] === "view").length, 1);
-  assert.equal(JSON.parse(fs.readFileSync(f.config)).plugin[0], "@lyy-gh/memocap@0.1.0");
+  assert.equal(JSON.parse(fs.readFileSync(f.config)).plugin[0][0], "@lyy-gh/memocap@0.1.0");
 });
 
 test("stable prerelease is refused while explicit prerelease dry-run can plan", async (context) => {
@@ -136,7 +143,7 @@ test("an unmodified release-proven 0.0.10 skill and plugin can be adopted", asyn
   } } }));
   const report = await f.setup(["update", "--to", "0.1.0", "--yes"]);
   assert.equal(report.exit_code, 0, JSON.stringify(report));
-  assert.equal(JSON.parse(fs.readFileSync(f.config)).plugin[0], "@lyy-gh/memocap@0.1.0");
+  assert.equal(JSON.parse(fs.readFileSync(f.config)).plugin[0][0], "@lyy-gh/memocap@0.1.0");
 });
 
 test("explicit remove-cli succeeds only after final owned references disappear", async (context) => {
@@ -150,15 +157,20 @@ test("explicit remove-cli succeeds only after final owned references disappear",
 test("manifest failure preserves and reports the CLI mutation before a successful retry", async (context) => {
   const f = fixture(context);
   const manifest = path.join(f.env.XDG_STATE_HOME, "memocap/setup.json");
-  f.state.afterCommand = (_command, args) => {
-    if (args[0] === "install") fs.mkdirSync(manifest, { recursive: true });
-  };
+  let installed = false;
+  let failed = false;
+  f.state.afterCommand = (_command, args) => { if (args[0] === "install") installed = true; };
+  const rename = fs.renameSync;
+  context.mock.method(fs, "renameSync", (source, destination) => {
+    if (installed && !failed && destination === manifest) { failed = true; throw Object.assign(new Error("manifest commit fault"), { code: "EACCES" }); }
+    return rename(source, destination);
+  });
   const partial = await f.setup(["install", "--yes"]);
   assert.equal(partial.status, "partial");
   assert.equal(partial.steps.find((step) => step.component === "cli").status, "changed");
   assert.equal(partial.steps.find((step) => step.component === "manifest").status, "failed");
   assert.equal(fs.existsSync(path.join(f.prefix, "bin/memocap")), true);
-  fs.rmdirSync(manifest);
+  context.mock.restoreAll();
   f.state.afterCommand = null;
   const repaired = await f.setup(["install", "--yes"]);
   assert.equal(repaired.exit_code, 0, JSON.stringify(repaired));
@@ -188,7 +200,7 @@ test("backup failure never replaces the original config and permits a scoped ret
   const repaired = await f.setup(["install", "--yes"]);
   assert.equal(repaired.exit_code, 0, JSON.stringify(repaired));
   assert.equal(repaired.scopes[0].config, f.config);
-  assert.deepEqual(JSON.parse(fs.readFileSync(f.config, "utf8")).plugin, ["@lyy-gh/memocap@0.1.0"]);
+  assert.deepEqual(JSON.parse(fs.readFileSync(f.config, "utf8")).plugin, [["@lyy-gh/memocap@0.1.0", { skillDirectory: f.managedPath() }]]);
 });
 
 test("a failed binary verification reports the package actually installed and a partial mutation", async (context) => {
@@ -224,28 +236,38 @@ test("adoption reports the release source and content proof persisted in the man
   assert.equal(manifest.installs[report.scopes[0].id].adoption.skill.source, "LYY/memocap");
 });
 
-test("failed scoped removal is detected from actual discovery even when skills list has no agents", async (context) => {
+test("failed local payload removal is reported and a same-target retry completes it", async (context) => {
   const f = fixture(context);
   await f.setup(["install", "--yes"]);
-  f.state.agents = [];
-  f.state.fail = (command, args) => command === "npx" && args.includes("remove");
+  const directory = f.managedPath();
+  const remove = fs.rmSync;
+  context.mock.method(fs, "rmSync", (filename, options) => {
+    if (filename === directory) throw Object.assign(new Error("payload removal denied"), { code: "EACCES" });
+    return remove(filename, options);
+  });
   const report = await f.setup(["uninstall", "--yes"]);
   assert.equal(report.exit_code, 1);
-  assert.equal(report.error.code, "skill_remove_failed");
-  assert.equal(report.steps.find((step) => step.component === "skill").status, "failed");
-  assert.equal(fs.existsSync(path.join(f.home, ".agents/skills/memocap/SKILL.md")), true);
+  assert.equal(report.error.code, "EACCES");
+  assert.equal(report.steps.find((step) => step.component === "skill_removal").status, "failed");
+  assert.equal(fs.existsSync(path.join(directory, "SKILL.md")), true);
+  context.mock.restoreAll();
+  assert.equal((await f.setup(["uninstall", "--yes"])).exit_code, 0);
+  assert.equal(fs.existsSync(directory), false);
 });
 
-test("uninstall preserves a skill edited while dependency inventory is being read", async (context) => {
+test("uninstall preserves a payload edited after config removal before payload inspection", async (context) => {
   const f = fixture(context);
   await f.setup(["install", "--yes"]);
-  const filename = path.join(f.home, ".agents/skills/memocap/SKILL.md");
-  f.state.afterCommand = (command, args) => {
-    if (command === "npx" && args.includes("list")) fs.appendFileSync(filename, "user edit during uninstall\n");
-  };
+  const filename = path.join(f.managedPath(), "SKILL.md");
+  const rename = fs.renameSync;
+  context.mock.method(fs, "renameSync", (source, destination) => {
+    const outcome = rename(source, destination);
+    if (destination === f.config) fs.appendFileSync(filename, "user edit during uninstall\n");
+    return outcome;
+  });
   const report = await f.setup(["uninstall", "--yes"]);
-  assert.equal(report.exit_code, 1);
-  assert.equal(report.error.code, "skill_modified");
+  assert.equal(report.exit_code, 0);
+  assert.equal(report.warnings.some((warning) => warning.code === "skill_modified"), true);
   assert.equal(fs.readFileSync(filename, "utf8").endsWith("user edit during uninstall\n"), true);
 });
 
