@@ -38,7 +38,9 @@ test("managed install copies the complete bundle and registers one absolute shar
   assert.equal(fs.existsSync(f.skillPaths(f.project, true).canonical), false);
   const { inspectPolicy } = await import("../lib/policy.mjs");
   const installed = JSON.parse(fs.readFileSync(report.manifest_path)).installs[report.scopes[0].id].skill;
-  assert.equal(installed.digest, inspectPolicy(directory).digest);
+  const checksBefore = f.metadataChecks.length;
+  assert.equal(installed.digest, inspectPolicy(directory, f.runtime.policyMetadata).digest);
+  assert.deepEqual(f.metadataChecks.slice(checksBefore), [directory]);
   assert.equal(installed.kind, "managed");
   const before = tree(f.home);
   assert.equal((await f.setup(["install", "--yes"])).status, "unchanged");

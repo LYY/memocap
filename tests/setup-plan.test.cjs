@@ -12,7 +12,9 @@ test("dry-run exposes exact package command and local policy identity without ex
   const report = await f.setup(["install", "--project", f.project, "--dry-run"]);
   assert.deepEqual(report.plan?.cli.command, { executable: "npm", args: ["install", "--global", "@lyy-gh/memocap@0.1.0"] });
   const { inspectPolicy } = await import("../lib/policy.mjs");
-  const digest = inspectPolicy(path.join(f.packageRoot, "skills/memocap")).digest;
+  const checksBefore = f.metadataChecks.length;
+  const digest = inspectPolicy(path.join(f.packageRoot, "skills/memocap"), f.runtime.policyMetadata).digest;
+  assert.deepEqual(f.metadataChecks.slice(checksBefore), [path.join(f.packageRoot, "skills/memocap")]);
   assert.equal(report.plan.scopes[0].skill.command, null);
   assert.equal(report.plan.scopes[0].skill.digest, digest);
   assert.equal(report.plan.scopes[0].skill.path, path.join(fs.realpathSync(f.project), `.opencode/memocap/policies/0.1.0-${digest}/memocap`));

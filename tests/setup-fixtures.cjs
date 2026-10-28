@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-function fixture(context) {
+function fixture(context, options = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "memocap setup "));
   context.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const home = path.join(root, "home");
@@ -104,6 +104,8 @@ console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEM
     return { code: 1, stdout: "", stderr: `unsupported fixture process ${command} ${args.join(" ")}` };
   }
   const runtime = { env, cwd: project, packageRoot, run, platform: process.platform, arch: process.arch };
+  const metadataChecks = [];
+  if (options.metadata !== "native") runtime.policyMetadata = (directory) => { metadataChecks.push(directory); return null; };
   function cacheBinary(version) {
     const base = process.platform === "darwin" ? path.join(home, "Library/Caches")
       : process.platform === "win32" ? env.LOCALAPPDATA : env.XDG_CACHE_HOME;
@@ -115,7 +117,7 @@ console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEM
     return runSetup(args, runtime);
   }
   function managedPath() { return JSON.parse(fs.readFileSync(config)).plugin.find((entry) => Array.isArray(entry) && entry[0].startsWith("@lyy-gh/memocap@"))[1].skillDirectory; }
-  return { root, home, prefix, project, packageRoot, config, env, calls, state, installed, cliPath, cliScript, installCLI, skillPaths, managedPath, cacheBinary, runtime, setup };
+  return { root, home, prefix, project, packageRoot, config, env, calls, state, installed, cliPath, cliScript, installCLI, skillPaths, managedPath, cacheBinary, runtime, setup, metadataChecks };
 }
 
 function failPolicyCopy(context) {

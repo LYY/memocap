@@ -27,7 +27,8 @@ test("shared Windows host fixture has package metadata and a usable explicit cmd
 
 for (const scope of ["global", "project"]) {
   test(`native ${scope} setup copies its policy within the selected filesystem root`, async (context) => {
-    const f = fixture(context);
+    const f = fixture(context, { metadata: "native" });
+    assert.equal(Object.hasOwn(f.runtime, "policyMetadata"), false);
     const root = scope === "global" ? path.join(fs.realpathSync(f.home), "config/opencode") : path.join(fs.realpathSync(f.project), ".opencode");
     const args = scope === "global" ? ["--global"] : ["--project", f.project];
 
