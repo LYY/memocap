@@ -14,10 +14,10 @@ remote operation are documented in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Install
 
-Install the v0.3.0 CLI, OpenCode plugin, and runtime skill for your user:
+Install the v0.4.0 CLI, OpenCode plugin, and runtime skill for your user:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.4.0 memocap-setup install --global --yes --json
 ```
 
 Requires Node.js 22.20 or later, npm/npx, and OpenCode 1.19.3. The package
@@ -40,7 +40,7 @@ mutually exclusive. `<PLACEMENT>` is `repository:<64 lowercase hex>`,
 Global `--repo <PATH>` selects a concrete repository instead of the working
 directory; repeat it only for recall, up to eight targets. Writes have one
 target. Global `--json` returns a format-1 receipt for automation; it is not
-supported by `serve` or `ui`. Package `0.3.0`, core schema `2.0`, and receipt
+supported by `serve` or `ui`. Package `0.4.0`, core schema `2.1`, and receipt
 format `1` are independent identities.
 
 ```text
@@ -99,11 +99,11 @@ Use `scope list --all` only for an intentional full inventory, then
 logical writes: it does not write data or schema, initialize or migrate the main
 database, prune history, or record activity. Ordinary memory commands such as
 `memocap list` use a read-write open and can initialize a missing database or
-bridge schema `1.0` to `2.0`. `activity list/show` use read-only access and do
+upgrade an exact schema `2.0` to `2.1`. `activity list/show` use read-only access and do
 not prepare the database. SQLite `READ_ONLY` connections may still coordinate
 WAL/SHM sidecars; ordinary WAL inspection needs no owner snapshot.
 `activity prepare` explicitly prepares the local main database, creating schema
-`2.0` or bridging the exact registered `1.0` schema. Preparation can prune
+`2.1` or upgrading the exact supported `2.0` schema. Preparation can prune
 retained activity. Remote preparation belongs to the server administrator.
 See the
 [schema versioning contract](docs/SCHEMA-VERSIONING.md) for the full boundary.
@@ -117,12 +117,40 @@ history. An existing `<core filename>.activity.sqlite` file is left untouched
 and its history is not imported. Any later discard is a separate, user-authorized
 choice after old writers are quiescent.
 
-The plugin exposes `memocap_recall`, `memocap_remember`, and `memocap_scope`
-tools. `/memory status`, `/memory recall`, `/memory scope <PATH...>`,
+The plugin exposes `memocap_recall`, `memocap_remember`, `memocap_scope`, and
+`memocap_organize` tools. `/memory status`, `/memory recall`, `/memory scope <PATH...>`,
 `/memory scopes`, `/memory list`, `/memory recent`, and `/memory why` make the
 session's target and recall receipt inspectable. Prepared input is not proof of
 model understanding or adoption. See the [runtime skill](skills/memocap/SKILL.md)
 for permission and explicit target-switching policy.
+
+## Memory organization
+
+Use `/memory organize` to review saved memories. It defaults to all unorganized
+records across placements, including shadowed records. `/memory organize --all`
+or `/memory organize -a` also includes previously organized records. `/memory help`
+shows the available command forms without opening the database.
+Use `/memory organize --help` or `/memory organize -h` for the full organization
+usage. An empty pending scan reports that there are no unorganized memories and
+suggests `-a`; it never starts another scan automatically.
+
+Organization is a local-only feature. When remote mode is configured, the
+organization request is refused; it does not fall back to local storage or add
+remote organization support. Other supported remote operations are unchanged.
+Organization reads and paginates the complete candidate set before reporting a
+completed scan. It previews each exact ID, placement, original content, proposed
+action, replacement content, rationale, evidence, and scope. No memory changes
+until the user confirms a concrete group and the permission-aware organization
+tool authorizes it. Changes apply one group at a time and are read back after
+commit. Conflicts require a new review. An uncertain write is read before any
+further action and is never replayed to verify it.
+
+Keep, refine, and same-placement merge mark surviving records organized only
+after the confirmed transaction commits. Delete removes the record. Declined,
+failed, conflicted, or evidence-pending records remain unchanged. New memories
+and copies start unorganized; moves and ordinary edits preserve organization
+state. `--all` only widens the review set. The full workflow and decision rules
+are in the on-demand [memory organization guide](skills/memocap/references/memory-organization.md).
 
 ## Scope and visible stack
 
@@ -214,12 +242,12 @@ manually replay a lost request from a bare `not_found` result.
 ## Policy boundaries
 
 The OpenCode skill's memory-admission and least-sharing policy is model guidance.
-It admits only stable repository conventions, enduring preferences, and
-continuing decisions whose rationale is absent from a durable, authoritative,
-cheaply queryable source, then chooses repository, attached-domain, or
-universal placement. Temporary state remains in its source system. The policy
-does not auto-classify content, scan secrets, or guarantee compliance. It is
-not a compliance guarantee and it does not create or attach domains.
+It admits durable conventions, enduring preferences, and continuing decisions
+only when they can be reused or change future judgment or action, and their
+useful rationale is absent from a durable, authoritative, cheaply queryable
+source. Temporary state remains in its source system. Placement is the narrowest
+scope that supports the intended reuse. The policy does not auto-classify
+content, scan secrets, guarantee compliance, or create or attach domains.
 
 Runtime validation is separate. The CLI and server validate repository IDs,
 domain registration, current-repository attachment, exact placements, and
@@ -230,13 +258,14 @@ written. Authorization is only the remote bearer-token gate described above.
 ## Schema and data loss
 
 Read [SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md) before opening a store
-created by an earlier build. The exact registered schema `1.0` is bridged to
-`2.0` without rebuilding core tables or changing memory IDs and placements.
-Pre-versioned, unknown, malformed, and unsupported schemas are refused without
-reset. Back up with SQLite's backup API or another WAL-aware method before a
-legacy upgrade. The v0.1.0 and v0.0.10 binaries cannot open schema `2.0`; changing
-software versions does not restore data. Never restore an older backup over
-newer schema `2.0` data.
+created by an earlier build. New databases use schema `2.1`; only the exact
+supported schema `2.0` upgrades to `2.1`, without rebuilding core tables or
+changing memory IDs or placements. Schema `1.0`, pre-versioned, unknown, future,
+and malformed databases are refused without reset. Back up with SQLite's backup
+API or another WAL-aware method before the `2.0` upgrade. Changing package
+versions does not change or restore database data. Never restore an older backup
+over newer data. Package `0.4.0`, schema `2.1`, and receipt format `1` are
+independent identities.
 
 ## Compare
 

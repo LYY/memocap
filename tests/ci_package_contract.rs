@@ -40,7 +40,7 @@ fn package_contract_runs_release_gates_before_packaging() {
         "actionlint_1.7.12_linux_amd64.tar.gz",
         "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
         "scripts/check-release.mjs",
-        "RELEASE_TAG: v0.3.0",
+        "RELEASE_TAG: v0.4.0",
         "node --check",
         "npm pack --dry-run --json",
     ] {
@@ -67,6 +67,25 @@ fn package_contract_accepts_windows_crlf_checkout() {
 #[test]
 fn platform_matrix_runs_node_contracts() {
     assert_node_contract(CI_WORKFLOW);
+}
+
+#[test]
+fn platform_host_step_enables_real_organization_surfaces() {
+    let test = job(CI_WORKFLOW, "test").replace("\r\n", "\n");
+    let host = step_running(&test, "node --test tests/opencode-v1.integration.test.cjs");
+    for required in [
+        "MEMOCAP_ORGANIZATION_NATIVE: \"1\"",
+        "MEMOCAP_ORGANIZATION_HOST: \"1\"",
+        "tests/plugin-organization-native.test.cjs",
+        "tests/opencode-v1-organization.integration.test.cjs",
+        "organization-${{ runner.os }}.json",
+    ] {
+        assert!(
+            host.contains(required),
+            "missing organization gate {required}"
+        );
+    }
+    assert!(test.contains("${{ runner.temp }}/organization-${{ runner.os }}.json"));
 }
 
 #[test]

@@ -1,5 +1,28 @@
 # Changelog
 
+## @lyy-gh/memocap 0.4.0 (2026-10-28)
+
+Implemented outcomes for package target `0.4.0` and Git tag target `v0.4.0`.
+Publication and registry provenance verification remain separate release gates.
+
+- `/memory organize` selects pending records; `-a` includes organized records.
+  Read complete source snapshots and the on-demand organization reference before
+  proposing keep, refine, delete, or merge groups. Each confirmed group uses an
+  atomic transaction, exact snapshot conflict checks, placement preservation,
+  explicit permissions, and independent post-commit readback without replay.
+- Schema `2.1` adds organization state to the existing database. Authorized
+  local preparation upgrades current schema `2.0` while retaining memory IDs,
+  placements, domains, provenance, FTS, ledger, and activity. Read-only status,
+  setup check/doctor, and dry-run leave `2.0` unchanged and report upgrade needed.
+  Normal recall/list behavior remains unchanged.
+- Current managed v0.3.0 format-2 ownership upgrades through the exact v0.4.0
+  worker, including records with inert historical fields. Legacy format-1 setup,
+  deferred producer inspection, legacy skill takeover, and schema-1 bridges are
+  retired; unsupported state refuses without reset or ownership bypass.
+- The compact daily policy keeps organization instructions in an on-demand
+  reference. Native and real OpenCode organization acceptance join the existing
+  three-platform CI host step with isolated fixtures and retained evidence.
+
 ## @lyy-gh/memocap 0.3.0 (2026-10-26)
 
 Implemented outcomes for package target `0.3.0` and Git tag target `v0.3.0`.
