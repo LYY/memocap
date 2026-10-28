@@ -271,3 +271,18 @@ test("invalid argv, cwd and deadline reject before launching", async (context) =
     await assert.rejects(run(argv, options), { code: "invalid_request" });
   }
 });
+
+test("optional stdin carries literal UTF8 to EOF under a copied environment without argv disclosure", async (context) => {
+  const { directory, run } = await fixture(context, `
+    let raw = ''; process.stdin.setEncoding('utf8');
+    process.stdin.on('data', chunk => raw += chunk);
+    process.stdin.on('end', () => console.log(JSON.stringify({format_version:1,status:'ok',
+      stdin:raw,argv:process.argv.slice(2),database:process.env.MEMOCAP_DB})));
+  `);
+  const stdin = JSON.stringify({ content: 'literal $(touch forbidden)\n中文 "quote"' });
+  const { receipt } = await run(['organize', 'apply'], { cwd: directory, stdin,
+    env: { ...process.env, MEMOCAP_DB: '/frozen/db' } });
+  assert.equal(receipt.stdin, stdin);
+  assert.equal(receipt.database, '/frozen/db');
+  assert.deepEqual(receipt.argv, ['organize', 'apply', '--json']);
+});

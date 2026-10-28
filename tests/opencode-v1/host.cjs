@@ -58,6 +58,7 @@ async function wireProvider() {
     try {
       assert.equal(request.method, 'POST');
       assert.equal(request.url, '/v1/chat/completions');
+      request.setEncoding('utf8');
       let raw = '';
       for await (const chunk of request) raw += chunk;
       const body = JSON.parse(raw);
@@ -93,7 +94,7 @@ async function startHost(fixture, provider, evidence) {
     model: 'wire/wire-model', small_model: 'wire/wire-model',
     enabled_providers: ['wire'], share: 'disabled', autoupdate: false,
     permission: { '*': 'deny', skill: 'allow', read: 'allow', external_directory: 'allow',
-      memocap_scope: 'allow', memocap_recall: 'allow', memocap_remember: 'allow' },
+      memocap_scope: 'allow', memocap_recall: 'allow', memocap_remember: 'allow', memocap_organize: 'allow' },
     provider: { wire: { npm: '@ai-sdk/openai-compatible', name: 'Local deterministic wire fixture',
       options: { baseURL: provider.url, apiKey: 'local-fixture-only', timeout: 10000 },
       models: { 'wire-model': { name: 'Local fixture', tool_call: true,

@@ -3,6 +3,14 @@ import { fileURLToPath } from "node:url";
 import { inspectPolicy, PolicyError } from "../lib/policy.mjs";
 import { packageVersion } from "./protocol.js";
 
+const organizationPointers = new WeakMap();
+
+export function organizationPointer(policy) {
+  const pointer = organizationPointers.get(policy);
+  if (!pointer) throw new PolicyError("policy_reference", "Validated organization policy is unavailable", policy.provenance.directory);
+  return pointer;
+}
+
 function inspect(directory) {
   try { return inspectPolicy(directory); }
   catch (cause) {
@@ -26,5 +34,10 @@ export function loadPolicy(options = {}) {
   }
   const provenance = Object.freeze({ mode: managed ? "managed" : "bundled", directory: selected.directory,
     mainPath: selected.mainPath, version: packageVersion, digest: selected.digest });
-  return Object.freeze({ rules: selected.rules, provenance });
+  const policy = Object.freeze({ rules: selected.rules, provenance });
+  if (selected.files.some((file) => file.path === "references/memory-organization.md")) {
+    organizationPointers.set(policy, Object.freeze({ path: path.join(selected.directory, "references/memory-organization.md"),
+      version: provenance.version, digest: provenance.digest }));
+  }
+  return policy;
 }

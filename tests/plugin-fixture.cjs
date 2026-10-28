@@ -87,4 +87,53 @@ process.stdout.write(JSON.stringify(envelope));
   };
 }
 
-module.exports = { receipt, memory, user, fixture, sandbox, repoPath };
+const organizationDatabase = path.resolve('/isolated/memory.db');
+const organizationSnapshot = (id = 7, content = 'original') => ({ id, placement: 'universal', scope: 'global', content,
+  kind: 'context', tags: '', topic_key: '', created_at: '2026-10-28T10:00:00Z',
+  updated_at: '2026-10-28T10:00:00Z', organized_at: null, provenance: null });
+const organizationReceipt = (operation, organization, extra = {}) => receipt(`organize_${operation}`, {
+  targets: [], results: [], activity_status: 'not_requested', organization, ...extra,
+  returned_ids: operation === 'read' ? organization.records.filter((row) => row.snapshot).map((row) => row.id)
+    : organization.records.map((row) => row.id),
+});
+
+async function organizationHost(context, respond) {
+  const base = fixture();
+  context.mock.property(process, 'env', { ...process.env, MEMOCAP_DB: organizationDatabase,
+    MEMOCAP_ADDR: '', MEMOCAP_URL: '', MEMOCAP_ADDRESS: '' });
+  const { createRecallRuntime } = await import('../plugin/recall.js');
+  const { createOperations } = await import('../plugin/operations.js');
+  const { createOrganization } = await import('../plugin/organization.js');
+  const { createTools } = await import('../plugin/tools.js');
+  const { createCommands } = await import('../plugin/commands.js');
+  const { loadPolicy } = await import('../plugin/policy.js');
+  const runtime = createRecallRuntime(base.input, {}, base.run);
+  const policy = loadPolicy();
+  const organizationCalls = [];
+  const invoke = async (argv, options) => {
+    organizationCalls.push({ argv, options });
+    const operation = argv[1];
+    const request = JSON.parse(options.stdin);
+    return { receipt: respond ? await respond(operation, request, options) : organizationReceipt(operation, {
+      database: options.env.MEMOCAP_DB, selection: request.selection ?? 'pending', upper_id: 7,
+      next_id: 7, exhausted: false, records: [organizationSnapshot()],
+    }) };
+  };
+  const operations = { ...createOperations(runtime), organization: createOrganization(runtime, policy, invoke) };
+  const tools = createTools(operations);
+  const commands = createCommands(operations, runtime, policy.provenance);
+  await commands.config({});
+  const asks = [];
+  const toolContext = { sessionID: 'A', messageID: 'tool-message', abort: new AbortController().signal,
+    ask: async (permission) => { asks.push(permission); }, metadata() {} };
+  const command = async (argumentsText) => {
+    const output = { parts: [{ type: 'text', messageID: 'org-command', text: 'placeholder' }] };
+    await commands.execute({ command: 'memory', sessionID: 'A', arguments: argumentsText }, output);
+    return { payload: JSON.parse(output.parts[0].text), part: output.parts[0] };
+  };
+  const execute = async (args) => JSON.parse((await tools.memocap_organize.execute(args, toolContext)).output);
+  return { ...base, runtime, commands, tools, policy, organizationCalls, asks, toolContext, command, execute };
+}
+
+module.exports = { receipt, memory, user, fixture, sandbox, repoPath,
+  organizationHost, organizationDatabase, organizationSnapshot, organizationReceipt };

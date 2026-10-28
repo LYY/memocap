@@ -11,7 +11,7 @@ test('V1 exported server executes hooks through the real bridge and fixture chil
   const hooks = await fixturePackage.module.default.server(host.input);
   const config = {};
   await hooks.config(config);
-  assert.deepEqual(Object.keys(hooks.tool).sort(), ['memocap_recall', 'memocap_remember', 'memocap_scope']);
+  assert.deepEqual(Object.keys(hooks.tool).sort(), ['memocap_organize', 'memocap_recall', 'memocap_remember', 'memocap_scope']);
   const message = user();
   await hooks['chat.message']({ sessionID: 'A' }, { message: message.info, parts: message.parts });
   await hooks['experimental.chat.messages.transform']({}, { messages: [message] });

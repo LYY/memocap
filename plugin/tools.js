@@ -25,6 +25,16 @@ export function createTools(operations) {
 
   const text = tool.schema.string().min(1);
   return {
+    ...(operations.organization ? { memocap_organize: tool({
+      description: "Page/read complete local organization snapshots, or apply one concretely user-confirmed group. Read instruction_pointer first; use preview database identity on later calls. Apply requires confirmed=true plus host permission; unknown outcomes must never be replayed.",
+      args: { operation: tool.schema.enum(["page", "read", "apply"]), request: text,
+        database: text.optional(), confirmed: tool.schema.boolean().optional() },
+      async execute(args, context) {
+        const rendered = toolOutput(await operations.organization.permitted(args, context));
+        rendered.metadata.memocap_complete_output = rendered.output;
+        return rendered;
+      },
+    }) } : {}),
     memocap_scope: permitted("scope", { paths: tool.schema.array(text).min(1).max(8), query: text.optional() },
       "Select explicit local repository paths for this session; resolve and recall before committing targets."),
     memocap_recall: permitted("recall", { query: text },
