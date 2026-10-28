@@ -18,18 +18,18 @@ export function policyDirectory(scope, runtime, target, digest) {
   return paths.join(root, "memocap", "policies", `${target}-${digest}`, "memocap");
 }
 
-function existingPolicy(destination, digest) {
+function existingPolicy(destination, digest, metadata) {
   try { fs.lstatSync(destination); }
   catch (error) { if (error.code === "ENOENT") return null; throw error; }
-  const policy = inspectPolicy(destination);
+  const policy = inspectPolicy(destination, metadata);
   if (policy.digest !== digest) throw new PolicyError("policy_collision", `Existing policy differs: ${destination}`, destination);
   return { ...policy, status: "unchanged" };
 }
 
-export function copyPolicy(source, destination, expectedDigest) {
-  const policy = inspectPolicy(source);
+export function copyPolicy(source, destination, expectedDigest, metadata) {
+  const policy = inspectPolicy(source, metadata);
   if (policy.digest !== expectedDigest) throw new PolicyError("policy_digest", `Source policy changed: ${source}`, source);
-  const existing = existingPolicy(destination, expectedDigest);
+  const existing = existingPolicy(destination, expectedDigest, metadata);
   if (existing) return existing;
   const parent = path.dirname(destination);
   fs.mkdirSync(parent, { recursive: true });
@@ -37,16 +37,16 @@ export function copyPolicy(source, destination, expectedDigest) {
   const payload = path.join(staging, "memocap");
   try {
     fs.cpSync(policy.directory, payload, { recursive: true, dereference: false, errorOnExist: true, force: false });
-    if (inspectPolicy(payload).digest !== expectedDigest) throw new PolicyError("policy_digest", `Staged policy differs: ${payload}`, payload);
-    const concurrent = existingPolicy(destination, expectedDigest);
+    if (inspectPolicy(payload, metadata).digest !== expectedDigest) throw new PolicyError("policy_digest", `Staged policy differs: ${payload}`, payload);
+    const concurrent = existingPolicy(destination, expectedDigest, metadata);
     if (concurrent) return concurrent;
     try { fs.renameSync(payload, destination); }
     catch (error) {
-      const collision = existingPolicy(destination, expectedDigest);
+      const collision = existingPolicy(destination, expectedDigest, metadata);
       if (collision) return collision;
       throw error;
     }
-    const installed = inspectPolicy(destination);
+    const installed = inspectPolicy(destination, metadata);
     if (installed.digest !== expectedDigest) throw new PolicyError("policy_digest", `Installed policy changed: ${destination}`, destination);
     return { ...installed, status: "changed" };
   } finally { fs.rmSync(staging, { recursive: true, force: true }); }
