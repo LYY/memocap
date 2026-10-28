@@ -5,7 +5,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { spawnSync } = require('node:child_process');
 const { repo, prepare, wireProvider, startHost, portClosed } = require('./opencode-v1/host.cjs');
-const { retain } = require('./opencode-v1/phases.cjs');
+const { observe, retain } = require('./opencode-v1/phases.cjs');
 
 test('actual OpenCode 1.19.3 transports organization commands and permitted native apply through an isolated local provider',
   { skip: process.env.MEMOCAP_ORGANIZATION_HOST !== '1', timeout: 600000 }, async (context) => {
@@ -36,6 +36,8 @@ test('actual OpenCode 1.19.3 transports organization commands and permitted nati
     env.MEMOCAP_DB = path.join(root, 'organization/core.db');
     provider = await wireProvider();
     host = await startHost(fixture, provider, evidence);
+    await observe(evidence, 'debug_config', async () => JSON.parse((await fixture.packaged.command(
+      fixture.host, ['debug', 'config'], { cwd: fixture.directories.outside })).stdout));
     assert.ok((await host.api('/experimental/tool/ids')).includes('memocap_organize'));
     const session = await host.api('/session', { title: 'isolated organization transport' });
     const command = async (argumentsText) => {

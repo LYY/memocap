@@ -255,12 +255,24 @@ test("default deadline is three seconds and pre-abort never starts a child", asy
 test("handshake time is deducted from the command deadline", async (context) => {
   const { directory, run } = await fixture(context, `
     require("node:fs").writeFileSync("command-started", "yes");
-    setTimeout(() => { ${success} }, 350);
-  `, `setTimeout(() => console.log("memocap ${version}"), 300)`);
-  const started = Date.now();
-  await assert.rejects(run(["recall", "query"], { cwd: directory, deadlineMs: 600 }), { code: "timeout" });
-  assert.equal(fs.existsSync(path.join(directory, "command-started")), true);
-  assert.ok(Date.now() - started < 850);
+    ${success}
+  `, `
+    require("node:fs").writeFileSync("handshake-completed", String(process.pid));
+    console.log("memocap ${version}");
+  `);
+  const handshakeCompleted = path.join(directory, "handshake-completed");
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  const clock = context.mock.method(Date, "now", () => fs.existsSync(handshakeCompleted) ? 600 : 0);
+  try {
+    await assert.rejects(run(["recall", "query"], { cwd: directory, deadlineMs: 600 }),
+      { code: "timeout", phase: "command", outcome: "not_started" });
+    assert.equal(fs.existsSync(handshakeCompleted), true);
+    assert.equal(fs.existsSync(path.join(directory, "command-started")), false);
+  } finally {
+    clock.mock.restore();
+    context.mock.timers.reset();
+  }
+  await assertGone(Number(fs.readFileSync(handshakeCompleted, "utf8")));
 });
 
 test("invalid argv, cwd and deadline reject before launching", async (context) => {
