@@ -16,7 +16,7 @@ function physicalPath(directory) {
 }
 
 export function targetPolicy(scope, context) {
-  const bundle = context.bundle || inspectPolicy(path.join(context.runtime.packageRoot, "skills/memocap"));
+  const bundle = context.bundle || inspectPolicy(path.join(context.runtime.packageRoot, "skills/memocap"), context.runtime.policyMetadata);
   const directory = physicalPath(policyDirectory(scope, context.runtime, context.target, bundle.digest));
   return { kind: "managed", path: directory, mainPath: path.join(directory, "SKILL.md"), version: context.target, source_version: context.report.runner_version,
     digest: bundle.digest, payload_root: path.resolve(directory, "../../../.."), owned_paths: [] };
@@ -33,7 +33,7 @@ export function discoverSkill(scope, runtime, record) {
   let observed = null;
   let inspectionError = null;
   if (managed && fs.existsSync(managed.path)) {
-    try { observed = inspectPolicy(managed.path); }
+    try { observed = inspectPolicy(managed.path, runtime.policyMetadata); }
     catch (error) { inspectionError = { code: error.code || "policy_invalid", message: error.message }; }
   }
   if (selected && managed) Object.assign(selected, { kind: "managed", digest: observed?.digest || null, mainPath: observed?.mainPath || managed.mainPath, version: managed.version });
@@ -56,7 +56,7 @@ export function installSkill(scope, context) {
   const record = context.manifest.installs[scope.id];
   if (!record.intent) return { ...record.skill, status: "unchanged" };
   const desired = record.intent.skill;
-  const policy = copyPolicy(path.join(context.runtime.packageRoot, "skills/memocap"), desired.path, desired.digest);
+  const policy = copyPolicy(path.join(context.runtime.packageRoot, "skills/memocap"), desired.path, desired.digest, context.runtime.policyMetadata);
   return { ...desired, path: policy.directory, mainPath: policy.mainPath, status: policy.status };
 }
 
@@ -81,7 +81,7 @@ export function removeSkill(scope, context, record) {
     known_owners: Object.entries(context.manifest.installs).filter(([id, record]) => id !== scope.id && record.skill?.path === skill.path).map(([id]) => id) };
   if (!fs.existsSync(skill.path)) return { status: "unchanged" };
   let policy;
-  try { policy = inspectPolicy(skill.path); }
+  try { policy = inspectPolicy(skill.path, context.runtime.policyMetadata); }
   catch (error) {
     if (!error.code?.startsWith("policy_") && !["ENOENT", "ERR_ENCODING_INVALID_ENCODED_DATA"].includes(error.code)) throw error;
     context.report.warnings.push({ code: "skill_modified", path: skill.path });

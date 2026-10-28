@@ -132,7 +132,7 @@ export async function runSetup(argv, overrides = {}) {
     if (context.options.help) return { ...report, status: "ok", exit_code: 0, usage: "memocap-setup <install|check|update|doctor|uninstall> [--global] [--project PATH ...] [--config FILE] [--to VERSION] [--package-manager npm|pnpm] [--yes] [--dry-run] [--remove-cli] [--json]" };
     if (context.options.worker && context.options.to !== metadata.version) throw new SetupError("worker_version_mismatch", `Worker ${metadata.version} cannot mutate target ${context.options.to}`);
     context.target = await resolveVersion(context.options, runtime, metadata.version);
-    context.bundle = inspectPolicy(path.join(runtime.packageRoot, "skills/memocap"));
+    context.bundle = inspectPolicy(path.join(runtime.packageRoot, "skills/memocap"), runtime.policyMetadata);
     report.resolved_version = context.target;
     report.recovery.retry = ["memocap-setup", context.options.command, "--to", context.target, ...(context.options.global ? ["--global"] : []), ...context.options.projects.flatMap((project) => ["--project", project]), ...(context.options.config ? ["--config", context.options.config] : []), "--yes", "--json"];
     const writes = ["install", "update", "uninstall"].includes(context.options.command) && !context.options.dryRun;
