@@ -7,6 +7,7 @@ pub mod hosts;
 pub mod inspection;
 pub mod inventory;
 pub mod operation;
+pub mod organization;
 pub mod paths;
 mod readonly;
 pub mod receipt;

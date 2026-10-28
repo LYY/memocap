@@ -180,7 +180,9 @@ fn prepare(command: Command, paths: &[PathBuf], caller: Caller) -> Result<Reques
             ActivityCommand::Prepare => Action::ActivityPrepare,
         },
         Command::Scope { command } => scope::action(command)?,
-        Command::Serve { .. } | Command::Ui => bail!("--json is unsupported for ui and serve"),
+        Command::Serve { .. } | Command::Ui | Command::Organize { .. } => {
+            bail!("command requires dedicated dispatch")
+        }
         Command::Operation {
             command: crate::OperationCommand::Status { recovery },
         } => Action::OperationStatus {
