@@ -1,5 +1,32 @@
 # Changelog
 
+## @lyy-gh/memocap 0.5.0 (2026-10-29)
+
+Implemented outcomes for package target `0.5.0` and Git tag target `v0.5.0`.
+Publication requires the release workflow's successful `registry` job, including
+registry metadata, integrity, and provenance verification.
+
+- Repository descriptions and optional location observations are keyed by the
+  existing repository IDs. Missing metadata or a vanished checkout does not
+  invalidate memory access; names and remotes never merge IDs or widen scope.
+- Explicit repository-ID selection and frozen targets carry the same identity
+  through permission checks, recall, writes, and independent readback. Current
+  CLI, plugin, skill, and server contracts update together and reject version
+  mismatches without old-request fallback or new capability negotiation.
+- Schema `2.2` adds identity and location tables. Only exact `2.1` upgrades,
+  transactionally preserving existing memory and organization state, domains,
+  provenance, FTS, activity, operation ledger, and old metadata/hints. Schemas
+  `2.0`, `1.0`, unknown, malformed, and future versions are rejected without reset.
+  New databases start at `2.2`; read-only inspection leaves `2.1` unchanged.
+- Managed 0.4.0 format-2 installations can update through the exact 0.5.0 worker.
+  Preflight accepts the installed 0.4.0 producer's `ready`/`2.1` receipt; completion
+  requires the target CLI and an independent `ready`/`2.2` readback. Receipt format
+  `1` and setup ownership format `2` remain independent of package/schema versions.
+- Historical semantic enrichment is deferred until publication and local
+  installation, then planned as a confirmed one-time operation using normal
+  interfaces where sufficient. No automatic scan or permanent backfill feature
+  is introduced, and old hints are retained without runtime fallback.
+
 ## @lyy-gh/memocap 0.4.0 (2026-10-28)
 
 Implemented outcomes for package target `0.4.0` and Git tag target `v0.4.0`.

@@ -14,10 +14,10 @@ remote operation are documented in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Install
 
-Install the v0.4.0 CLI, OpenCode plugin, and runtime skill for your user:
+Install the v0.5.0 CLI, OpenCode plugin, and runtime skill for your user:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.4.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.5.0 memocap-setup install --global --yes --json
 ```
 
 Requires Node.js 22.20 or later, npm/npx, and OpenCode 1.19.3. The package
@@ -38,9 +38,10 @@ mutually exclusive. `<PLACEMENT>` is `repository:<64 lowercase hex>`,
 `domain:<DOMAIN>`, or `universal`.
 
 Global `--repo <PATH>` selects a concrete repository instead of the working
-directory; repeat it only for recall, up to eight targets. Writes have one
-target. Global `--json` returns a format-1 receipt for automation; it is not
-supported by `serve` or `ui`. Package `0.4.0`, core schema `2.1`, and receipt
+directory; repeat it for recall or `scope resolve`, up to eight targets. Alternatively use
+`--repository-id <ID>` for explicit ID-only selection, mutually exclusive with
+`--repo`. Writes have one target. Global `--json` returns a format-1 receipt for automation; it is not
+supported by `serve` or `ui`. Package `0.5.0`, core schema `2.2`, and receipt
 format `1` are independent identities.
 
 ```text
@@ -49,6 +50,7 @@ memocap recall [--match all|any] [--limit <LIMIT>] [--type <TYPE>] [--max-chars 
 memocap list [--limit <LIMIT>] [--offset <OFFSET>] [--placement <PLACEMENT> | --domain <DOMAIN> | --universal]
 memocap forget [--domain <DOMAIN> | --universal] <ID>
 memocap scope show
+memocap scope resolve --json
 memocap scope list --all
 memocap scope domain create <DOMAIN>
 memocap scope domain attach <DOMAIN> [--before <DOMAIN>]
@@ -99,11 +101,11 @@ Use `scope list --all` only for an intentional full inventory, then
 logical writes: it does not write data or schema, initialize or migrate the main
 database, prune history, or record activity. Ordinary memory commands such as
 `memocap list` use a read-write open and can initialize a missing database or
-upgrade an exact schema `2.0` to `2.1`. `activity list/show` use read-only access and do
+upgrade an exact schema `2.1` to `2.2`. `activity list/show` use read-only access and do
 not prepare the database. SQLite `READ_ONLY` connections may still coordinate
 WAL/SHM sidecars; ordinary WAL inspection needs no owner snapshot.
 `activity prepare` explicitly prepares the local main database, creating schema
-`2.1` or upgrading the exact supported `2.0` schema. Preparation can prune
+`2.2` or upgrading the exact supported `2.1` schema. Preparation can prune
 retained activity. Remote preparation belongs to the server administrator.
 See the
 [schema versioning contract](docs/SCHEMA-VERSIONING.md) for the full boundary.
@@ -123,6 +125,10 @@ The plugin exposes `memocap_recall`, `memocap_remember`, `memocap_scope`, and
 session's target and recall receipt inspectable. Prepared input is not proof of
 model understanding or adoption. See the [runtime skill](skills/memocap/SKILL.md)
 for permission and explicit target-switching policy.
+
+`memocap_scope` accepts either `paths` or `repository_ids`, with host permission
+for each explicit target. The selected repository ID stays fixed through
+recall, list, remember, and readback even if its checkout later disappears.
 
 ## Memory organization
 
@@ -165,6 +171,24 @@ Repository identity is stable when a supported Git remote is available. An
 ambiguous or unsupported remote uses the Git common directory. Outside Git,
 memocap uses the canonical non-Git directory path. The printed repository ID
 is opaque and is not a user-selected ACL or tenant name.
+
+Schema `2.2` stores optional identity descriptions and location observations
+separately from the ID. Returned `repository_context` is keyed by full repository
+ID; an unknown description is `identity: null` and missing locations are `[]`.
+Names and remotes can repeat without merging identities. Observations never
+prove a path still exists and are never scanned during context reads. A missing
+description or checkout does not invalidate repository memory:
+
+```sh
+memocap --repository-id 'repository:<64 lowercase hex>' recall 'project convention' --json
+```
+
+`scope resolve --json` resolves only the explicit path or ID for permission
+checks without opening storage or writing Git. Targets stay frozen throughout
+each call; descriptions and locations never widen them. Accessing source files
+still requires a valid path and permission. Historical enrichment is a separate,
+confirmed one-time plan after publication and local installation, using normal
+interfaces where sufficient.
 
 The default visible stack is ordered as follows:
 
@@ -228,9 +252,9 @@ Remote clients must use an operator-controlled TLS-terminating reverse proxy or
 an equivalent trusted encrypted network boundary; set `MEMOCAP_ADDR` to its
 `https://` endpoint. Do not publish the raw HTTP port on all host interfaces.
 
-JSON operations first negotiate `/v1/capabilities`, then use `/v1/receipt`;
-unsupported servers fail before a new-semantics operation. Existing `/v1/status`
-remains available for legacy clients. See [DEPLOYMENT.md](docs/DEPLOYMENT.md)
+Current JSON operations check the server version through `/v1/capabilities`,
+then use `/v1/receipt`. CLI and server must match version 0.5.0 before mutation;
+there is no old-request fallback or new capability negotiation. See [DEPLOYMENT.md](docs/DEPLOYMENT.md)
 for the route list, trust boundary, Compose setup, and recovery procedure.
 Remote requests carry a valid remote scope ID, and the server strictly validates
 that ID.
@@ -258,13 +282,13 @@ written. Authorization is only the remote bearer-token gate described above.
 ## Schema and data loss
 
 Read [SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md) before opening a store
-created by an earlier build. New databases use schema `2.1`; only the exact
-supported schema `2.0` upgrades to `2.1`, without rebuilding core tables or
-changing memory IDs or placements. Schema `1.0`, pre-versioned, unknown, future,
+created by an earlier build. New databases use schema `2.2`; only the exact
+supported schema `2.1` upgrades to `2.2`, without rebuilding core tables or
+changing memory IDs or placements. Schemas `2.0` and `1.0`, pre-versioned, unknown, future,
 and malformed databases are refused without reset. Back up with SQLite's backup
-API or another WAL-aware method before the `2.0` upgrade. Changing package
+API or another WAL-aware method before the `2.1` upgrade. Changing package
 versions does not change or restore database data. Never restore an older backup
-over newer data. Package `0.4.0`, schema `2.1`, and receipt format `1` are
+over newer data. Package `0.5.0`, schema `2.2`, and receipt format `1` are
 independent identities.
 
 ## Compare

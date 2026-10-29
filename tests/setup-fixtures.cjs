@@ -56,7 +56,7 @@ if (args.join(' ') === 'activity prepare --json') {
 if (args.join(' ') !== 'status --read-only --json') process.exit(9);
 const ready = fs.existsSync(database);
 console.log(JSON.stringify({format_version:1,status:'ok',backend:process.env.MEMOCAP_ADDR?'remote':'local',origin:process.env.MEMOCAP_ADDR?'server':'cli',inspection:{
-  core_status:ready?'ready':'not_initialized',schema_version:ready?'2.1':null,visible:ready?{schema_version:'2.1',placements:[],addressable_total:0,effective_total:0}:null,activity_status:ready?'ready':'not_initialized',activity_error:null,
+  core_status:ready?'ready':'not_initialized',schema_version:ready?'2.2':null,visible:ready?{schema_version:'2.2',placements:[],addressable_total:0,effective_total:0}:null,activity_status:ready?'ready':'not_initialized',activity_error:null,
   capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status','single_database','schema_2_compatible']}}));
 `, { mode: 0o755 });
   }

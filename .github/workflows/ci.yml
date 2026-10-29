@@ -54,12 +54,14 @@ jobs:
           MEMOCAP_OPENCODE_INTEGRATION: "1"
           MEMOCAP_ORGANIZATION_NATIVE: "1"
           MEMOCAP_ORGANIZATION_HOST: "1"
+          MEMOCAP_IDENTITY_NATIVE: "1"
           MEMOCAP_TEST_NPM_CACHE: ${{ runner.temp }}/memocap-npm-download-cache
           MEMOCAP_TEST_LINUX_OFFLINE: ${{ runner.os == 'Linux' && '1' || '0' }}
           MEMOCAP_TEST_HOST_EVIDENCE: ${{ runner.temp }}/task-8-${{ runner.os }}.json
         run: |
           node --test tests/opencode-v1.integration.test.cjs
           MEMOCAP_TEST_HOST_EVIDENCE="${{ runner.temp }}/organization-${{ runner.os }}.json" node --test tests/plugin-organization-native.test.cjs tests/opencode-v1-organization.integration.test.cjs
+          node --test tests/plugin-identity-native.test.cjs
       - name: Upload native packaged acceptance evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -123,7 +125,7 @@ jobs:
           "$RUNNER_TEMP/actionlint" .github/workflows/ci.yml .github/workflows/release.yml
       - name: Check release contract
         env:
-          RELEASE_TAG: v0.4.0
+          RELEASE_TAG: v0.5.0
         run: node scripts/check-release.mjs
       - uses: actions/setup-node@v7
         with:

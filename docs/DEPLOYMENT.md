@@ -1,6 +1,6 @@
 # Deployment and Operations
 
-This guide describes the operator contract implemented for package 0.2.0; it
+This guide describes the operator contract implemented for package 0.5.0; it
 does not claim that the package has been published. The server owns one main
 SQLite database for core memories, activity, and repository metadata. It is not
 a multi-tenant service.
@@ -51,7 +51,7 @@ docker compose ps
 
 The token is required before the container starts. Keep it out of committed
 files and shell history where practical. The volume is the database boundary.
-Before a schema bridge, back up the main database with SQLite's backup API or
+Before a schema upgrade, back up the main database with SQLite's backup API or
 another WAL-aware method and verify the backup. memocap does not create an
 automatic backup; a raw file copy while WAL is active can omit committed data.
 
@@ -112,6 +112,12 @@ supported Git remote when possible, falls back to the Git common directory for
 ambiguous or unsupported remotes, and uses the canonical non-Git directory path
 outside Git.
 
+Optional identity descriptions and location observations are keyed by this ID.
+`repository_context` contains only the current operation's IDs. A description
+can be null and locations can be empty without invalidating memory. A location
+never proves current filesystem access, and the server never opens client paths.
+Names and remotes do not merge IDs, authorize selection, or widen targets.
+
 ## Placements and visible stack
 
 Memory placements are:
@@ -168,7 +174,7 @@ The server exposes these authenticated `POST` routes under `/v1`:
 
 | Route | Purpose |
 | --- | --- |
-| `/v1/capabilities` | Negotiate receipt, match mode, multi-target, inventory, activity, read-only-status, single-database, and schema-2-compatibility support before a new-semantics operation. |
+| `/v1/capabilities` | Check the current server version before receipt operations; CLI and server must match 0.5.0. |
 | `/v1/receipt` | Execute typed operations and return one format-1 receipt, including core outcome and independent activity outcome. |
 | `/v1/memories/remember` | Store one memory at an exact placement. |
 | `/v1/memories/recall` | Recall effective memories from the visible stack or one selected placement. |
@@ -188,18 +194,20 @@ Legacy unversioned routes such as `/remember`, `/recall`, `/list`, `/forget`,
 and `/status` are removed, not deprecated. There is no route fallback and no
 remote-to-local fallback.
 
-The CLI and plugin represented by this branch negotiate capabilities before
-sending observable operations. Missing required capabilities fail explicitly;
-clients do not retry through legacy routes. The `single_database` and
-`schema_2_compatible` capabilities describe binary support, not database
-readiness. Use read-only status on the server to inspect its actual main
-database. Only the server opens the remote database. Client filesystem paths
-are display hints, never authority over server filesystem access.
+CLI, plugin, skill, and server use the current 0.5.0 contract. The existing
+`/v1/capabilities` endpoint provides the server version check before mutation;
+versions must match. There is no old-request fallback or new capability
+negotiation. Binary support fields do not prove database readiness; inspect
+actual storage through read-only status. Only the server opens its database.
+Descriptors supplied by clients are recorded as `client_reported`; client paths
+are observations, never authority over server filesystem access. Repository
+context does not alter operation fingerprints, replay, or recovery behavior.
 
 ## Inventory and retained activity
 
-Use explicit repository paths for ordinary operations. Repeat `--repo` only for
-recall, up to eight targets; writes remain single-target. Default recall is AND
+Use explicit repository paths or `--repository-id <ID>` for selected targets;
+these selectors are mutually exclusive. Repeat a selector only for recall, up
+to eight targets; writes remain single-target. Default recall is AND
 matching (`--match all`); use `--match any` explicitly for OR matching. Receipts
 report actual targets, query terms, matched/returned IDs, limits, and errors.
 Topic shadowing happens per target before one global result/character budget.
@@ -214,8 +222,9 @@ memocap activity list --writes --limit 20 --offset 0 --json
 memocap activity show '<OPERATION_UUID>' --json
 ```
 
-Activity events and repository display hints share the main database and
-persistent volume with core memories. Events store operational metadata, not
+Activity events, repository identities, and location observations share the main
+database and persistent volume with core memories. Old metadata/hints remain
+stored without runtime fallback or automatic enrichment. Events store operational metadata, not
 full prompts or memory content. Recall/injection events are bounded to 30 days
 and 10,000 entries; write metadata to 1,000 entries. Expiry, pruning, recording
 failure, or a crash after commit can leave gaps. A missing retained operation is
@@ -227,7 +236,7 @@ upgrade and must wait until old writers are quiesced. To prepare a new or
 existing server database, an administrator runs the local
 `memocap activity prepare --json` command with `MEMOCAP_ADDR` unset and the
 server's `MEMOCAP_DB`. This prepares the whole main schema: it creates a missing
-schema or bridges the registered schema `1.0`, and may prune retained activity.
+schema `2.2` or upgrades exact schema `2.1`, and may prune retained activity.
 Inspect afterward with `memocap status --read-only --json`. Remote preparation
 is refused. If recording fails after a successful core write, preserve its
 success and report the activity warning; never repeat the write to obtain a
@@ -271,16 +280,15 @@ Write, delete, and legacy host actions are removed from the TUI, not deprecated.
 ## Schema and recovery maintenance
 
 Schema policy is authoritative in [SCHEMA-VERSIONING.md](SCHEMA-VERSIONING.md).
-The current branch baseline is schema `2.0` in the main database. Read-only
-status reports an exact legacy `1.0` database as `upgrade_needed` without
-migrating it. A read-write open or explicit local preparation applies only the
-registered `1.0` to `2.0` bridge. Pre-versioned, malformed, unknown, or
-unsupported schemas are refused without reset. Higher `2.n` schemas are
-accepted only within the documented same-major compatibility bounds.
+The current baseline is schema `2.2` in the main database. Read-only status
+reports an exact `2.1` database as `upgrade_needed` without migrating it. A
+read-write open or explicit local preparation applies only exact `2.1` to `2.2`,
+adding identity/location tables while retaining all existing data and organization
+state. Schemas `2.0`, `1.0`, pre-versioned, malformed, unknown, and future versions
+are refused without reset; there is no migration chain or older-consumer promise.
 
-Before bridging, use SQLite's backup API or another WAL-aware backup method.
-Neither strict `0.0.10` nor `0.1.0` binaries can open schema `2.0`; switching to
-an older binary is not a downgrade or backup restore. Never overwrite newer
-schema `2.0` data with an older backup. For ordinary deletion, use the exact
+Before upgrading, use SQLite's backup API or another WAL-aware backup method.
+Switching to an older binary is not a downgrade or backup restore. Never overwrite
+newer schema `2.2` data with an older backup. For ordinary deletion, use the exact
 `forget` placement and ID. For a transfer, record its operation ID and recovery
 handle in the operator log.

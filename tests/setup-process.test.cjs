@@ -65,7 +65,7 @@ const fs = require('node:fs'); const path = require('node:path');
 const database = process.env.MEMOCAP_DB || path.join(process.env.HOME, '.memocap/memocap.db');
 if (process.argv[2] === '--version') console.log('memocap 0.1.0');
 else if (process.argv.includes('prepare')) { fs.mkdirSync(path.dirname(database),{recursive:true}); fs.writeFileSync(database,'fixture main'); console.log(JSON.stringify({format_version:1,status:'ok'})); }
-else { const ready=fs.existsSync(database); console.log(JSON.stringify({format_version:1,status:'ok',backend:'local',origin:'cli',inspection:{core_status:ready?'ready':'not_initialized',schema_version:ready?'2.1':null,visible:ready?{schema_version:'2.1',placements:[],addressable_total:0,effective_total:0}:null,activity_status:ready?'ready':'not_initialized',activity_error:null,capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status','single_database','schema_2_compatible']}})); }
+else { const ready=fs.existsSync(database); console.log(JSON.stringify({format_version:1,status:'ok',backend:'local',origin:'cli',inspection:{core_status:ready?'ready':'not_initialized',schema_version:ready?'2.2':null,visible:ready?{schema_version:'2.2',placements:[],addressable_total:0,effective_total:0}:null,activity_status:ready?'ready':'not_initialized',activity_error:null,capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status','single_database','schema_2_compatible']}})); }
 `;
   fs.writeFileSync(path.join(f.packageRoot, "bin/cli.cjs"), cliSource, { mode: 0o755 });
   const cache = path.dirname(f.cacheBinary("0.1.0"));

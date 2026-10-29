@@ -31,7 +31,7 @@ if (mode === 'unknown' || mode === 'unsupported') {
   console.log(JSON.stringify({format_version:1,status:'failed',backend:remote?'remote':'local',error:{code:mode === 'unknown'?'operation_failed':'capability_unsupported',message:mode}})); process.exit(1);
 }
 console.log(JSON.stringify({format_version:1,status:'ok',backend:remote?'remote':'local',origin:remote?'server':'cli',inspection:{
-core_status: mode === 'missing'&&!fs.existsSync(main)?'not_initialized':'ready',schema_version:mode === 'missing'&&!fs.existsSync(main)?null:'2.1',visible:mode === 'missing'&&!fs.existsSync(main)?null:{schema_version:'2.1',placements:[],addressable_total:3,effective_total:2},
+core_status: mode === 'missing'&&!fs.existsSync(main)?'not_initialized':'ready',schema_version:mode === 'missing'&&!fs.existsSync(main)?null:'2.2',visible:mode === 'missing'&&!fs.existsSync(main)?null:{schema_version:'2.2',placements:[],addressable_total:3,effective_total:2},
 activity_status:mode === 'degraded'?'degraded':mode === 'missing'&&!fs.existsSync(main)?'not_initialized':'ready',activity_error:mode === 'degraded'?'activity inspection failed':null,
 capabilities:['receipt_v1','recall_match','multi_target','inventory','activity','read_only_status','single_database','schema_2_compatible']}}));
 `, { mode: 0o755 });

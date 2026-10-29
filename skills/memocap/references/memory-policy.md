@@ -40,7 +40,7 @@ Use the narrowest placement that still lets the intended future work find the me
 - Universal placement is only for knowledge useful across unrelated repositories.
 - When uncertain, keep the current repository scope. Split mixed candidates rather than sharing the repository-specific part broadly.
 
-Before selecting a new target, check the current scope with `memocap_scope` or `/memory scope`. A target change requires a concrete repository path from the user and an approved scope selection. Read at most eight explicit real repository paths. Never infer, enumerate, or widen targets. Each write has one placement. Full inventories such as `/memory scopes` require an explicit request. Never create or attach a domain as part of admission.
+Before selecting a new target, check the current scope with `memocap_scope` or `/memory scope`. A target change requires explicit user-provided repository paths or repository IDs and host permission for each selection. `paths` and `repository_ids` are mutually exclusive; read at most eight explicit targets and write to one target. New path selections must resolve successfully. Reuse the selected repository IDs for recall, list, remember, and readback; an optional historical path becoming unavailable does not invalidate identity or memory access. Access to source files still requires a valid path and permission. Identity, names, remotes, locations, and returned context never authorize inferring, enumerating, or widening targets. Each write has one placement. Full inventories such as `/memory scopes` require an explicit request. Never create or attach a domain as part of admission.
 
 ## Similarity and conflicts
 
