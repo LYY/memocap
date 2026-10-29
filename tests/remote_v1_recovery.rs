@@ -15,6 +15,27 @@ mod transfer_race;
 
 const TOKEN: &str = "remote-recovery-token";
 
+fn accept_preflight(server: &Server, database: &std::path::Path) {
+    let mut request = server.incoming_requests().next().unwrap();
+    assert_eq!(request.url(), "/v1/capabilities");
+    let mut body = String::new();
+    request.as_reader().read_to_string(&mut body).unwrap();
+    let outgoing = server::handle(
+        database,
+        TOKEN,
+        &Incoming {
+            method: "POST".into(),
+            path: request.url().into(),
+            token: Some(TOKEN.into()),
+            body,
+        },
+    );
+    assert_eq!(outgoing.status, 200);
+    request
+        .respond(Response::from_string(outgoing.body))
+        .unwrap();
+}
+
 fn repository() -> RepositoryId {
     "repository:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         .parse()
@@ -28,7 +49,7 @@ fn response_loss_server(
     let address = format!("http://{}", server.server_addr());
     let (sender, receiver) = mpsc::channel();
     let handle = thread::spawn(move || {
-        for (index, mut request) in server.incoming_requests().take(3).enumerate() {
+        for (index, mut request) in server.incoming_requests().take(4).enumerate() {
             let token = request
                 .headers()
                 .iter()
@@ -52,7 +73,7 @@ fn response_loss_server(
             let path = incoming.path.clone();
             let outgoing = server::handle(&database, TOKEN, &incoming);
             sender.send(path).unwrap();
-            if index == 0 {
+            if index == 1 {
                 continue;
             }
             request
@@ -131,6 +152,7 @@ fn response_loss_recovers_committed_copy_once_from_a_strict_handle() {
     assert_eq!(
         receiver.iter().collect::<Vec<_>>(),
         vec![
+            "/v1/capabilities",
             "/v1/memories/copy",
             "/v1/operations/status",
             "/v1/operations/status",

@@ -73,7 +73,7 @@ fn remote_client_uses_authenticated_v1_for_memory_domains_and_status() {
     let repository = repository();
     let placement = PlacementId::Repository(repository.clone());
     let domain: DomainId = "engineering/rust".parse().unwrap();
-    let (address, receiver, handle) = test_server(database, 8);
+    let (address, receiver, handle) = test_server(database, 13);
 
     // When
     let memory_id = remote::remember(
@@ -88,6 +88,7 @@ fn remote_client_uses_authenticated_v1_for_memory_domains_and_status() {
             topic_key: None,
             force: false,
             overwrite_id: None,
+            target: None,
         },
     )
     .unwrap();
@@ -117,7 +118,7 @@ fn remote_client_uses_authenticated_v1_for_memory_domains_and_status() {
     assert_eq!(status.domains, vec![domain]);
     handle.join().unwrap();
     let requests = receiver.iter().collect::<Vec<_>>();
-    assert_eq!(requests.len(), 8);
+    assert_eq!(requests.len(), 13);
     assert!(requests
         .iter()
         .all(|(_, authorization)| authorization == "Bearer remote-v1-token"));
@@ -127,13 +128,18 @@ fn remote_client_uses_authenticated_v1_for_memory_domains_and_status() {
             .map(|(path, _)| path.as_str())
             .collect::<Vec<_>>(),
         vec![
+            "/v1/capabilities",
             "/v1/memories/remember",
+            "/v1/capabilities",
             "/v1/domains/create",
+            "/v1/capabilities",
             "/v1/domains/attach",
             "/v1/memories/recall",
             "/v1/memories/list",
             "/v1/status",
+            "/v1/capabilities",
             "/v1/memories/forget",
+            "/v1/capabilities",
             "/v1/domains/detach",
         ]
     );

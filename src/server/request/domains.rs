@@ -6,6 +6,7 @@ use super::{repository, ParseError};
 
 pub enum Domain {
     Create {
+        repository: RepositoryId,
         domain: DomainId,
     },
     List {
@@ -22,6 +23,7 @@ pub enum Domain {
         domain: DomainId,
     },
     Delete {
+        repository: RepositoryId,
         domain: DomainId,
     },
 }
@@ -45,6 +47,7 @@ struct DomainsIn {
 pub fn create(body: &str) -> Result<Domain, ParseError> {
     let input = input(body)?;
     Ok(Domain::Create {
+        repository: input.repository,
         domain: input.domain,
     })
 }
@@ -75,8 +78,10 @@ pub fn detach(body: &str) -> Result<Domain, ParseError> {
 }
 
 pub fn delete(body: &str) -> Result<Domain, ParseError> {
+    let input = input(body)?;
     Ok(Domain::Delete {
-        domain: input(body)?.domain,
+        repository: input.repository,
+        domain: input.domain,
     })
 }
 

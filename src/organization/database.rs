@@ -59,7 +59,7 @@ pub(super) fn validate(connection: &Connection) -> Result<()> {
     match version {
         SchemaVersion {
             major: 2,
-            minor: 0 | 1,
+            minor: 1 | 2,
         } => {}
         _ => {
             return Err(Error::before(
@@ -75,7 +75,7 @@ pub(super) fn validate(connection: &Connection) -> Result<()> {
     if version.needs_upgrade() {
         return Err(Error::before(
             "upgrade_required",
-            "schema 2.0 requires normal authorized preparation to upgrade to 2.1",
+            "schema 2.1 requires normal authorized preparation to upgrade to 2.2",
         ));
     }
     Ok(())

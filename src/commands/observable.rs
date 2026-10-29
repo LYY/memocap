@@ -2,13 +2,11 @@ use crate::{ActivityCommand, Command};
 use anyhow::{bail, Result};
 use memocap::{
     activity::ActivityBackend,
-    cli,
     config::{self, Target},
     operation::{self, Caller, Command as Action, Request},
     receipt::Receipt,
     scope::PlacementId,
 };
-use std::path::PathBuf;
 
 mod render;
 mod scope;
@@ -20,9 +18,15 @@ pub(super) fn run(command: Command, options: &crate::Cli) -> Result<()> {
     if config::configured_address().is_some() {
         failure.backend = "remote".into();
     }
-    let execution = prepare(command, &options.repo, caller).and_then(|request| {
+    let execution = prepare(command, options, caller).and_then(|request| {
         failure.operation = request.command.name().into();
         failure.targets = request.targets.clone();
+        if matches!(request.command, Action::ScopeResolve) {
+            let mut receipt = Receipt::new("scope_resolve");
+            receipt.targets = request.targets;
+            receipt.caller = request.caller;
+            return Ok(receipt);
+        }
         match config::resolve_target()? {
             Target::Local { database } => Ok(operation::execute(
                 &database,
@@ -61,46 +65,25 @@ pub(super) fn run(command: Command, options: &crate::Cli) -> Result<()> {
     Ok(())
 }
 
-fn prepare(command: Command, paths: &[PathBuf], caller: Caller) -> Result<Request> {
+fn prepare(command: Command, options: &crate::Cli, caller: Caller) -> Result<Request> {
     if matches!(command, Command::Serve { .. } | Command::Ui) {
         bail!("--json is unsupported for ui and serve");
     }
-    if paths.len() > 1
+    let targets = super::targets::resolve(&command, options)?;
+    if targets.len() > 1
         && !matches!(
             command,
             Command::Recall { .. }
+                | Command::Scope {
+                    command: crate::ScopeCommand::Resolve
+                }
                 | Command::Activity {
                     command: ActivityCommand::Record { .. }
                 }
         )
     {
-        bail!("--repo may be repeated only for recall");
+        bail!("multiple targets are supported only by recall and scope resolve");
     }
-    let resolved = if paths.is_empty() {
-        let path = std::env::current_dir()?.canonicalize()?;
-        vec![cli::RepositoryTarget {
-            scope: if matches!(
-                command,
-                Command::Status { read_only: true } | Command::Activity { .. }
-            ) {
-                memocap::scope::resolve_readonly(&path)?
-            } else {
-                cli::current_scope()?
-            },
-            path,
-        }]
-    } else {
-        cli::resolve_targets(paths)?
-    };
-    let targets = resolved
-        .into_iter()
-        .map(|target| memocap::receipt::Target {
-            canonical_path: Some(target.path),
-            repository_id: target.scope.repository().clone(),
-            identity_source: target.scope.source().label().into(),
-            placements: vec![],
-        })
-        .collect();
     let command = match command {
         Command::Remember {
             content,

@@ -13,6 +13,7 @@ pub(crate) mod organization;
 mod recall;
 mod remote;
 mod scope;
+mod targets;
 
 pub(crate) fn run(command: Command, options: &crate::Cli) -> Result<()> {
     if let Command::Organize { command } = command {
@@ -24,7 +25,7 @@ pub(crate) fn run(command: Command, options: &crate::Cli) -> Result<()> {
         || !matches!(
             &command,
             Command::Serve { .. } | Command::Ui | Command::Operation { .. }
-        ) && config::configured_address().is_none()
+        )
     {
         return observable::run(command, options);
     }

@@ -30,6 +30,7 @@ pub struct Remember {
     pub topic_key: Option<String>,
     pub force: bool,
     pub overwrite_id: Option<i64>,
+    pub target: Option<crate::receipt::Target>,
 }
 
 pub struct Recall {
@@ -70,6 +71,7 @@ struct RememberIn {
     force: bool,
     id: Option<i64>,
     topic_key: Option<String>,
+    target: Option<crate::receipt::Target>,
 }
 
 #[derive(Deserialize)]
@@ -143,6 +145,7 @@ fn remember(body: &str) -> Result<Remember, ParseError> {
     if matches!(&placement, PlacementId::Repository(value) if value != &repository) {
         return Err(ParseError::Invalid);
     }
+    let target = current_target(input.target, &repository)?;
     Ok(Remember {
         repository,
         placement,
@@ -152,6 +155,7 @@ fn remember(body: &str) -> Result<Remember, ParseError> {
         topic_key: input.topic_key,
         force: input.force,
         overwrite_id: input.id,
+        target,
     })
 }
 
@@ -198,6 +202,22 @@ fn status(body: &str) -> Result<Request, ParseError> {
 
 fn repository(value: &str) -> Result<RepositoryId, ParseError> {
     value.parse().map_err(|_| ParseError::Invalid)
+}
+
+fn current_target(
+    mut target: Option<crate::receipt::Target>,
+    repository: &RepositoryId,
+) -> Result<Option<crate::receipt::Target>, ParseError> {
+    if let Some(target) = &mut target {
+        target.validate().map_err(|_| ParseError::Invalid)?;
+        if target.repository_id != *repository {
+            return Err(ParseError::Invalid);
+        }
+        if let Some(descriptor) = &mut target.descriptor {
+            descriptor.origin = crate::repository::Origin::ClientReported;
+        }
+    }
+    Ok(target)
 }
 
 fn placement(

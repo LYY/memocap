@@ -181,58 +181,85 @@ fn list_filters_writes_by_repo_session_operation_and_pages_deterministically() {
 }
 
 #[test]
-fn repository_hints_remain_optional_and_reject_stale_observations() {
+fn repository_locations_remain_optional_and_reject_stale_observations() {
     let directory = tempfile::tempdir().unwrap();
     let core = directory.path().join("db");
-    let mut activity = ActivityStore::open(&core).unwrap();
-    let hint = RepositoryHint {
+    let connection = memocap::store::open(&core).unwrap();
+    let target = memocap::receipt::Target {
         repository_id: repository('a'),
-        display_name: Some("new name".into()),
         canonical_path: Some(directory.path().join("historical/path")),
-        identity_source: Some("git-common-dir".into()),
-        last_seen: "2026-10-23T12:00:00Z".into(),
+        identity_source: "git-common-dir".into(),
+        observed_at: Some("2026-10-23T12:00:00Z".into()),
+        descriptor: None,
+        placements: vec![],
     };
-    assert_eq!(activity.repository_hint(&hint.repository_id).unwrap(), None);
-    activity.update_repository_hint(&hint).unwrap();
-    let mut stale = hint.clone();
-    stale.last_seen = "2026-10-22T12:00:00Z".into();
-    stale.display_name = Some("stale name".into());
-
-    activity.update_repository_hint(&stale).unwrap();
-
-    assert_eq!(
-        ActivityStore::open(&core)
+    assert!(
+        memocap::repository::context(&connection, &target.repository_id)
             .unwrap()
-            .repository_hint(&hint.repository_id)
-            .unwrap(),
-        Some(hint)
+            .locations
+            .is_empty()
     );
-    assert_eq!(activity.repository_hint(&repository('b')).unwrap(), None);
+    let observe = |target, backend| {
+        let request = memocap::operation::Request {
+            operation_id: memocap::receipt::Receipt::new("remember")
+                .operation_id
+                .parse()
+                .unwrap(),
+            targets: vec![target],
+            caller: memocap::operation::Caller::default(),
+            command: memocap::operation::Command::Remember {
+                content: "observation".into(),
+                kind: "note".into(),
+                tags: String::new(),
+                topic: None,
+                force: true,
+                id: None,
+                placement: None,
+            },
+        };
+        assert!(memocap::operation::execute(&core, &request, backend).succeeded());
+    };
+    observe(target.clone(), ActivityBackend::Local);
+    let mut stale = target.clone();
+    stale.observed_at = Some("2026-10-22T12:00:00Z".into());
+
+    observe(stale, ActivityBackend::Remote);
+
+    let context = memocap::repository::context(&connection, &target.repository_id).unwrap();
+    assert_eq!(context.locations.len(), 1);
+    assert_eq!(context.locations[0].observed_at, "2026-10-23T12:00:00Z");
+    assert_eq!(context.locations[0].source, "local");
+    assert!(context.identity.is_none());
+    assert!(memocap::repository::context(&connection, &repository('b'))
+        .unwrap()
+        .locations
+        .is_empty());
 }
 
 #[test]
-fn newer_partial_hint_keeps_known_display_fields() {
+fn historical_hints_are_preserved_without_becoming_repository_identity() {
     let directory = tempfile::tempdir().unwrap();
-    let mut activity = ActivityStore::open(&directory.path().join("db")).unwrap();
-    let mut hint = RepositoryHint {
-        repository_id: repository('a'),
-        display_name: Some("known".into()),
-        canonical_path: None,
-        identity_source: None,
-        last_seen: "2026-10-22T12:00:00Z".into(),
-    };
-    activity.update_repository_hint(&hint).unwrap();
-    let mut partial = hint.clone();
-    partial.display_name = None;
-    partial.last_seen = "2026-10-23T12:00:00Z".into();
+    let core = directory.path().join("db");
+    let connection = memocap::store::open(&core).unwrap();
+    let repository = repository('a');
+    connection.execute("INSERT INTO repository_metadata VALUES (?1,'historical name','/old/path','directory','2026-10-22T12:00:00Z',1)", [repository.as_str()]).unwrap();
 
-    activity.update_repository_hint(&partial).unwrap();
+    let activity = ActivityStore::open(&core).unwrap();
+    let context = memocap::repository::context(&connection, &repository).unwrap();
 
-    hint.last_seen = partial.last_seen;
+    assert!(context.identity.is_none());
+    assert!(context.locations.is_empty());
     assert_eq!(
-        activity.repository_hint(&hint.repository_id).unwrap(),
-        Some(hint)
+        connection
+            .query_row(
+                "SELECT display_name FROM repository_metadata WHERE repository_id=?1",
+                [repository.as_str()],
+                |row| row.get::<_, String>(0)
+            )
+            .unwrap(),
+        "historical name"
     );
+    assert!(activity.list(&ActivityQuery::default()).unwrap().is_empty());
 }
 
 #[test]

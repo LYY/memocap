@@ -20,6 +20,8 @@ pub(super) fn execute(database: &Path, query: Recall) -> Outgoing {
             canonical_path: None,
             identity_source: "explicit".into(),
             placements: vec![],
+            descriptor: None,
+            observed_at: None,
         }],
         caller: operation::Caller::default(),
         command: operation::Command::Recall {
@@ -46,6 +48,6 @@ pub(super) fn execute(database: &Path, query: Recall) -> Outgoing {
         .collect::<Vec<_>>();
     json(
         200,
-        serde_json::json!({"memories": memories, "activity_status": receipt.activity_status, "warning": receipt.warning}),
+        serde_json::json!({"memories": memories, "repository_context":receipt.repository_context, "activity_status": receipt.activity_status, "warning": receipt.warning}),
     )
 }

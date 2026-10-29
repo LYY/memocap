@@ -23,6 +23,7 @@ fn coordinated_transfer_server(
     let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
     let (release_sender, release_receiver) = mpsc::sync_channel(1);
     let handle = thread::spawn(move || {
+        super::accept_preflight(&server, &database);
         let mut transfer_request = server.incoming_requests().next().unwrap();
         let mut transfer_body = String::new();
         transfer_request
@@ -62,6 +63,7 @@ fn coordinated_transfer_server(
                 )
                 .unwrap();
         });
+        super::accept_preflight(&server, &database);
         let mut detach_request = server.incoming_requests().next().unwrap();
         let mut detach_body = String::new();
         detach_request

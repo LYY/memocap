@@ -69,6 +69,14 @@ pub(crate) fn run(command: Command, options: &crate::Cli) -> Result<()> {
                 }
             };
             receipt.organization = Some(output);
+            if let Some(output) = &receipt.organization {
+                let database = match output {
+                    Output::Page(page) => page.database.clone(),
+                    Output::Read(read) => read.database.clone(),
+                    Output::Apply(applied) => applied.database.clone(),
+                };
+                receipt.load_repository_context(&database);
+            }
         }
         Err(error) => error.record(&mut receipt),
     }
@@ -94,10 +102,13 @@ pub(crate) fn run(command: Command, options: &crate::Cli) -> Result<()> {
 }
 
 fn execute(command: Command, options: &crate::Cli) -> organization::Result<Output> {
-    if !options.repo.is_empty() {
+    if !options.repo.is_empty()
+        || !options.repository_id.is_empty()
+        || options.targets_json.is_some()
+    {
         return Err(Error::before(
             "invalid_arguments",
-            "organize scans the complete local database and rejects --repo",
+            "organize scans the complete local database and rejects target selectors",
         ));
     }
     if config::configured_address().is_some() {

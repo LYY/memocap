@@ -43,7 +43,7 @@ fn remember(connection: &Connection, request: super::request::Remember) -> Outgo
     if validate_placement(connection, &request.repository, &request.placement).is_err() {
         return error(400, "invalid_request");
     }
-    match store::remember_at(
+    let outgoing = match store::remember_with_descriptor(
         connection,
         &request.placement,
         &request.content,
@@ -54,8 +54,16 @@ fn remember(connection: &Connection, request: super::request::Remember) -> Outgo
             force: request.force,
             overwrite_id: request.overwrite_id,
         },
+        request
+            .target
+            .as_ref()
+            .and_then(|target| target.descriptor.as_ref()),
     ) {
-        Ok(id) => json(200, serde_json::json!({"id": id})),
+        Ok(id) => super::context::observe(
+            connection,
+            request.target.as_ref(),
+            json(200, serde_json::json!({"id": id})),
+        ),
         Err(error_value) => {
             if let Some(similar) = error_value.downcast_ref::<store::SimilarMemories>() {
                 json(
@@ -66,7 +74,8 @@ fn remember(connection: &Connection, request: super::request::Remember) -> Outgo
                 error(400, "invalid_request")
             }
         }
-    }
+    };
+    super::context::attach(connection, &request.repository, outgoing)
 }
 
 fn list(connection: &Connection, request: super::request::List) -> Outgoing {
@@ -75,7 +84,11 @@ fn list(connection: &Connection, request: super::request::List) -> Outgoing {
         Err(_) => return error(400, "invalid_request"),
     };
     match store::list_inventory(connection, &sources, request.limit) {
-        Ok(memories) => json(200, serde_json::json!({"memories": memories})),
+        Ok(memories) => super::context::attach(
+            connection,
+            &request.repository,
+            json(200, serde_json::json!({"memories": memories})),
+        ),
         Err(_) => error(400, "invalid_request"),
     }
 }
@@ -85,14 +98,25 @@ fn forget(connection: &Connection, request: super::request::Forget) -> Outgoing 
         return error(400, "invalid_request");
     }
     match store::forget_at(connection, &request.placement, request.id) {
-        Ok(deleted) => json(200, serde_json::json!({"deleted": deleted})),
+        Ok(deleted) => super::context::attach(
+            connection,
+            &request.repository,
+            json(200, serde_json::json!({"deleted": deleted})),
+        ),
         Err(_) => error(400, "invalid_request"),
     }
 }
 
 fn domain(connection: &mut Connection, request: super::request::Domain) -> Outgoing {
+    let repository = match &request {
+        super::request::Domain::Create { repository, .. }
+        | super::request::Domain::List { repository, .. }
+        | super::request::Domain::Attach { repository, .. }
+        | super::request::Domain::Detach { repository, .. }
+        | super::request::Domain::Delete { repository, .. } => repository.clone(),
+    };
     let result = match request {
-        super::request::Domain::Create { domain } => store::create_domain(connection, &domain)
+        super::request::Domain::Create { domain, .. } => store::create_domain(connection, &domain)
             .map(|changed| serde_json::json!({"changed": changed})),
         super::request::Domain::List { repository, all } => {
             let domains = if all {
@@ -112,11 +136,11 @@ fn domain(connection: &mut Connection, request: super::request::Domain) -> Outgo
             store::detach_domain(connection, &repository, &domain)
                 .map(|changed| serde_json::json!({"changed": changed}))
         }
-        super::request::Domain::Delete { domain } => store::delete_domain(connection, &domain)
+        super::request::Domain::Delete { domain, .. } => store::delete_domain(connection, &domain)
             .map(|changed| serde_json::json!({"changed": changed})),
     };
     match result {
-        Ok(body) => json(200, body),
+        Ok(body) => super::context::attach(connection, &repository, json(200, body)),
         Err(_) => error(400, "invalid_request"),
     }
 }
@@ -131,9 +155,13 @@ fn status(connection: &Connection, repository: &RepositoryId) -> Outgoing {
         Err(_) => return error(500, "internal"),
     };
     match store::visible_status(connection, &sources) {
-        Ok(status) => json(
-            200,
-            serde_json::json!({"domains": domain_values(&domains), "status": status}),
+        Ok(status) => super::context::attach(
+            connection,
+            repository,
+            json(
+                200,
+                serde_json::json!({"domains": domain_values(&domains), "status": status}),
+            ),
         ),
         Err(_) => error(500, "internal"),
     }
@@ -187,8 +215,18 @@ fn domain_values(domains: &[DomainId]) -> Vec<String> {
 
 fn transfer(connection: &mut Connection, transfer: super::request::Transfer) -> Outgoing {
     let request = transfer.request;
-    match store::copy_move(connection, request) {
-        Ok(result) => transfer_result(result),
+    let target = request.target().cloned();
+    let repository = request.repository().clone();
+    match store::copy_move_observed(connection, request) {
+        Ok((result, replayed)) => {
+            let outgoing = json(200, serde_json::json!({"result": transfer_body(&result)}));
+            let outgoing = if replayed {
+                outgoing
+            } else {
+                super::context::observe(connection, target.as_ref(), outgoing)
+            };
+            super::context::attach(connection, &repository, outgoing)
+        }
         Err(error_value) if error_value.to_string().contains("operation ID conflict") => {
             error(409, "conflict")
         }
@@ -197,7 +235,7 @@ fn transfer(connection: &mut Connection, transfer: super::request::Transfer) -> 
 }
 
 fn operation_status(connection: &Connection, request: super::request::OperationStatus) -> Outgoing {
-    match store::operation_status(
+    let outgoing = match store::operation_status(
         connection,
         &request.repository,
         &request.operation_id,
@@ -212,11 +250,8 @@ fn operation_status(connection: &Connection, request: super::request::OperationS
             error(409, "conflict")
         }
         Err(_) => error(500, "internal"),
-    }
-}
-
-fn transfer_result(result: store::CopyMoveResult) -> Outgoing {
-    json(200, serde_json::json!({"result": transfer_body(&result)}))
+    };
+    super::context::attach(connection, &request.repository, outgoing)
 }
 
 fn transfer_body(result: &store::CopyMoveResult) -> serde_json::Value {

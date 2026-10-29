@@ -13,6 +13,7 @@ fn readonly_missing_and_upgrade_paths_never_prepare_database() {
     connection
         .execute_batch(include_str!("../fixtures/schema-2.0.sql"))
         .unwrap();
+    connection.execute_batch("ALTER TABLE memories ADD COLUMN organized_at TEXT DEFAULT NULL; UPDATE schema_metadata SET minor=1;").unwrap();
     drop(connection);
     let before = std::fs::read(&path).unwrap();
     let (_current_directory, current_path, current) = database();

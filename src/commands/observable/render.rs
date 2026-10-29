@@ -19,6 +19,7 @@ pub(super) fn print(receipt: &Receipt) {
             }
         }
         "recall" | "list" => {
+            print_context(receipt);
             let inventory = receipt
                 .results
                 .iter()
@@ -43,6 +44,7 @@ pub(super) fn print(receipt: &Receipt) {
             }
         }
         "scope_show" => {
+            print_context(receipt);
             if let Some(target) = receipt.targets.first() {
                 println!(
                     "active_scope: {}\nrepository_id: {}\nsource: {}\nattached_domains:",
@@ -56,6 +58,7 @@ pub(super) fn print(receipt: &Receipt) {
             }
         }
         "status" => {
+            print_context(receipt);
             if let Some(inspection) = &receipt.inspection {
                 println!(
                     "core: {}\nactivity: {}",
@@ -107,6 +110,7 @@ pub(super) fn print(receipt: &Receipt) {
             }
         }
         _ => {
+            print_context(receipt);
             if let Some(inventory) = &receipt.inventory {
                 for placement in inventory {
                     println!("{} count: {}", placement.placement, placement.count);
@@ -125,6 +129,23 @@ pub(super) fn print(receipt: &Receipt) {
             if let Some(history) = &receipt.history_status {
                 println!("history: {history}");
             }
+        }
+    }
+}
+
+fn print_context(receipt: &Receipt) {
+    for (repository, context) in &receipt.repository_context {
+        let name = context
+            .identity
+            .as_ref()
+            .map_or("name unknown", |identity| identity.display_name.as_str());
+        println!("repository: {repository}\n  display_name: {name}");
+        for location in &context.locations {
+            println!(
+                "  observed_path: {} ({})",
+                location.canonical_path.display(),
+                location.observed_at
+            );
         }
     }
 }

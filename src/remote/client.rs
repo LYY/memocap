@@ -21,6 +21,7 @@ struct RememberBody<'a> {
     topic_key: Option<&'a str>,
     force: bool,
     id: Option<i64>,
+    target: Option<&'a crate::receipt::Target>,
 }
 
 #[derive(Serialize)]
@@ -84,6 +85,7 @@ pub fn remember(address: &str, token: &str, request: RememberRequest<'_>) -> Res
         topic_key: request.topic_key,
         force: request.force,
         id: request.overwrite_id,
+        target: request.target,
     };
     match post(address, token, "/v1/memories/remember", &body) {
         Ok(response) => Ok(decode::<IdReply>(response, "remember reply")?.id),

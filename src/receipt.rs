@@ -6,9 +6,10 @@ use std::{
     time::Instant,
 };
 
+mod context;
 pub mod ids;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Target {
     pub canonical_path: Option<PathBuf>,
@@ -16,6 +17,24 @@ pub struct Target {
     pub repository_id: crate::scope::RepositoryId,
     pub identity_source: String,
     pub placements: Vec<String>,
+    pub descriptor: Option<crate::repository::Descriptor>,
+    pub observed_at: Option<String>,
+}
+
+impl Target {
+    pub fn validate(&self) -> anyhow::Result<()> {
+        if let Some(descriptor) = &self.descriptor {
+            descriptor.validate()?;
+        }
+        if let Some(observed_at) = &self.observed_at {
+            chrono::DateTime::parse_from_rfc3339(observed_at)?;
+            anyhow::ensure!(
+                self.canonical_path.is_some(),
+                "observation requires a target path"
+            );
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,6 +103,7 @@ pub struct Receipt {
     pub started_at: String,
     pub elapsed_ms: u64,
     pub targets: Vec<Target>,
+    pub repository_context: crate::repository::Contexts,
     pub searched_placements: Vec<String>,
     pub query_terms: Vec<String>,
     pub matched_ids: Vec<i64>,
@@ -153,6 +173,7 @@ impl Receipt {
             started_at,
             elapsed_ms: 0,
             targets: vec![],
+            repository_context: crate::repository::Contexts::new(),
             searched_placements: vec![],
             query_terms: vec![],
             matched_ids: vec![],

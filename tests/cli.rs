@@ -380,7 +380,7 @@ fn remote_remember_uses_v1_without_creating_local_database() {
     // Given
     let fixture = CliFixture::new();
     let remote_database = fixture._temp.path().join("remote.db");
-    let (address, server) = remote_server(remote_database, "remote-cli-token", 1);
+    let (address, server) = remote_server(remote_database, "remote-cli-token", 2);
 
     // When
     let output = fixture
@@ -397,7 +397,7 @@ fn remote_remember_uses_v1_without_creating_local_database() {
 
     // Then
     assert_success(&output);
-    assert_eq!(paths, vec!["/v1/memories/remember"]);
+    assert_eq!(paths, vec!["/v1/capabilities", "/v1/receipt"]);
     assert!(!fixture.data_dir.join("memocap.db").exists());
 }
 
@@ -420,7 +420,7 @@ fn remote_list_without_selector_includes_the_visible_stack() {
         },
     )
     .unwrap();
-    let (address, server) = remote_server(remote_database, "remote-cli-token", 1);
+    let (address, server) = remote_server(remote_database, "remote-cli-token", 2);
 
     // When
     let output = fixture
@@ -433,7 +433,7 @@ fn remote_list_without_selector_includes_the_visible_stack() {
 
     // Then
     assert_success(&output);
-    assert_eq!(paths, vec!["/v1/memories/list"]);
+    assert_eq!(paths, vec!["/v1/capabilities", "/v1/receipt"]);
     assert!(String::from_utf8_lossy(&output.stdout).contains("remote universal memory"));
     assert!(!fixture.data_dir.join("memocap.db").exists());
 }
@@ -446,7 +446,7 @@ fn remote_scope_commands_use_v1_without_creating_local_database() {
         .unwrap()
         .repository()
         .to_string();
-    let (address, server) = remote_server(remote_database, "remote-cli-token", 9);
+    let (address, server) = remote_server(remote_database, "remote-cli-token", 18);
     let execute = |arguments: &[&str]| {
         fixture
             .command(&fixture.repo_a, &fixture.data_dir, arguments)
@@ -516,20 +516,7 @@ fn remote_scope_commands_use_v1_without_creating_local_database() {
     assert!(String::from_utf8_lossy(&shown.stdout).contains("engineering/rust"));
     assert!(String::from_utf8_lossy(&copied.stdout).contains("operation_id:"));
     assert!(String::from_utf8_lossy(&moved.stdout).contains("operation_id:"));
-    assert_eq!(
-        paths,
-        vec![
-            "/v1/domains/create",
-            "/v1/domains/attach",
-            "/v1/status",
-            "/v1/memories/remember",
-            "/v1/memories/copy",
-            "/v1/memories/move",
-            "/v1/domains/detach",
-            "/v1/domains/create",
-            "/v1/domains/delete",
-        ]
-    );
+    assert_eq!(paths, ["/v1/capabilities", "/v1/receipt"].repeat(9));
     assert!(!fixture.data_dir.join("memocap.db").exists());
 }
 

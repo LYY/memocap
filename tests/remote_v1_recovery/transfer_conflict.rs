@@ -14,6 +14,7 @@ fn conflict_server(database: PathBuf) -> (String, thread::JoinHandle<()>) {
     let server = Server::http("127.0.0.1:0").unwrap();
     let address = format!("http://{}", server.server_addr());
     let handle = thread::spawn(move || {
+        super::accept_preflight(&server, &database);
         let mut request = server.incoming_requests().next().unwrap();
         let token = request
             .headers()

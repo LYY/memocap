@@ -6,25 +6,27 @@ use super::{
 use anyhow::{ensure, Context, Result};
 use rusqlite::Connection;
 
-fn expected(organized: bool) -> Result<Connection> {
+fn expected(identity: bool) -> Result<Connection> {
     let connection = Connection::open_in_memory()?;
-    match organized {
-        true => connection.execute_batch(baseline::CORE)?,
-        false => connection
-            .execute_batch(&baseline::CORE.replace("    organized_at TEXT DEFAULT NULL,\n", ""))?,
-    }
+    connection.execute_batch(baseline::CORE)?;
     connection.execute_batch(baseline::ACTIVITY)?;
+    if identity {
+        connection.execute_batch(super::identity::SQL)?;
+    }
     Ok(connection)
 }
 
-pub(super) fn current(connection: &Connection, organized: bool) -> Result<()> {
-    let expected = expected(organized)?;
-    if !organized {
+pub(super) fn current(connection: &Connection, identity: bool) -> Result<()> {
+    let expected = expected(identity)?;
+    if !identity {
         ensure!(
-            !structure::columns(connection, "memories")?
+            !structure::objects(connection)?
                 .iter()
-                .any(|column| column.name == "organized_at"),
-            "schema 2.0 already has organized_at"
+                .any(|object| matches!(
+                    object.name.as_str(),
+                    "repository_identities" | "repository_locations"
+                )),
+            "schema 2.1 already has repository identity structures"
         );
     }
     let actual = structure::objects(connection)?;

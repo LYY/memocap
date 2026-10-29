@@ -9,7 +9,9 @@ use anyhow::{anyhow, bail, Result};
 use sha2::{Digest, Sha256};
 use url::Url;
 
+mod descriptor;
 mod readonly;
+pub use descriptor::descriptor;
 pub use readonly::resolve_readonly;
 
 #[cfg(unix)]

@@ -28,7 +28,7 @@ pub(super) fn execute(
                 .clone()
                 .unwrap_or_else(|| PlacementId::Repository(repository.clone()));
             super::validate_placement(connection, repository, &placement)?;
-            let saved = store::remember_at(
+            let saved = store::remember_with_descriptor(
                 connection,
                 &placement,
                 content,
@@ -39,6 +39,10 @@ pub(super) fn execute(
                     force: *force,
                     overwrite_id: *id,
                 },
+                receipt
+                    .targets
+                    .first()
+                    .and_then(|target| target.descriptor.as_ref()),
             )?;
             let (status, write_status) = if id.is_some() {
                 (Status::Updated, WriteStatus::Updated)
@@ -91,8 +95,13 @@ pub(super) fn execute(
                 },
             )?;
             receipt.operation_id = transfer.operation_id().to_string();
-            let replayed = store::replay_copy_move(connection, &transfer)?.is_some();
-            let committed = store::copy_move(connection, transfer)?;
+            let transfer = transfer.with_descriptor(
+                receipt
+                    .targets
+                    .first()
+                    .and_then(|target| target.descriptor.clone()),
+            );
+            let (committed, replayed) = store::copy_move_observed(connection, transfer)?;
             receipt.returned_ids = vec![committed.memory_id];
             receipt.searched_placements = vec![from.to_string(), to.to_string()];
             receipt.status = match action {

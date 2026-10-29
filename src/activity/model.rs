@@ -1,6 +1,5 @@
 use crate::scope::{OperationId, PlacementId, RepositoryId};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -169,17 +168,6 @@ pub struct ReceiptDetails {
     pub result_limit: Option<u32>,
     pub max_chars: Option<u32>,
     pub error_code: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RepositoryHint {
-    #[serde(with = "super::serde_ids::scalar")]
-    pub repository_id: RepositoryId,
-    pub display_name: Option<String>,
-    pub canonical_path: Option<PathBuf>,
-    pub identity_source: Option<String>,
-    pub last_seen: String,
 }
 
 #[derive(Debug, Clone)]
