@@ -7,7 +7,7 @@ const secondID = `repository:${'b'.repeat(64)}`;
 const target = (id, directory = null) => ({ repository_id: id, canonical_path: directory,
   identity_source: directory ? 'directory' : 'selected-id', placements: [id], descriptor: null, observed_at: null });
 
-async function identityHost() {
+async function identityHost(resolvedTargets = (targets) => targets) {
   const base = fixture();
   const { createRecallRuntime } = await import('../plugin/recall.js');
   const { createOperations } = await import('../plugin/operations.js');
@@ -25,7 +25,7 @@ async function identityHost() {
       return target(locations.get(directory), directory);
     });
     const operation = argv[0] === 'scope' && argv[1] === 'resolve' ? 'scope_resolve' : argv[0];
-    const envelope = receipt(operation, { targets });
+    const envelope = receipt(operation, { targets: operation === 'scope_resolve' ? resolvedTargets(targets) : targets });
     if (operation === 'remember') {
       const entry = memory(rows.length + 1, argv[argv.indexOf('--') + 1]);
       entry.memory.placement = targets[0].repository_id;
@@ -96,6 +96,62 @@ test('eight explicitly selected IDs can be read but cannot fan out a write or it
   assert.equal((await host.execute('remember', { content: 'no fanout' })).status, 'failed');
   assert.equal(host.asks.length, asksBeforeWrite);
   assert.equal(host.rows.length, 0);
+});
+
+test('distinct checkout paths sharing an ID stay frozen through scope and subsequent recall', async () => {
+  const host = await identityHost();
+  const paths = [host.input.directory, `${host.input.worktree}-linked`];
+  host.locations.set(paths[1], firstID);
+  const saved = await host.execute('remember', { content: 'sharedcheckoutanchor' });
+  host.context.ask = async (permission) => {
+    host.asks.push(permission);
+    assert.ok(Object.isFrozen(permission.metadata.targets));
+    for (const selected of permission.metadata.targets) {
+      assert.ok(Object.isFrozen(selected));
+      assert.ok(Object.isFrozen(selected.placements));
+    }
+    host.locations.set(paths[0], secondID);
+    host.locations.set(paths[1], secondID);
+  };
+
+  const selected = await host.execute('scope', { paths, query: 'sharedcheckoutanchor' });
+
+  assert.equal(selected.status, 'ok', JSON.stringify(selected));
+  const expected = paths.map((directory) => target(firstID, directory));
+  assert.deepEqual(selected.targets, expected);
+  assert.deepEqual(selected.returned_ids, saved.returned_ids);
+  const recalled = await host.execute('recall', { query: 'sharedcheckoutanchor' });
+  assert.deepEqual(recalled.targets, expected);
+  assert.deepEqual(recalled.returned_ids, saved.returned_ids);
+  assert.deepEqual(host.asks.slice(1).map((permission) => permission.metadata.targets), [expected, expected]);
+  const asksBeforeWrite = host.asks.length;
+  const callsBeforeWrite = host.calls.length;
+  assert.equal((await host.execute('remember', { content: 'no fanout' })).status, 'failed');
+  assert.equal(host.asks.length, asksBeforeWrite);
+  assert.equal(host.calls.length, callsBeforeWrite);
+  assert.equal(host.rows.length, 1);
+});
+
+test('scope rejects duplicate target paths, duplicate ID-only targets and malformed resolution receipts', async () => {
+  for (const resolvedTargets of [
+    ([selected]) => [selected, { ...selected }],
+    ([selected]) => [selected, { ...selected, repository_id: secondID, placements: [secondID] }],
+    () => [target(firstID), target(firstID)],
+    ([selected]) => [{ ...selected, repository_id: 'repository:bad' }],
+    ([selected]) => [{ ...selected, canonical_path: 42 }],
+    ([selected]) => [{ ...selected, placements: [secondID] }],
+    ([selected]) => [{ ...selected, descriptor: {} }],
+    ([selected]) => [{ ...selected, observed_at: 42 }],
+  ]) {
+    const host = await identityHost(resolvedTargets);
+
+    const selected = await host.execute('scope', { paths: [host.input.directory] });
+
+    assert.equal(selected.status, 'failed');
+    assert.equal(selected.error.code, 'invalid_receipt');
+    assert.equal(host.asks.length, 0);
+    assert.equal(host.calls.some(({ argv }) => argv[0] === 'recall'), false);
+  }
 });
 
 test('session invalidation during permission prevents stale target selection', async () => {

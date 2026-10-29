@@ -17,7 +17,9 @@ function descriptorValid(descriptor) {
 export function freezeTargets(receipt) {
   if (receipt.operation !== "scope_resolve" || receipt.status !== "ok" ||
       receipt.targets.length < 1 || receipt.targets.length > 8 ||
-      new Set(receipt.targets.map((target) => target.repository_id)).size !== receipt.targets.length ||
+      new Set(receipt.targets.map((target) => JSON.stringify([
+        target.canonical_path, target.canonical_path === null ? target.repository_id : null,
+      ]))).size !== receipt.targets.length ||
       receipt.targets.some((target) => !repositoryID.test(target.repository_id) ||
         !nullableText(target.canonical_path) || typeof target.identity_source !== "string" ||
         !Array.isArray(target.placements) || target.placements.length !== 1 || target.placements[0] !== target.repository_id ||
