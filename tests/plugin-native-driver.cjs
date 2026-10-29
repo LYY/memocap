@@ -88,7 +88,7 @@ async function main() {
     context.ask = async (permission) => { permissions.push(permission); };
     const scoped = JSON.parse((await hooks.tool.memocap_scope.execute({ paths: ["."] }, context)).output);
     check("relative scope used session directory despite different ToolContext", scoped.targets[0].canonical_path, actualDirectory);
-    check("scope permission targets equal executed targets", permissions.at(-1).patterns, [actualDirectory]);
+    check("scope permission IDs equal executed targets", permissions.at(-1).patterns, [scoped.targets[0].repository_id]);
 
     nativeRun(["remember", "universal shadow fixture", "--universal", "--topic", "shadow-topic", "--force", "--json"]);
     nativeRun(["remember", "repository shadow winner", "--topic", "shadow-topic", "--force", "--json"]);
@@ -101,7 +101,7 @@ async function main() {
     check("independent inventory readback succeeded with shadowed rows", saved.readback.status, "ok");
     check("receipt retains actual caller", saved.caller,
       { actor: "plugin", session_id: context.sessionID, message_id: context.messageID });
-    check("remember approved the same actual directory", permissions.at(-1).patterns, [actualDirectory]);
+    check("remember approved the same repository ID", permissions.at(-1).patterns, [scoped.targets[0].repository_id]);
     const inventory = nativeRun(["list", "--placement", "universal", "--limit", "20", "--repo", actualDirectory, "--json"]);
     check("native inventory includes a shadowed memory", inventory.results.some((entry) => entry.visibility === "shadowed"), true);
     check("readback preserves literal content", inventory.results.find((entry) => entry.memory.id === saved.returned_ids[0]).memory.content, content);

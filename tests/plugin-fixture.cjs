@@ -2,12 +2,15 @@ const { version } = require('../package.json');
 const path = require('node:path');
 
 const repoPath = (...segments) => path.resolve('/repo', ...segments);
+const repoID = (directory) => `repository:${require('node:crypto').createHash('sha256').update(directory).digest('hex')}`;
+const resolvedTarget = (directory) => ({ canonical_path: directory, repository_id: repoID(directory),
+  identity_source: 'directory', placements: [repoID(directory)], descriptor: null, observed_at: null });
 
 function receipt(operation, overrides = {}) {
   return {
     format_version: 1, package_version: version, operation_id: '00000000-0000-0000-0000-000000000311',
     operation, status: 'ok', backend: 'local', origin: 'cli',
-    targets: [{ canonical_path: repoPath('A'), repository_id: 'repository:A', identity_source: 'directory', placements: [] }],
+    targets: [resolvedTarget(repoPath('A'))],
     results: [], returned_ids: [], activity_status: 'recorded', ...overrides,
   };
 }
@@ -34,8 +37,8 @@ function fixture() {
   const run = async (argv, options) => {
     calls.push({ argv, options });
     const paths = argv.flatMap((arg, index) => arg === '--repo' ? [argv[index + 1]] : []);
-    return { receipt: receipt(argv[0], { targets: paths.map((directory) => ({ canonical_path: directory,
-      repository_id: `repository:${path.basename(directory)}`, identity_source: 'directory', placements: [] })),
+    const targets = argv.includes('--targets-json') ? JSON.parse(argv[argv.indexOf('--targets-json') + 1]) : paths.map(resolvedTarget);
+    return { receipt: receipt(argv[0] === 'scope' && argv[1] === 'resolve' ? 'scope_resolve' : argv[0], { targets,
       ...(argv[0] === 'recall' ? { results: [memory()], returned_ids: [1] } : {}) }) };
   };
   return { calls, notices, input, run };
@@ -62,10 +65,19 @@ const args = process.argv.slice(2);
 if (args[0] === '--version') { process.stdout.write('memocap ' + version); return; }
 const log = path.join(root, 'calls.jsonl');
 fs.appendFileSync(log, JSON.stringify(args) + '\\n');
-const operation = args[0];
+fs.appendFileSync(path.join(root, 'execution.jsonl'), JSON.stringify({cwd:process.cwd(),database:process.env.MEMOCAP_DB}) + '\\n');
+const operation = args[0] === 'scope' && args[1] === 'resolve' ? 'scope_resolve' : args[0];
 const repos = args.flatMap((arg, index) => arg === '--repo' ? [args[index+1]] : []);
-const targets = (repos.length ? repos : [process.cwd()]).map(canonical_path => ({canonical_path,repository_id:'repository:'+path.basename(canonical_path),identity_source:'directory',placements:[]}));
+const repoID = directory => 'repository:'+require('node:crypto').createHash('sha256').update(directory).digest('hex');
+const targets = args.includes('--targets-json') ? JSON.parse(args[args.indexOf('--targets-json')+1]) : repos.map(canonical_path => {
+ fs.statSync(canonical_path);
+ return {canonical_path,repository_id:repoID(canonical_path),identity_source:'directory',placements:[repoID(canonical_path)],descriptor:null,observed_at:null};
+});
 const file = path.join(root, 'rows.json');
+if(operation === 'scope_resolve') {
+ process.stdout.write(JSON.stringify({format_version:1,package_version:version,operation_id:'00000000-0000-0000-0000-000000000311',operation,status:'ok',backend:'local',origin:'cli',targets,results:[],returned_ids:[],activity_status:'not_requested'}));
+ return;
+}
 const rows = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file,'utf8')) : [];
 const envelope = {format_version:1,package_version:version,operation_id:'00000000-0000-0000-0000-000000000311',operation,status:'ok',backend:'local',origin:'cli',targets,results:[],returned_ids:[],activity_status:'recorded'};
 if (operation === 'remember') {
@@ -83,6 +95,7 @@ process.stdout.write(JSON.stringify(envelope));
   return { root, A: path.join(root, 'A'), B: path.join(root, 'B'),
     module: await import(pathToFileURL(path.join(root, 'plugin/index.js')).href),
     calls: () => fs.existsSync(path.join(root, 'calls.jsonl')) ? fs.readFileSync(path.join(root, 'calls.jsonl'), 'utf8').trim().split('\n').map(JSON.parse) : [],
+    executions: () => fs.existsSync(path.join(root, 'execution.jsonl')) ? fs.readFileSync(path.join(root, 'execution.jsonl'), 'utf8').trim().split('\n').map(JSON.parse) : [],
     cleanup: () => fs.rmSync(root, { recursive: true, force: true }),
   };
 }
@@ -135,5 +148,5 @@ async function organizationHost(context, respond) {
   return { ...base, runtime, commands, tools, policy, organizationCalls, asks, toolContext, command, execute };
 }
 
-module.exports = { receipt, memory, user, fixture, sandbox, repoPath,
+module.exports = { receipt, memory, user, fixture, sandbox, repoPath, repoID, resolvedTarget,
   organizationHost, organizationDatabase, organizationSnapshot, organizationReceipt };

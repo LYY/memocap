@@ -87,7 +87,7 @@ export function createOrganization(runtime, policy, invoke = run) {
   }
 
   async function prepare(args, context) {
-    const frozen = freezeOrganization(args, context);
+    const frozen = freezeOrganization(args, context, runtime.configuredCwd);
     organizationPointer(policy);
     return Object.freeze({ ...frozen, sessionID: context.sessionID });
   }
