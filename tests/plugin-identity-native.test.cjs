@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { sandbox, fixture } = require('./plugin-fixture.cjs');
+const { assertDirectoryTargets } = require('./opencode-v1/paths.cjs');
 
 test('native plugin selects primary and linked worktree together and recalls their shared memory',
   { skip: process.env.MEMOCAP_IDENTITY_NATIVE !== '1' }, async (context) => {
@@ -40,7 +41,7 @@ test('native plugin selects primary and linked worktree together and recalls the
     const selected = await execute('scope', { paths, query: 'linkedcheckoutanchor' });
 
     assert.equal(selected.status, 'ok', JSON.stringify(selected));
-    assert.deepEqual(selected.targets.map((target) => target.canonical_path), paths.map((directory) => fs.realpathSync(directory)));
+    assertDirectoryTargets(selected.targets.map((target) => target.canonical_path), paths);
     assert.deepEqual(selected.targets.map((target) => target.repository_id), Array(2).fill(saved.targets[0].repository_id));
     assert.deepEqual(selected.returned_ids, saved.returned_ids);
     assert.deepEqual(asks[1].metadata.targets, selected.targets.map((target) => ({

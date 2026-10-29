@@ -8,6 +8,7 @@ test('real bridge retains targets and anchored database after deleting every che
   const current = await sandbox();
   context.after(current.cleanup);
   const previousCwd = process.cwd();
+  const expectedExecutionCwd = fs.realpathSync(path.parse(current.A).root);
   context.mock.property(process, 'env', { ...process.env, MEMOCAP_DB: '../anchored.db' });
   const host = fixture();
   host.input.client.session.get = async () => ({ data: { directory: current.A } });
@@ -33,7 +34,7 @@ test('real bridge retains targets and anchored database after deleting every che
   assert.equal(missing.status, 'failed');
   for (const execution of current.executions()) {
     assert.equal(execution.database, path.join(fs.realpathSync(current.root), 'anchored.db'));
-    assert.equal(fs.realpathSync(execution.cwd), fs.realpathSync(path.parse(previousCwd).root));
+    assert.equal(fs.realpathSync(execution.cwd), expectedExecutionCwd);
   }
 });
 
