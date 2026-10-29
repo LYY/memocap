@@ -9,11 +9,15 @@ use crate::{Command, OperationCommand};
 
 mod domain;
 mod observable;
+pub(crate) mod organization;
 mod recall;
 mod remote;
 mod scope;
 
 pub(crate) fn run(command: Command, options: &crate::Cli) -> Result<()> {
+    if let Command::Organize { command } = command {
+        return organization::run(command, options);
+    }
     let paths = &options.repo;
     if options.json
         || options.caller_json.is_some()
@@ -178,7 +182,10 @@ fn run_scoped(command: Command, targets: &[cli::RepositoryTarget]) -> Result<()>
         Command::Scope { command } => scope::run(command, scope)?,
         Command::Status { .. } => run_status(scope)?,
         Command::Activity { .. } => bail!("activity requires the observable operation API"),
-        Command::Serve { .. } | Command::Ui | Command::Operation { .. } => {
+        Command::Serve { .. }
+        | Command::Ui
+        | Command::Operation { .. }
+        | Command::Organize { .. } => {
             bail!("command does not use a repository target");
         }
     }

@@ -22,22 +22,20 @@ test("missing manifest defaults to format 2 without creating state", async (cont
   assert.deepEqual(fs.readdirSync(scope.env.HOME), []);
 });
 
-for (const version of [1, 2]) {
-  test(`known manifest format ${version} reads retain exact bytes and legacy ownership proof`, async (context) => {
+  test("current manifest reads retain exact bytes and managed ownership proof", async (context) => {
     const scope = runtime(context);
     const { manifestLocation, loadManifest } = await import("../scripts/setup/manifest.mjs");
     const filename = manifestLocation(scope);
-    const legacy = { skill: { path: "/legacy", version: "0.2.1", fingerprint: "old-proof" }, plugin: { entry: ["@lyy-gh/memocap@0.2.1", { custom: true }] } };
-    const text = ` { "format_version": ${version}, "installs": ${JSON.stringify({ "global:fixture": legacy })} }\r\n`;
+    const managed = { skill: { kind: "managed", path: "/managed", version: "0.3.0", digest: "current-proof" }, plugin: { entry: ["@lyy-gh/memocap@0.3.0", { custom: true }] } };
+    const text = ` { "format_version": 2, "installs": ${JSON.stringify({ "global:fixture": managed })} }\r\n`;
     fs.mkdirSync(path.dirname(filename));
     fs.writeFileSync(filename, text);
     const loaded = loadManifest(scope);
-    assert.deepEqual(loaded.manifest.installs["global:fixture"], legacy);
-    assert.equal(loaded.manifest.format_version, version);
+    assert.deepEqual(loaded.manifest.installs["global:fixture"], managed);
+    assert.equal(loaded.manifest.format_version, 2);
     assert.equal(fs.readFileSync(filename, "utf8"), text);
     assert.deepEqual(fs.readdirSync(path.dirname(filename)), ["setup.json"]);
   });
-}
 
 for (const malformed of [{ format_version: 3, installs: {} }, { format_version: "2", installs: {} }, { format_version: 2, installs: [] }, { format_version: 2, installs: null }, { format_version: 2, installs: { bad: null } }, null, []]) {
   test("unknown or malformed manifests refuse without rewriting bytes", async (context) => {
@@ -52,39 +50,37 @@ for (const malformed of [{ format_version: 3, installs: {} }, { format_version: 
   });
 }
 
-test("format upgrade requires the acquired manifest lock and preserves prior records", async (context) => {
+test("filesystem lock excludes concurrent setup owners", async (context) => {
   const scope = runtime(context);
-  const { manifestLocation, loadManifest, lockManifest, upgradeManifest } = await import("../scripts/setup/manifest.mjs");
+  const { manifestLocation, loadManifest, lockManifest } = await import("../scripts/setup/manifest.mjs");
   const filename = manifestLocation(scope);
-  const legacy = { skill: { path: "/legacy", fingerprint: "old-proof", version: "0.2.1" } };
+  const managed = { skill: { kind: "managed", path: "/managed", digest: "current-proof", version: "0.3.0" } };
   fs.mkdirSync(path.dirname(filename));
-  const text = JSON.stringify({ format_version: 1, installs: { legacy } });
+  const text = JSON.stringify({ format_version: 2, installs: { managed } });
   fs.writeFileSync(filename, text);
   const state = { manifestPath: filename, manifestText: text, manifest: loadManifest(scope).manifest, report: { backups: [], steps: [] } };
-  assert.throws(() => upgradeManifest(state), { code: "manifest_lock_required" });
   const unlock = lockManifest(state);
   try {
-    assert.equal(upgradeManifest(state).status, "changed");
-    assert.equal(upgradeManifest(state).status, "unchanged");
+    assert.throws(() => lockManifest(state), { code: "setup_busy" });
   } finally { unlock(); }
   const saved = loadManifest(scope).manifest;
   assert.equal(saved.format_version, 2);
-  assert.deepEqual(saved.installs.legacy, legacy);
-  assert.equal(saved.installs.legacy.skill.kind, undefined);
-  assert.equal(state.report.backups.length, 1);
-  assert.throws(() => upgradeManifest(state), { code: "manifest_lock_required" });
+  assert.deepEqual(saved.installs.managed, managed);
+  assert.equal(state.report.backups.length, 0);
 });
 
-for (const command of ["check", "doctor"]) {
-  test(`${command} reads an existing format-1 install without changing manifest bytes`, async (context) => {
+for (const command of ["check", "doctor", "update", "uninstall"]) {
+  test(`${command} refuses format-1 install without changing manifest bytes`, async (context) => {
     const setup = fixture(context);
     const installed = await setup.setup(["install", "--yes"]);
     const manifest = JSON.parse(fs.readFileSync(installed.manifest_path));
     manifest.format_version = 1;
     const bytes = ` ${JSON.stringify(manifest)}\r\n`;
     fs.writeFileSync(installed.manifest_path, bytes);
-    const report = await setup.setup([command]);
-    assert.equal(report.error, null);
+    setup.calls.length = 0;
+    const report = await setup.setup([command, "--to", "0.1.0", "--yes"]);
+    assert.equal(report.error?.code, "manifest_version");
+    assert.equal(setup.calls.length, 0);
     assert.equal(fs.readFileSync(installed.manifest_path, "utf8"), bytes);
   });
 }
@@ -103,20 +99,20 @@ test("unknown manifest produces a nonzero setup receipt before any mutator", asy
   assert.equal(setup.calls.some((call) => call.command === "npx" || ["install", "add", "remove", "uninstall"].includes(call.args[0])), false);
 });
 
-test("explicit upgrade preserves a concurrent edit and keeps the loaded format on failure", async (context) => {
+test("current manifest save preserves a concurrent edit on failure", async (context) => {
   const scope = runtime(context);
-  const { manifestLocation, loadManifest, lockManifest, upgradeManifest } = await import("../scripts/setup/manifest.mjs");
+  const { manifestLocation, loadManifest, lockManifest, saveManifest } = await import("../scripts/setup/manifest.mjs");
   const filename = manifestLocation(scope);
   fs.mkdirSync(path.dirname(filename));
-  const text = '{"format_version":1,"installs":{}}';
+  const text = '{"format_version":2,"installs":{}}';
   fs.writeFileSync(filename, text);
   const state = { manifestPath: filename, manifestText: text, manifest: loadManifest(scope).manifest, report: { backups: [], steps: [] } };
   const unlock = lockManifest(state);
-  const concurrent = '{"format_version":1,"installs":{"another":{"version":"0.2.1"}}}';
+  const concurrent = '{"format_version":2,"installs":{"another":{"version":"0.3.0"}}}';
   fs.writeFileSync(filename, concurrent);
-  try { assert.throws(() => upgradeManifest(state), { code: "manifest_write_failed" }); }
+  try { assert.throws(() => saveManifest(state), { code: "manifest_write_failed" }); }
   finally { unlock(); }
   assert.equal(fs.readFileSync(filename, "utf8"), concurrent);
-  assert.equal(state.manifest.format_version, 1);
+  assert.equal(state.manifest.format_version, 2);
   assert.equal(state.report.steps.at(-1).status, "failed");
 });

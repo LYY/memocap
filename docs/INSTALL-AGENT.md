@@ -1,27 +1,17 @@
 # Agent Install and Update Guide
 
-Use this guide only when the user has authorized a memocap installation or
-update. It covers package target `0.3.0` and tag target `v0.3.0`. Keep the CLI,
-plugin, and runtime skill on one release. For the human-facing explanation, see
-[Install and Update](INSTALL.md).
+Use this guide for an authorized memocap install/update targeting package
+`0.4.0` and tag `v0.4.0`. Keep native CLI, plugin, and runtime skill on that
+exact release. See [Install and Update](INSTALL.md) for the human guide.
 
-## Authorization boundary
+## Authorization and preflight
 
-Confirm the requested scope before writing anything:
+Resolve the user's requested scope: global integration or one absolute project
+path. Installation scope does not authorize memory writes or select memory
+placement. `--yes` confirms only that scope; it cannot bypass user edits,
+conflicts, ownership, permissions, or other agents' state.
 
-- Global means this user's OpenCode integration and CLI.
-- Project means one explicit absolute project path.
-- Memory placement is separate. A global install does not select universal
-  memory, and a project install does not authorize reading or writing memories.
-
-`--yes` skips installer prompts within the requested scope. It does not grant
-permission to upgrade OpenCode, overwrite user edits, touch other projects or
-agents, alter a database, or work around a denied tool permission. If the user
-has not selected global or a concrete project path, ask before installing.
-
-## Preflight
-
-Use read-only checks before choosing a command:
+Inspect prerequisites before changing installed state:
 
 ```sh
 node --version
@@ -29,168 +19,126 @@ npm --version
 opencode --version
 ```
 
-Require Node.js 22.20 or later and OpenCode 1.19.3. The setup command does not
-install or upgrade OpenCode, Node.js, or Git. Git is not required for the
-package-managed skill copy. If OpenCode is absent or has an unsupported version,
-report that and ask for authorization before changing it.
-The version-pinned host install, when authorized, is documented in the
-[user guide](INSTALL.md#requirements).
-
-## Starting from the skill alone
-
-An installed skill provides policy and guide links, not the CLI or OpenCode
-plugin. If the user authorized the full integration, bootstrap it with the
-version-pinned setup runner instead of assuming `memocap` or `memocap-setup` is
-already installed:
-
-```sh
-npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup install --global --yes --json
-```
-
-For project scope, use the same command with
-`--project "/absolute/path/to/repo"` instead of `--global`. If the user's
-authorization covered only the skill, stop after the skill installation and
-report that the runtime integration is not installed. The standalone skill path
-is optional and separate; see [the user guide](INSTALL.md#optional-standalone-skill-for-another-agent).
+Require Node.js 22.20 or later and OpenCode 1.19.3. Setup never installs/upgrades
+OpenCode, Node.js, or Git. Git is unnecessary for the managed npm skill. If host
+changes are needed, obtain that separate authorization. An installed skill alone
+provides policy, not the CLI/plugin. For an authorized full integration,
+bootstrap the pinned package instead of assuming those commands exist.
 
 ## Install
 
-For a new global install:
-
 ```sh
-npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.4.0 memocap-setup install --global --yes --json
 ```
 
-For a project install, substitute the user's concrete path:
+For project scope:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
+npx --yes --package @lyy-gh/memocap@0.4.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
 ```
 
-The exact npm package is the setup worker and contains the full skill, including
-references. Setup copies it to
-`<config-root>/memocap/policies/<target>-<full-digest>/memocap`, then registers
-that same absolute directory in plugin `skillDirectory` and `skills.paths`. No
-separate skills installation or GitHub skill fetch is part of the default flow.
-The registry and outer npx bootstrap may use the network.
+The worker copies its complete bundled skill and references into
+`<config-root>/memocap/policies/<version>-<full-digest>/memocap`; plugin
+`skillDirectory` and `skills.paths` select that same absolute directory. Do not
+add another skill installation or edit the plugin after successful setup.
+The outer npx runner and npm registry can use the network/cache.
 
-The installer performs the write steps for the selected scope and returns JSON
-on stdout. For a local missing or exact legacy schema, after prerequisites and
-authorization it explicitly prepares the main database and verifies the result
-by readback. Back up a schema `1.0` database with SQLite's backup API or another
-WAL-aware method before authorizing its bridge. Keep diagnostics from stderr
-separate. Do not add a manual skill installation or plugin edit after successful
-setup.
+Global config root is `OPENCODE_CONFIG_DIR`, otherwise
+`$XDG_CONFIG_HOME/opencode` or `$HOME/.config/opencode`; project root is
+`<project>/.opencode`. `--config` selects an active configuration file without
+moving the skill. An inherited project reuses one exact matching global owner.
+Unknown/different owners, changed or duplicate skills, ambiguous sources,
+remote `skills.urls`, and inactive config targets stop preflight. Preserve
+concurrent config edits and report the conflict.
 
-An inherited project reuses one exact known global owner without creating a
-project plugin entry, path, or manifest owner. Different or unknown versions,
-changed or duplicate payloads, ambiguous registrations, remote `skills.urls`,
-and inactive `--config` targets stop preflight before writes. A known format-1
-manifest is upgraded to format 2 only during an explicit mutation under the
-setup lock. If its old canonical skill has already been removed, setup does not
-restore it. A shared legacy install stops with `shared_skill_migration_required`
-and preserves all existing files, links, and locks. `--yes` does not bypass any
-of these checks.
+Current ownership uses manifest format `2`. A v0.3.0 format-2 record containing
+inert `migration`, `adoption`, and `steps.legacy_cleanup` fields must remain
+upgradable; those historical fields authorize no takeover or cleanup. Unsupported
+manifest formats are refused. Keep shared/modified payload protections intact.
 
-## Check and update
+Authorized local install/update prepares missing schema `2.1` or upgrades
+current `2.0` to `2.1`, then reads core/activity readiness back. Back up an
+existing database using SQLite's backup API or another WAL-aware method first.
+Preparation can prune retained activity. Remote preparation belongs to the
+server administrator and must run locally.
 
-Run `check` without mutating installed state:
+## Current v0.3.0 to v0.4.0 update
+
+Inspect without mutation:
 
 ```sh
 memocap-setup check --global --json
 ```
 
-Read `resolved_version` once from that result. For an authorized update, use
-that exact version for dry-run and execution:
+Freeze the reported `resolved_version`. Review and execute the same exact
+target after authorization; current examples use 0.4.0:
 
 ```sh
-memocap-setup update --to 0.3.0 --global --dry-run --json
-memocap-setup update --to 0.3.0 --global --yes --json
+memocap-setup update --to 0.4.0 --global --dry-run --json
+memocap-setup update --to 0.4.0 --global --yes --json
 ```
 
-Use the exact `resolved_version` returned by `check` in both commands; the
-examples pin the current v0.3.0 target. For a project, use
-`--project "/absolute/path/to/repo"` instead of `--global`. Do not substitute a
-second registry lookup for the version already selected by `check`.
-
-Check and dry-run do not prepare, migrate, or prune the database. The setup
-core's dry-run does not fetch the target worker or write config, skill, manifest,
-or database state. The outer npx runner may fetch its explicitly pinned package
-and update the npm cache first.
-
-If an authorized update uses a different-version runner, setup starts an exact
-`@lyy-gh/memocap@<resolved_version>` worker and verifies its reported version;
-there is no fallback to a different worker target.
-
-If updating an older v0.0.10 installation that has no setup command or new
-read-only status interface, preflight reports `inspection_deferred` only. This
-is not success or readiness. After authorization, use the exact v0.3.0 runner:
-
-Before running it against a database that may be schema `1.0`, make a WAL-aware
-backup.
+To start with the target package explicitly:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup update --to 0.3.0 --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.4.0 memocap-setup update --to 0.4.0 --global --yes --json
 ```
 
-For a proven v0.1.0 producer, preflight reports schema `1.0` as
-`upgrade_needed`. Back up first. The authorized exact-target update prepares the
-local main database and verifies schema and activity status by readback. Remote
-clients cannot prepare the server database; the server administrator must do so
-locally.
+Use the same concrete `--project` path for project updates. A different-version
+runner delegates to the exact target package worker and checks report/version;
+there is no fallback to a different target. Do not resolve stable/latest twice.
+The supported path is managed format `2`, package `0.3.0`, schema `2.0`, to
+managed format `2`, package `0.4.0`, schema `2.1`. Legacy installer recovery and
+schema-major transitions are retired. Existing supported memories, placements,
+domains, provenance, FTS, operation ledger, and activity remain intact.
 
-Same-version updates are a no-op when owned components match and may repair an
-incomplete owned step. A `--dry-run` does not change installed files, config,
-skills, or databases. The outer npx runner can still fetch its pinned package
-and write to the npm cache before the setup core starts.
+Check, doctor, and dry-run perform no logical database writes, initialization,
+schema changes, activity recording, or pruning. Dry-run also avoids worker
+fetches and config/skill/manifest writes; outer npx can still download its
+pinned runner first. Read-only status reports current schema `2.0` as
+`upgrade_needed` without changing it. Unsupported schema `1.0`, future,
+malformed, and pre-versioned databases are refused unchanged. See the
+[schema contract](SCHEMA-VERSIONING.md).
+
+Same-version installs are a no-op when owned components match and can repair
+incomplete owned steps. Preserve unrelated state. After partial/uncertain
+results, inspect ownership, versions, config, manifest, and backups before any
+retry; resume only the same exact target. Never repeat a write to check success.
 
 ## Read back and report
-
-After a successful install or update, verify the result instead of rerunning
-the write command:
 
 ```sh
 memocap --version
 memocap-setup doctor --global --json
 ```
 
-For project scope, pass the same explicit path to `doctor`. Read back the
-installed CLI path and version, plugin entry and effective config source, managed
-skill path/version/digest and discovery, core schema status, activity status, and
-any backup or conflict details from the actual command output. A component can be
-`unchanged`; that is not a failure when it already matches the target.
+Use the same project path when applicable. Report actual CLI path/version,
+plugin entry/config source, managed skill path/version/full digest/discovery,
+schema/activity readiness, backup/conflict details, and restart requirement.
+`unchanged` is valid for an already matching component. Doctor exits zero only
+for `static_ready`; check's zero exit is informational.
 
-Preserve the actual readiness result. `static_ready` requires matching
-components, a compatible initialized main database, and ready activity. Fresh
-install preparation creates schema `2.0`; the installer reads back and requires
-both core and activity ready. `not_initialized`, `upgrade_needed`,
-`activity_not_initialized`, `activity_degraded`, `incomplete`, and
-`inspection_deferred` are not ready. The last value is limited to preflight for
-the known local v0.0.10 producer; it is not success evidence. Doctor exits zero
-only for `static_ready`. Check, doctor, and dry-run perform no logical database
-writes, initialization, bridge, prune, or activity recording. SQLite
-`READ_ONLY` inspection may still coordinate WAL/SHM sidecars; ordinary WAL
-inspection needs no owner snapshot. Doctor performs no preparation and leaves
-`runtime.status: not_run`. A check without `--to` may query the npm registry for
-the stable target version.
-Treat runtime-not-run separately from installation failure. See the
-[readiness table](INSTALL.md#verify) and the
-[schema contract](SCHEMA-VERSIONING.md) before interpreting a report.
+`static_ready` requires matching components, initialized compatible schema `2.1`,
+and ready activity. `not_initialized`, `upgrade_needed`,
+`activity_not_initialized`, `activity_degraded`, and `incomplete` are not ready.
+SQLite read-only connections may coordinate WAL/SHM sidecars; ordinary WAL
+inspection needs no owner snapshot. Doctor does no preparation and leaves
+`runtime.status: not_run`. A check without `--to` can query the registry.
 
-The JSON report distinguishes step outcomes such as `changed`, `unchanged`,
-`failed`, `not_run`, and `outcome_unknown`. A partial result is nonzero and
-does not mean all steps were rolled back. Check the current state and backups
-before any retry. Resume an incomplete update only with the same explicit
-`--to` target. Never repeat `remember` to validate a successful core write.
+Setup reports step outcomes `changed`, `unchanged`, `failed`, `not_run`, and
+`outcome_unknown`; a partial result does not imply rollback of earlier steps.
+Report successful core writes separately from activity warnings and never replay
+`remember` to repair history. Old `.activity.sqlite` files remain untouched and
+are not imported. Software rollback is not data restoration; never restore an
+older backup over newer data automatically.
 
-An agent completion report can use this structure. These are report examples,
-not literal setup JSON payloads:
+An example agent completion report, distinct from literal setup JSON:
 
 ```json
 {
   "result": "static_ready",
   "scope": "global",
-  "target_version": "0.3.0",
+  "target_version": "0.4.0",
   "cli": "unchanged",
   "plugin": "installed",
   "skill": "installed",
@@ -199,61 +147,38 @@ not literal setup JSON payloads:
 }
 ```
 
-For a partial failure, name the component and next read-only check:
-
-```json
-{
-  "result": "partial",
-  "scope": "global",
-  "target_version": "0.3.0",
-  "cli": "unchanged",
-  "plugin": "installed",
-  "skill": "failed",
-  "next_step": "Read skill ownership and current links before retrying the same target."
-}
-```
-
 ## Runtime verification
 
-`doctor` reports configured/static readiness only. It does not prove that a
-running OpenCode process loaded the plugin or skill. Do not restart OpenCode
-automatically. After the user restarts it, `opencode debug skill` must show the
-actual `memocap` skill location. In that session, `/memory status` must report
-`policy.mode: "managed"` and the runtime `policy.directory`, `policy.mainPath`,
-`policy.version`, and `policy.digest`. Resolve the debug location to the
-`SKILL.md` file and compare it with the canonical `policy.mainPath`; compare
-its parent directory with `policy.directory`. The version and full digest must
-match the installed payload. The runtime policy object has no `source` property. Observe a
-real recall receipt before reporting `runtime_verified`. If no provider or live
-session is available, report the static result, `runtime.status: not_run`, and
-`restart_required` when applicable. Policy rules are appended at compaction,
-not forced into every turn; neither a hook nor receipt proves model adoption.
+Static readiness does not prove a running host loaded the package. After the
+user restarts OpenCode, use a new session. `opencode debug skill` must show one
+selected `memocap` skill. `/memory status` must report `policy.mode: "managed"`,
+`policy.directory`, `policy.mainPath`, `policy.version`, and `policy.digest`.
+Resolve discovered `SKILL.md` to the canonical `policy.mainPath`; its parent
+must equal `policy.directory`, and version/digest must match installed payload.
+The runtime object has no `source` property.
 
-Activity and repository hints share the main database and are bounded operational
-history, not a complete audit. An old `<core filename>.activity.sqlite` file is
-left untouched and its history is not imported. An activity failure after a
-successful memory write must be reported as core success plus an activity
-warning. Do not retry the memory write. Neither v0.1.0 nor v0.0.10 can open
-schema `2.0`; ordinary software downgrade does not restore database state.
-Never restore an older backup over newer data. To prepare a local database
-outside setup, back up first if its schema may be `1.0`, then run
-`memocap activity prepare --json` with remote mode unset; it may prune retained
-activity. Remote preparation is server-admin-only. Data
-backup and explicit restore are covered in the
-[user guide](INSTALL.md#data-and-compatibility).
+Observe a real recall receipt before claiming runtime verification. Without a
+provider/live session, report static readiness and `runtime.status: not_run`.
+Policy rules appear at compaction; hooks and receipts do not prove model
+understanding or adoption. Organization loads its reference on demand through
+`/memory organize` or `/memory organize -a`; follow that workflow's permissions,
+exact snapshots, explicit group confirmation, atomic apply, and independent
+readback. A failed readback after commit never authorizes replay.
 
-## Platform commands
+For an authorized standalone skill for another agent, use the separate
+[standalone flow](INSTALL.md#optional-standalone-skill-for-another-agent).
+Uninstall is similarly explicit; use the [ownership-preserving commands](INSTALL.md#uninstall).
+Neither flow authorizes personal memory changes or tool-denial bypasses.
 
-PowerShell uses the same pinned workflow. Quote a project path that contains
-spaces:
+## Windows PowerShell
 
 ```powershell
-npx --yes --package '@lyy-gh/memocap@0.3.0' memocap-setup install --global --yes --json
-npx --yes --package '@lyy-gh/memocap@0.3.0' memocap-setup install --project 'C:\work\my repo' --yes --json
+npx --yes --package '@lyy-gh/memocap@0.4.0' memocap-setup install --global --yes --json
+npx --yes --package '@lyy-gh/memocap@0.4.0' memocap-setup install --project 'C:\work\my repo' --yes --json
 memocap-setup check --global --json
-memocap-setup update --to 0.3.0 --global --dry-run --json
-memocap-setup update --to 0.3.0 --global --yes --json
+memocap-setup update --to 0.4.0 --global --dry-run --json
+memocap-setup update --to 0.4.0 --global --yes --json
 ```
 
-The source checkout's `scripts/install.sh` and `scripts/install.ps1` only
-forward arguments and exit status to the same setup core.
+Source wrappers `scripts/install.sh` and `scripts/install.ps1` forward arguments
+and exit status to the same setup core.

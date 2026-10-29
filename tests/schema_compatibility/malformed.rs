@@ -99,3 +99,34 @@ fn extra_unique_indexes_and_constraints_refuse_without_mutation() {
         assert_eq!(std::fs::read(&path).unwrap(), before);
     }
 }
+
+#[test]
+fn organized_column_requires_exact_nullable_text_null_default_on_schema_2_1() {
+    for definition in [
+        None,
+        Some("organized_at BLOB DEFAULT NULL"),
+        Some("organized_at TEXT NOT NULL DEFAULT ''"),
+        Some("organized_at TEXT DEFAULT 'done'"),
+    ] {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("malformed.db");
+        let connection = rusqlite::Connection::open(&path).unwrap();
+        connection
+            .execute_batch(include_str!("../fixtures/schema-2.0.sql"))
+            .unwrap();
+        if let Some(definition) = definition {
+            connection
+                .execute_batch(&format!("ALTER TABLE memories ADD COLUMN {definition}"))
+                .unwrap();
+        }
+        connection
+            .execute_batch("UPDATE schema_metadata SET minor=1")
+            .unwrap();
+        drop(connection);
+        let before = std::fs::read(&path).unwrap();
+
+        assert!(store::open(&path).is_err());
+
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+}

@@ -172,7 +172,7 @@ fn default_recall_list_and_status_explain_the_visible_stack() {
     assert!(list.contains("visibility: shadowed"));
     assert!(list.contains("shadowed_by: source 0"));
     assert!(list.contains("shadowed_by: source 1"));
-    assert!(status.contains("schema_version: 2.0"));
+    assert!(status.contains("schema_version: 2.1"));
     assert!(status.contains("addressable_total: 7"));
     assert!(status.contains("effective_total: 4"));
     assert_eq!(

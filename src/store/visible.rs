@@ -9,6 +9,7 @@ mod query;
 mod recall;
 mod shadow;
 
+pub(crate) use recall::budget_targeted_memories;
 pub use recall::{
     merge_recalled, recall_targets, recall_visible_with_options, MatchMode, RecallApplicability,
     RecallOptions, RecallTarget, TargetRecall, TargetedMemory,

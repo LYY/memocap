@@ -6,35 +6,27 @@ use super::{
 use anyhow::{ensure, Context, Result};
 use rusqlite::Connection;
 
-pub(super) fn expected(activity: bool) -> Result<Connection> {
+fn expected(organized: bool) -> Result<Connection> {
     let connection = Connection::open_in_memory()?;
-    connection.execute_batch(baseline::CORE)?;
-    if activity {
-        connection.execute_batch(baseline::ACTIVITY)?;
+    match organized {
+        true => connection.execute_batch(baseline::CORE)?,
+        false => connection
+            .execute_batch(&baseline::CORE.replace("    organized_at TEXT DEFAULT NULL,\n", ""))?,
     }
+    connection.execute_batch(baseline::ACTIVITY)?;
     Ok(connection)
 }
 
-pub(super) fn exact_legacy(connection: &Connection) -> Result<bool> {
-    let expected = expected(false)?;
-    let actual = structure::objects(connection)?;
-    let reference = structure::objects(&expected)?;
-    if actual.len() != reference.len() {
-        return Ok(false);
+pub(super) fn current(connection: &Connection, organized: bool) -> Result<()> {
+    let expected = expected(organized)?;
+    if !organized {
+        ensure!(
+            !structure::columns(connection, "memories")?
+                .iter()
+                .any(|column| column.name == "organized_at"),
+            "schema 2.0 already has organized_at"
+        );
     }
-    Ok(actual.iter().zip(reference).all(|(actual, expected)| {
-        actual.kind == expected.kind
-            && actual.name == expected.name
-            && actual.table == expected.table
-            && actual
-                .sql
-                .split_whitespace()
-                .eq(expected.sql.split_whitespace())
-    }))
-}
-
-pub(super) fn current(connection: &Connection) -> Result<()> {
-    let expected = expected(true)?;
     let actual = structure::objects(connection)?;
     for object in structure::objects(&expected)? {
         let existing = actual

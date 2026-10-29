@@ -96,7 +96,7 @@ function runProcess(request) {
     try {
       child = spawn(executable, [launcher, ...argv], {
         cwd, shell: false, windowsHide: true, detached: process.platform !== "win32",
-        stdio: ["ignore", "pipe", "pipe"],
+        env: request.env, stdio: [request.stdin === undefined ? "ignore" : "pipe", "pipe", "pipe"],
       });
     } catch (cause) {
       reject(new BridgeError("spawn_failed", "Could not launch bundled CLI", { ...details(), cause }));
@@ -107,6 +107,10 @@ function runProcess(request) {
     const timer = setTimeout(() => stop("timeout", "CLI deadline exceeded"), Math.max(1, expiresAt - Date.now()));
     signal?.addEventListener("abort", abort, { once: true });
     child.once("spawn", () => { started = true; });
+    if (request.stdin !== undefined) {
+      child.stdin.on("error", (cause) => stop("stdin_failed", "Could not send CLI request", cause));
+      child.stdin.end(request.stdin, "utf8");
+    }
     child.once("error", (cause) => stop("spawn_failed", "Could not launch bundled CLI", cause));
     child.once("close", async (exitCode, exitSignal) => {
       clearTimeout(timer);
@@ -162,8 +166,8 @@ function supportedNode(runtime) {
     (major > 22 || (major === 22 && minor >= 20));
 }
 
-async function pathNode() {
-  const search = Object.entries(process.env).find(([key]) => key.toLowerCase() === "path")?.[1] ?? "";
+async function pathNode(env) {
+  const search = Object.entries(env).find(([key]) => key.toLowerCase() === "path")?.[1] ?? "";
   for (const directory of search.split(delimiter).filter(isAbsolute)) {
     const executable = join(directory, process.platform === "win32" ? "node.exe" : "node");
     try { await access(executable, constants.X_OK); return executable; } catch (error) {
@@ -177,7 +181,7 @@ async function verifiedNode(executable, request) {
   if (!executable && !process.versions.bun && process.release.name === "node") {
     executable = process.execPath;
   }
-  const output = await runProcess({ ...request, executable: executable ?? await pathNode(), launcher: "-e",
+  const output = await runProcess({ ...request, executable: executable ?? await pathNode(request.env ?? process.env), launcher: "-e",
     argv: ['console.log(JSON.stringify({release:process.release.name,node:process.versions.node,bun:process.versions.bun,execPath:process.execPath}))'],
     phase: "handshake" });
   let runtime;
@@ -197,23 +201,26 @@ export function createBridge({ launcher = bundledLauncher, executable } = {}) {
   }
   let nodeExecutable;
   return {
-    async run(argv, { cwd, signal, deadlineMs = 3000 } = {}) {
+    async run(argv, { cwd, signal, deadlineMs = 3000, stdin, env } = {}) {
       validateRequest(argv, { cwd, deadlineMs, signal });
+      if (stdin !== undefined && typeof stdin !== "string") {
+        throw new BridgeError("invalid_request", "Expected UTF-8 stdin text", { outcome: "not_started" });
+      }
       const expiresAt = Date.now() + deadlineMs;
       try { await access(launcher); } catch (cause) {
         throw new BridgeError("launcher_missing", "Bundled CLI launcher is unavailable", {
           phase: "handshake", outcome: "not_started", cause,
         });
       }
-      nodeExecutable ??= await verifiedNode(executable, { cwd, signal, expiresAt });
-      const request = { executable: nodeExecutable, launcher, cwd, signal, expiresAt };
+      nodeExecutable ??= await verifiedNode(executable, { cwd, signal, expiresAt, env });
+      const request = { executable: nodeExecutable, launcher, cwd, signal, expiresAt, env };
       const handshake = await runProcess({ ...request, argv: ["--version"], phase: "handshake" });
       if (handshake.exitCode !== 0) {
         throw new BridgeError("cli_failed", "CLI version handshake failed", handshake);
       }
       checkVersion(/^memocap\s+(\S+)\s*$/.exec(handshake.stdout)?.[1], "handshake", handshake);
       const commandArgv = argv.includes("--json") ? [...argv] : [...argv, "--json"];
-      const output = await runProcess({ ...request, argv: commandArgv, phase: "command" });
+      const output = await runProcess({ ...request, argv: commandArgv, stdin, phase: "command" });
       return { receipt: commandReceipt(output), stderr: output.stderr, exitCode: output.exitCode };
     },
   };

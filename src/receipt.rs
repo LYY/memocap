@@ -110,6 +110,8 @@ pub struct Receipt {
     pub recovery: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub outcome: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization: Option<crate::organization::Output>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -168,6 +170,7 @@ impl Receipt {
             domain_operation: None,
             recovery: None,
             outcome: None,
+            organization: None,
         }
     }
 

@@ -100,7 +100,7 @@ test("pnpm inventory version disagreement and stale shim targets are refused", a
   await assert.rejects(discoverCLI(f.runtime, {}), { code: "unowned_cli" });
 });
 
-test("a manual 0.1.0 release can plan a later upgrade without a setup manifest", async (context) => {
+test("a manual unmanaged release cannot plan adoption without a setup manifest", async (context) => {
   const f = fixture(context);
   f.installCLI("0.1.0");
   fs.mkdirSync(path.dirname(f.config), { recursive: true });
@@ -113,7 +113,7 @@ test("a manual 0.1.0 release can plan a later upgrade without a setup manifest",
   const [major, minor] = JSON.parse(fs.readFileSync(path.join(f.packageRoot, "package.json"))).version.split(".").map(Number);
   const target = `${major}.${minor + 1}.0`;
   const report = await f.setup(["update", "--to", target, "--dry-run"]);
-  assert.equal(report.exit_code, 0, JSON.stringify(report));
+  assert.equal(report.error?.code, "unowned_skill");
   assert.equal(report.manifest_path && fs.existsSync(report.manifest_path), false);
   fs.appendFileSync(path.join(paths.canonical, "SKILL.md"), "user edit\n");
   const changed = await f.setup(["update", "--to", target, "--dry-run"]);

@@ -25,6 +25,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
+    /// Inspect and apply confirmed organization groups across the local database.
+    Organize {
+        #[command(subcommand)]
+        command: commands::organization::Command,
+    },
     /// Store an explicit memory.
     Remember {
         content: String,

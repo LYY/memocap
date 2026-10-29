@@ -22,20 +22,20 @@ function backend(context, observed) {
 const receipt=${JSON.stringify(receipt)};
 if(process.argv.includes('--version')) console.log('memocap 0.1.0');
 else if(process.argv.includes('prepare')) { fs.writeFileSync(process.env.MEMOCAP_DB,'prepared'); console.log(JSON.stringify({format_version:1,status:'ok'})); }
-else { if(fs.existsSync(process.env.MEMOCAP_DB)) receipt.inspection=${JSON.stringify(inspection("ready", "2.0"))}; console.log(JSON.stringify(receipt)); }
+else { if(fs.existsSync(process.env.MEMOCAP_DB)) receipt.inspection=${JSON.stringify(inspection("ready", "2.1"))}; console.log(JSON.stringify(receipt)); }
 `);
   setup.env.MEMOCAP_DB = path.join(setup.home, "main.db");
   return setup;
 }
 
-for (const [state, version] of [["not_initialized", null], ["upgrade_needed", "1.0"], ["ready", "2.0"], ["ready", "2.7"]]) {
+for (const [state, version] of [["not_initialized", null], ["upgrade_needed", "2.0"], ["ready", "2.0"], ["ready", "2.1"]]) {
   test(`check accepts ${state} ${version} without preparing main`, async (context) => {
     const setup = backend(context, inspection(state, version));
     const report = await setup.setup(["check", "--to", "0.1.0"]);
     assert.equal(report.error, null, JSON.stringify(report));
     assert.equal(report.backend.memory_status, state);
     assert.equal(report.backend.core_schema.observed, version);
-    assert.equal(report.backend.core_schema.expected, "2.0");
+    assert.equal(report.backend.core_schema.expected, "2.1");
     assert.equal(fs.existsSync(setup.env.MEMOCAP_DB), false);
     assert.equal(setup.calls.some(({ args }) => args.includes("prepare")), false);
   });
@@ -43,11 +43,11 @@ for (const [state, version] of [["not_initialized", null], ["upgrade_needed", "1
 
 for (const state of ["not_initialized", "upgrade_needed"]) {
   test(`explicit install prepares ${state} main and verifies schema2`, async (context) => {
-    const setup = backend(context, inspection(state, state === "upgrade_needed" ? "1.0" : null));
+    const setup = backend(context, inspection(state, state === "upgrade_needed" ? "2.0" : null));
     const report = await setup.setup(["install", "--yes"]);
     assert.equal(report.exit_code, 0, JSON.stringify(report));
     assert.equal(report.readiness, "static_ready");
-    assert.equal(report.backend.core_schema.observed, "2.0");
+    assert.equal(report.backend.core_schema.observed, "2.1");
     assert.equal(report.backend.activity.status, "ready");
     assert.equal(fs.readFileSync(setup.env.MEMOCAP_DB, "utf8"), "prepared");
     assert.equal(setup.calls.filter(({ args }) => args.includes("prepare")).length, 1);
@@ -55,23 +55,23 @@ for (const state of ["not_initialized", "upgrade_needed"]) {
 }
 
 test("dry-run reports upgrade needed without claiming readiness", async (context) => {
-  const setup = backend(context, inspection("upgrade_needed", "1.0"));
+  const setup = backend(context, inspection("upgrade_needed", "2.0"));
   const report = await setup.setup(["update", "--to", "0.1.0", "--dry-run"]);
   assert.equal(report.error, null, JSON.stringify(report));
   assert.equal(report.readiness, "upgrade_needed");
   assert.equal(fs.existsSync(setup.env.MEMOCAP_DB), false);
 });
 
-test("doctor reports observed legacy upgrade even when component repair is needed", async (context) => {
-  const setup = backend(context, inspection("upgrade_needed", "1.0"));
+test("doctor reports current schema upgrade even when component repair is needed", async (context) => {
+  const setup = backend(context, inspection("upgrade_needed", "2.0"));
   const report = await setup.setup(["doctor"]);
   assert.equal(report.readiness, "upgrade_needed", JSON.stringify(report));
   assert.equal(report.exit_code, 1);
   assert.equal(fs.existsSync(setup.env.MEMOCAP_DB), false);
 });
 
-test("failed skill installation preserves legacy main until configuration prerequisites finish", async (context) => {
-  const setup = backend(context, inspection("upgrade_needed", "1.0"));
+test("failed skill installation preserves current main until configuration prerequisites finish", async (context) => {
+  const setup = backend(context, inspection("upgrade_needed", "2.0"));
   failPolicyCopy(context);
   const report = await setup.setup(["install", "--yes"]);
   assert.equal(report.status, "partial", JSON.stringify(report));
@@ -80,7 +80,7 @@ test("failed skill installation preserves legacy main until configuration prereq
 });
 
 test("lost process response after committed preparation is read back without replay on resume", async (context) => {
-  const setup = backend(context, inspection("upgrade_needed", "1.0"));
+  const setup = backend(context, inspection("upgrade_needed", "2.0"));
   const run = setup.runtime.run;
   setup.runtime.run = async (command, args, options) => {
     const execution = await run(command, args, options);
@@ -95,8 +95,8 @@ test("lost process response after committed preparation is read back without rep
   assert.equal(setup.calls.filter(({ args }) => args.includes("prepare")).length, 1);
 });
 
-test("remote legacy requires server administration without preparation", async (context) => {
-  const setup = backend(context, inspection("upgrade_needed", "1.0"));
+test("remote current schema upgrade requires server administration without preparation", async (context) => {
+  const setup = backend(context, inspection("upgrade_needed", "2.0"));
   setup.env.MEMOCAP_ADDR = "http://127.0.0.1:1";
   const script = fs.readFileSync(setup.cliScript, "utf8").replace('"backend":"local","origin":"cli"', '"backend":"remote","origin":"server"');
   fs.writeFileSync(setup.cliScript, script);
@@ -107,6 +107,8 @@ test("remote legacy requires server administration without preparation", async (
 });
 
 const malformed = {
+  retired_schema: { schema_version: "1.0" },
+  future_schema: { schema_version: "2.7" },
   major: { schema_version: "3.0" },
   incoherent: { visible: { schema_version: "2.7", placements: [], addressable_total: 0, effective_total: 0 } },
   negative_count: { visible: { schema_version: "2.0", placements: [], addressable_total: -1, effective_total: 0 } },
@@ -135,18 +137,14 @@ test("POSIX generated shim resolves owned launcher and uses verified native cach
   assert.equal(observed.executable_path, setup.cliPath);
 });
 
-test("released local 0.1 inspection permits planning its explicit binary upgrade", async (context) => {
+test("released schema 1 inspection is refused even during an explicit binary upgrade", async (context) => {
   const observed = { ...inspection("ready", "1.0"), capabilities: capabilities.slice(0, -2) };
   const setup = backend(context, observed);
   const { backendStatus } = await import("../scripts/setup/backend.mjs");
   const metadata = JSON.parse(fs.readFileSync(path.join(setup.packageRoot, "package.json")));
   const next = metadata.version.split(".").map(Number); next[1] += 1;
   const report = { shared_cli: { version: metadata.version, executable_path: setup.cliPath, package_root: setup.installed } };
-  const status = await backendStatus({ report, runtime: setup.runtime, target: next.join(".") });
-  assert.equal(status.memory_status, "upgrade_needed");
-  assert.equal(status.core_schema.observed, "1.0");
-  assert.equal(status.inspection.visible, null);
-  assert.equal(status.binary_contract, "released_schema_1");
+  await assert.rejects(backendStatus({ report, runtime: setup.runtime, target: next.join(".") }), { code: "backend_incompatible" });
 });
 
 test("a target binary cannot impersonate the released contract without single-database capabilities", async (context) => {

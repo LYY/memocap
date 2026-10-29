@@ -20,6 +20,7 @@ pub use transfers::{
     copy_move, operation_status, replay_copy_move, CopyMoveAction, CopyMoveInput, CopyMoveRequest,
     CopyMoveResult,
 };
+pub(crate) use visible::budget_targeted_memories;
 pub use visible::{
     list_inventory, merge_recalled, recall_targets, recall_visible, recall_visible_with_options,
     single_visible_source, visible_inventory, visible_sources, visible_status, InventoryMemory,
@@ -522,22 +523,6 @@ mod lifecycle_tests {
                 ",
             )
             .unwrap();
-    }
-
-    #[test]
-    fn unregistered_legacy_minor_refuses_before_migration() {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("legacy.db");
-        let connection = Connection::open(&path).unwrap();
-        connection
-            .execute_batch(include_str!("../tests/fixtures/schema-1.0.sql"))
-            .unwrap();
-        connection
-            .execute("UPDATE schema_metadata SET minor=1", [])
-            .unwrap();
-
-        assert!(open(&path).is_err());
-        assert_eq!(schema::version(&connection).unwrap().minor, 1);
     }
 
     #[test]

@@ -129,7 +129,7 @@ test("stable prerelease is refused while explicit prerelease dry-run can plan", 
   assert.equal(planned.resolved_version, "0.2.0-beta.1");
 });
 
-test("an unmodified release-proven 0.0.10 skill and plugin can be adopted", async (context) => {
+test("an unmodified unmanaged skill cannot be adopted even with a provenance lock", async (context) => {
   const f = fixture(context);
   f.installCLI("0.0.10");
   fs.mkdirSync(path.dirname(f.config), { recursive: true });
@@ -142,8 +142,10 @@ test("an unmodified release-proven 0.0.10 skill and plugin can be adopted", asyn
     source: "LYY/memocap", sourceUrl: "https://github.com/LYY/memocap/tree/v0.0.10", sourceType: "github", ref: "v0.0.10",
   } } }));
   const report = await f.setup(["update", "--to", "0.1.0", "--yes"]);
-  assert.equal(report.exit_code, 0, JSON.stringify(report));
-  assert.equal(JSON.parse(fs.readFileSync(f.config)).plugin[0][0], "@lyy-gh/memocap@0.1.0");
+  assert.equal(report.error?.code, "unowned_skill");
+  assert.deepEqual(JSON.parse(fs.readFileSync(f.config)).plugin, ["@lyy-gh/memocap@0.0.10"]);
+  assert.equal(fs.existsSync(paths.canonical), true);
+  assert.equal(f.calls.some(({ args }) => args[0] === "install" || args.includes("prepare")), false);
 });
 
 test("explicit remove-cli succeeds only after final owned references disappear", async (context) => {
@@ -219,7 +221,7 @@ test("a failed binary verification reports the package actually installed and a 
   assert.equal(report.steps.find((step) => step.component === "plugin").status, "not_run");
 });
 
-test("adoption reports the release source and content proof persisted in the manifest", async (context) => {
+test("a provenance lock cannot authorize unmanaged skill mutation without plugin ownership", async (context) => {
   const f = fixture(context);
   f.installCLI("0.0.10");
   const paths = f.skillPaths(f.project, true);
@@ -228,12 +230,9 @@ test("adoption reports the release source and content proof persisted in the man
   fs.mkdirSync(path.dirname(paths.lock), { recursive: true });
   fs.writeFileSync(paths.lock, JSON.stringify({ version: 3, skills: { memocap: { source: "LYY/memocap", sourceType: "github", ref: "v0.0.10", sourceUrl: "https://github.com/LYY/memocap/tree/v0.0.10" } } }));
   const report = await f.setup(["update", "--to", "0.1.0", "--yes"]);
-  assert.equal(report.exit_code, 0, JSON.stringify(report));
-  assert.ok(report.scopes[0].adoption);
-  assert.equal(report.scopes[0].adoption.skill.ref, "v0.0.10");
-  assert.equal(typeof report.scopes[0].adoption.skill.fingerprint, "string");
-  const manifest = JSON.parse(fs.readFileSync(report.manifest_path));
-  assert.equal(manifest.installs[report.scopes[0].id].adoption.skill.source, "LYY/memocap");
+  assert.equal(report.error?.code, "unowned_skill");
+  assert.equal(fs.existsSync(report.manifest_path), false);
+  assert.equal(fs.existsSync(paths.canonical), true);
 });
 
 test("failed local payload removal is reported and a same-target retry completes it", async (context) => {

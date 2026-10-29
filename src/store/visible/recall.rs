@@ -129,10 +129,20 @@ pub fn merge_recalled(
             }
         }
     }
-    merged.truncate(options.limit);
-    if let Some(max_chars) = options.max_chars {
+    budget_targeted_memories(&mut merged, options.limit, options.max_chars)?;
+    Ok(merged)
+}
+
+pub(crate) fn budget_targeted_memories(
+    memories: &mut Vec<TargetedMemory>,
+    limit: usize,
+    max_chars: Option<usize>,
+) -> Result<()> {
+    sqlite_limit(limit)?;
+    memories.truncate(limit);
+    if let Some(max_chars) = max_chars {
         let mut total = 0usize;
-        let keep = merged
+        let keep = memories
             .iter()
             .enumerate()
             .take_while(|(index, entry)| {
@@ -140,9 +150,9 @@ pub fn merge_recalled(
                 *index == 0 || total <= max_chars
             })
             .count();
-        merged.truncate(keep);
+        memories.truncate(keep);
     }
-    Ok(merged)
+    Ok(())
 }
 
 pub(crate) fn fts_query(query: &str, mode: MatchMode) -> String {

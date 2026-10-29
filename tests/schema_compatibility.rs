@@ -28,10 +28,10 @@ fn rows(connection: &Connection, table: &str) -> Vec<Vec<Value>> {
         .unwrap()
 }
 
-fn legacy(path: &std::path::Path) -> Connection {
+fn current_fixture(path: &std::path::Path) -> Connection {
     let connection = Connection::open(path).unwrap();
     connection
-        .execute_batch(include_str!("fixtures/schema-1.0.sql"))
+        .execute_batch(include_str!("fixtures/schema-2.0.sql"))
         .unwrap();
     connection
 }
@@ -43,7 +43,10 @@ fn new_store_has_activity_and_hints_in_the_same_main_database() {
 
     let connection = store::open(&path).unwrap();
 
-    assert_eq!(version(&connection), (2, 0));
+    assert_eq!(version(&connection), (2, 1));
+    assert!(connection
+        .prepare("SELECT organized_at FROM memories")
+        .is_ok());
     assert!(connection
         .prepare("SELECT sequence FROM activity_events")
         .is_ok());
@@ -57,21 +60,24 @@ fn new_store_has_activity_and_hints_in_the_same_main_database() {
 }
 
 #[test]
-fn legacy_bridge_preserves_all_business_rows_and_search() {
+fn current_upgrade_preserves_all_business_rows_history_and_search() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("legacy.db");
-    let connection = legacy(&path);
+    let connection = current_fixture(&path);
     connection.execute_batch("INSERT INTO domains VALUES('rust/cli','before');
       INSERT INTO repository_domain_attachments VALUES('repository:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','rust/cli',0);
       INSERT INTO memories(id,content,created_at,updated_at,placement_kind,domain_id) VALUES(41,'bridge searchable','before','before','domain','rust/cli');
       INSERT INTO memory_provenance VALUES(41,7,'universal',NULL,NULL,'copy','existing-operation','before','preserve note');
-      INSERT INTO operation_ledger VALUES('existing-operation','repository:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','fingerprint','copy','{}','before');").unwrap();
+       INSERT INTO operation_ledger VALUES('existing-operation','repository:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','fingerprint','copy','{}','before');
+       INSERT INTO activity_events VALUES(1,'history','write','write',0,'before','{}');
+       INSERT INTO repository_metadata VALUES('repository:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','name','/vanished','origin','before',0);").unwrap();
     let tables = [
         "domains",
         "repository_domain_attachments",
-        "memories",
         "memory_provenance",
         "operation_ledger",
+        "activity_events",
+        "repository_metadata",
     ];
     let before: Vec<_> = tables
         .iter()
@@ -81,7 +87,17 @@ fn legacy_bridge_preserves_all_business_rows_and_search() {
 
     let upgraded = store::open(&path).unwrap();
 
-    assert_eq!(version(&upgraded), (2, 0));
+    assert_eq!(version(&upgraded), (2, 1));
+    assert_eq!(
+        upgraded
+            .query_row(
+                "SELECT content, organized_at FROM memories WHERE id=41",
+                [],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
+            )
+            .unwrap(),
+        ("bridge searchable".into(), None)
+    );
     assert_eq!(
         tables
             .iter()
@@ -102,88 +118,53 @@ fn legacy_bridge_preserves_all_business_rows_and_search() {
 }
 
 #[test]
-fn readonly_legacy_reports_upgrade_without_touching_new_tables() {
+fn readonly_current_reports_upgrade_without_ddl() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("legacy.db");
-    drop(legacy(&path));
+    drop(current_fixture(&path));
     let before = std::fs::read(&path).unwrap();
 
     let inspected = inspection::inspect(&path, &repository()).unwrap();
 
     assert_eq!(inspected.core_status, "upgrade_needed");
     assert_eq!(inspected.activity_status, "upgrade_needed");
-    assert_eq!(inspected.schema_version.as_deref(), Some("1.0"));
+    assert_eq!(inspected.schema_version.as_deref(), Some("2.0"));
     assert!(inspected.visible.is_none());
     assert_eq!(std::fs::read(&path).unwrap(), before);
 }
 
 #[test]
-fn future_minor_preserves_extensions_and_uses_defaults_for_baseline_inserts() {
-    let directory = tempfile::tempdir().unwrap();
-    let path = directory.path().join("future.db");
-    let connection = store::open(&path).unwrap();
-    connection.execute_batch("ALTER TABLE memories ADD COLUMN future_label TEXT NOT NULL DEFAULT 'future-default';
-      ALTER TABLE schema_metadata ADD COLUMN publisher TEXT DEFAULT 'future';
-      CREATE TABLE future_links(memory_id INTEGER REFERENCES memories(id) ON DELETE CASCADE, label TEXT);
-      CREATE INDEX future_label_index ON memories(future_label);
-      CREATE TRIGGER future_link AFTER INSERT ON memories BEGIN INSERT INTO future_links VALUES(new.id,'linked'); END;
-      UPDATE schema_metadata SET minor=7;").unwrap();
-    drop(connection);
-
-    let reopened = store::open(&path).unwrap();
-    let id = store::remember(
-        &reopened,
-        "future baseline insert",
-        "note",
-        "",
-        "global",
-        true,
-        None,
-    )
-    .unwrap();
-
-    assert_eq!(version(&reopened), (2, 7));
-    assert_eq!(
-        reopened
-            .query_row(
-                "SELECT future_label FROM memories WHERE id=?1",
-                [id],
-                |row| row.get::<_, String>(0)
+fn unsupported_versions_refuse_without_mutation() {
+    for (major, minor) in [(1, 0), (2, 2), (3, 0)] {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("future.db");
+        let connection = current_fixture(&path);
+        connection
+            .execute(
+                "UPDATE schema_metadata SET major=?1,minor=?2",
+                [major, minor],
             )
-            .unwrap(),
-        "future-default"
-    );
-    assert_eq!(
-        reopened
-            .query_row(
-                "SELECT label FROM future_links WHERE memory_id=?1",
-                [id],
-                |row| row.get::<_, String>(0)
-            )
-            .unwrap(),
-        "linked"
-    );
-    assert_eq!(
-        inspection::inspect(&path, &repository())
-            .unwrap()
-            .schema_version
-            .as_deref(),
-        Some("2.7")
-    );
+            .unwrap();
+        drop(connection);
+        let before = std::fs::read(&path).unwrap();
+        assert!(store::open(&path).is_err());
+        assert!(inspection::inspect(&path, &repository()).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
 }
 
 #[test]
-fn explicit_activity_preparation_bridges_main_and_ignores_corrupt_old_auxiliary() {
+fn explicit_activity_preparation_upgrades_current_and_ignores_old_auxiliary() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("legacy.db");
-    drop(legacy(&path));
+    drop(current_fixture(&path));
     let auxiliary = directory.path().join("legacy.db.activity.sqlite");
     std::fs::write(&auxiliary, b"old auxiliary is opaque").unwrap();
 
     let prepared = ActivityStore::open(&path).unwrap();
 
     assert_eq!(prepared.path(), path);
-    assert_eq!(version(&Connection::open(&path).unwrap()), (2, 0));
+    assert_eq!(version(&Connection::open(&path).unwrap()), (2, 1));
     assert_eq!(
         std::fs::read(auxiliary).unwrap(),
         b"old auxiliary is opaque"

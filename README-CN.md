@@ -12,10 +12,10 @@ OpenCode 是唯一官方支持的集成。插件通过包内绝对路径的 CLI 
 
 ## 安装
 
-为当前用户安装 v0.3.0 CLI、OpenCode 插件和运行时 skill：
+为当前用户安装 v0.4.0 CLI、OpenCode 插件和运行时 skill：
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.3.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.4.0 memocap-setup install --global --yes --json
 ```
 
 需要 Node.js 22.20 或更高版本、npm/npx 和 OpenCode 1.19.3。npm 包包含完整
@@ -32,8 +32,8 @@ Agent 进行已获授权的非交互安装或更新时，按[Agent 指南](docs/
 
 全局 `--repo <PATH>` 显式选择真实仓库路径；只有 recall 可重复指定，最多八个目标。
 写操作始终只有一个目标。全局 `--json` 返回 format-1 receipt，供自动化使用；
-`serve` 和 `ui` 不支持它。package `0.3.0`、core schema `2.0`、receipt format
-`1` 是独立版本。
+`serve` 和 `ui` 不支持它。package `0.4.0`、core schema `2.1`、receipt format
+`1` 是彼此独立的标识。
 
 ```text
 memocap remember [--type <TYPE>] [--tags <TAGS>] [--force] [--id <ID>] [--domain <DOMAIN> | --universal] [--topic <TOPIC>] <CONTENT>
@@ -85,10 +85,10 @@ activity 状态。本次请求已有有效插件 receipt（包括空结果或有
 `list --placement <PLACEMENT> --limit 20 --offset 0` 分页查看精确 placement。
 `status --read-only --json` 检查 core 和 activity 兼容性，不产生逻辑写入：不写入
 数据或 schema、不初始化或迁移主数据库、不裁剪历史，也不记录 activity。普通记忆命令
-（例如 `memocap list`）使用 read-write open，可能初始化缺失数据库，或将 schema `1.0`
-桥接到 `2.0`。`activity list/show` 使用 read-only 访问，不会准备数据库。SQLite
+（例如 `memocap list`）使用 read-write open，可能初始化缺失数据库，或将精确支持的
+schema `2.0` 升级到 `2.1`。`activity list/show` 使用 read-only 访问，不会准备数据库。SQLite
 `READ_ONLY` 连接仍可能协调 WAL/SHM sidecar；普通 WAL 检查不需要 owner snapshot。
-`activity prepare` 显式准备本地主数据库，创建 schema `2.0` 或桥接精确注册的 `1.0`；
+`activity prepare` 显式准备本地主数据库，创建 schema `2.1` 或升级精确支持的 `2.0`；
 准备过程可能裁剪保留的 activity。远程准备由服务器管理员负责。完整边界见
 [schema versioning contract](docs/SCHEMA-VERSIONING.md)。
 
@@ -99,11 +99,31 @@ Recall/injection 最长保留 30 天、最多 10,000 条；write 元数据最多
 自动打开、导入、改写或删除，其中的历史不会出现在新查询中。静止旧 writer 后的个人丢弃
 必须是另行授权的选择。
 
-插件提供 `memocap_recall`、`memocap_remember`、`memocap_scope` tools。
+插件提供 `memocap_recall`、`memocap_remember`、`memocap_scope` 和
+`memocap_organize` tools。
 `/memory status`、`/memory recall`、`/memory scope <PATH...>`、`/memory scopes`、
 `/memory list`、`/memory recent`、`/memory why` 可查看会话目标和 recall receipt。
 准备进入模型输入不证明模型理解或采用。权限及显式切换目标规则见
 [runtime skill](skills/memocap/SKILL.md)。
+
+## 记忆整理
+
+运行 `/memory organize` 可检查已保存的记忆。默认扫描所有 placement 中尚未整理的
+记录，包括被 shadow 的记录。`/memory organize --all` 或 `/memory organize -a` 还会检查
+此前整理过的记录。`/memory help` 展示命令形式，不会打开数据库。
+使用 `/memory organize --help` 或 `/memory organize -h` 查看完整说明。待整理扫描为空时，
+提示“没有未整理记忆”，并建议使用 `-a`；不会自动启动第二次扫描。
+
+记忆整理只支持本地数据库。配置了 remote mode 时，该请求会被拒绝，不会回退到本地，
+也不会新增远程整理能力；现有远程操作不变。完整候选集会先分页扫描完，再报告扫描完成。
+预览会列出精确 ID、placement、原文、建议动作、新内容、理由、证据和适用范围。用户确认
+具体变更组并通过权限感知整理工具授权后，才会写入。每组单独提交，并在提交后读回验证。
+发现冲突时必须重新评估；结果不确定时先读取，不会为验证而重放写入。
+
+确认的 keep、refine 和同 placement merge 只会在事务成功后标记幸存记录已整理；delete
+会删除记录。被拒绝、失败、有冲突或等待证据的记录保持不变。新记忆和 copy 创建的记录
+均为未整理状态；move 和普通编辑保留原整理状态。`--all` 只扩大检查范围，不触发自动分类。
+完整流程和判断规则见按需加载的[记忆整理指南](skills/memocap/references/memory-organization.md)。
 
 ## Scope 和 visible stack
 
@@ -184,10 +204,10 @@ remote repository ID。
 ## Policy boundaries
 
 OpenCode skill 的 memory-admission 与 least-sharing policy 是 model guidance。它只接纳
-稳定的 repository convention、持续的 preference，以及理由未被持久、权威且易查询来源
-保留的 continuing decision，再选择 repository、attached-domain 或 universal placement。
-临时状态保留在其 source system 中。它不会自动分类、扫描 secret、保证合规。这不是
-compliance guarantee，也不会自动创建或挂载 domain。
+持久的 convention、长期 preference 和持续有效的 decision；这些内容必须可复用或能影响
+未来判断与行动，且有用理由未被持久、权威、易查询的来源记录。临时状态保留在其 source
+system 中。placement 选择满足目标复用所需的最窄范围。此 policy 不自动分类、扫描 secret、
+保证合规，也不会自动创建或挂载 domain。
 
 Runtime validation 是另一层。CLI 和 server 会验证 repository ID、domain
 registry、当前 repository attachment、精确 placement 和 operation fingerprint。
@@ -196,11 +216,12 @@ Namespace selection 还是另一层：`--domain`、`--universal` 和默认 visib
 
 ## Schema 和 data loss
 
-打开旧版本数据库前先读[SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md)。精确注册的
-schema `1.0` 会桥接到 `2.0`，不重建 core 表，也不改变 memory ID 和 placement。
-预版本、未知、畸形或不支持的 schema 会被拒绝，不会 reset。升级旧库前，使用 SQLite
-backup API 或其他 WAL-aware 方法备份。v0.1.0 和 v0.0.10 binary 都无法打开 schema `2.0`；
-切换软件版本不等于恢复数据。不要用旧备份覆盖更新的 schema `2.0` 数据。
+打开旧版本数据库前先读[SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md)。新数据库使用
+schema `2.1`；只有精确且受支持的 schema `2.0` 可以升级到 `2.1`，不重建 core 表，也不
+改变 memory ID 或 placement。schema `1.0`、预版本、未知、未来版本和畸形数据库会被拒绝，
+不会 reset。升级 `2.0` 前，使用 SQLite backup API 或其他 WAL-aware 方法备份。切换
+package 版本不会更改或恢复数据库数据。不要用旧备份覆盖更新的数据。package `0.4.0`、
+schema `2.1` 和 receipt format `1` 是彼此独立的标识。
 
 ## 对照
 

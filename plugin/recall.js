@@ -13,6 +13,11 @@ function ownReference(part) {
     part.metadata.memocap.trust === "untrusted_reference";
 }
 
+function quietCommand(parts) {
+  return parts.some((part) => part.synthetic === true && part.metadata?.memocap?.owner === "memocap_command" &&
+    part.metadata.memocap.suppress_auto_recall === true && ["organize", "help"].includes(part.metadata.memocap.command));
+}
+
 export function createRecallRuntime(input, options = {}, invoke = run) {
   const sessions = new Map();
   const warnings = [];
@@ -121,6 +126,12 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
   }
 
   async function capture(hookInput, output) {
+    if (output.message.role === "user" && quietCommand(output.parts)) {
+      const state = stateFor(output.message.sessionID ?? hookInput.sessionID);
+      invalidate(state);
+      state.messageID = output.message.id;
+      return;
+    }
     const text = realText(output.parts);
     if (output.message.role !== "user" || !text.trim()) return;
     const state = stateFor(output.message.sessionID ?? hookInput.sessionID);
@@ -133,6 +144,11 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
     if (disposed) return;
     for (const message of output.messages) {
       message.parts = message.parts.filter((part) => !ownReference(part));
+    }
+    const latest = output.messages.findLast((entry) => entry.info.role === "user");
+    if (latest && quietCommand(latest.parts)) {
+      invalidate(stateFor(latest.info.sessionID));
+      return;
     }
     const message = output.messages.findLast((entry) => entry.info.role === "user" && realText(entry.parts).trim());
     if (!message) return;

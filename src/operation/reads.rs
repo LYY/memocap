@@ -48,7 +48,7 @@ pub(super) fn execute(
                 limit: *limit,
                 max_chars: *max_chars,
             };
-            let all = store::recall_targets(
+            let mut returned = store::recall_targets(
                 connection,
                 &targets,
                 store::RecallOptions {
@@ -57,9 +57,9 @@ pub(super) fn execute(
                     ..options
                 },
             )?;
-            receipt.matched_ids = all.iter().map(|entry| entry.memory.id).collect();
-            let returned = store::recall_targets(connection, &targets, options)?;
-            receipt.truncated = returned.len() < all.len();
+            receipt.matched_ids = returned.iter().map(|entry| entry.memory.id).collect();
+            store::budget_targeted_memories(&mut returned, options.limit, options.max_chars)?;
+            receipt.truncated = returned.len() < receipt.matched_ids.len();
             receipt.results = returned
                 .into_iter()
                 .map(|entry| MemoryResult {

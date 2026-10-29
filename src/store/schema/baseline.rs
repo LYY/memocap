@@ -4,7 +4,7 @@ CREATE TABLE schema_metadata (
     major INTEGER NOT NULL CHECK (major >= 1),
     minor INTEGER NOT NULL CHECK (minor >= 0)
 );
-INSERT INTO schema_metadata (singleton, major, minor) VALUES (1, 2, 0);
+INSERT INTO schema_metadata (singleton, major, minor) VALUES (1, 2, 1);
 CREATE TABLE domains (
     domain_id TEXT PRIMARY KEY,
     created_at TEXT NOT NULL
@@ -28,6 +28,7 @@ CREATE TABLE memories (
     placement_kind TEXT NOT NULL DEFAULT 'universal' CHECK (placement_kind IN ('repository', 'domain', 'universal')),
     repository_id TEXT,
     domain_id TEXT REFERENCES domains(domain_id) ON DELETE RESTRICT,
+    organized_at TEXT DEFAULT NULL,
     CHECK (
         (placement_kind = 'repository' AND repository_id IS NOT NULL AND domain_id IS NULL)
         OR (placement_kind = 'domain' AND repository_id IS NULL AND domain_id IS NOT NULL)

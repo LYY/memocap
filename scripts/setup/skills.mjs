@@ -3,12 +3,8 @@ import path from "node:path";
 import { inspectPolicy } from "../../lib/policy.mjs";
 import { SetupError } from "./arguments.mjs";
 import { isMemocap, parseConfig } from "./config.mjs";
-import { fingerprint } from "./files.mjs";
 import { copyPolicy, policyDirectory } from "./policy.mjs";
 import { inventorySkills, resolvedSkillPath } from "./skill-discovery.mjs";
-import { legacyPlan, skillLock } from "./skill-legacy.mjs";
-
-export { skillLock } from "./skill-legacy.mjs";
 
 function physicalPath(directory) {
   if (fs.existsSync(directory)) return fs.realpathSync(directory);
@@ -28,7 +24,6 @@ export function discoverSkill(scope, runtime, record) {
   const managed = record?.skill?.kind === "managed" ? record.skill : null;
   const candidates = [...inventory.discovered];
   if (!managed && fs.existsSync(canonical) && !candidates.some((candidate) => candidate.path === fs.realpathSync(canonical))) candidates.push({ path: fs.realpathSync(canonical), discovery_path: null, registrations: [] });
-  if (!managed) for (const candidate of candidates) candidate.fingerprint = fingerprint(candidate.path);
   const selected = managed ? candidates.find((candidate) => physicalPath(candidate.path) === physicalPath(managed.path)) || null : candidates[0] || null;
   let observed = null;
   let inspectionError = null;
@@ -37,12 +32,12 @@ export function discoverSkill(scope, runtime, record) {
     catch (error) { inspectionError = { code: error.code || "policy_invalid", message: error.message }; }
   }
   if (selected && managed) Object.assign(selected, { kind: "managed", digest: observed?.digest || null, mainPath: observed?.mainPath || managed.mainPath, version: managed.version });
-  return { ...inventory, canonical, candidates, selected, observed, inspectionError, managed, lock: skillLock(scope, runtime) };
+  return { ...inventory, canonical, candidates, selected, observed, inspectionError, managed };
 }
 
 export function assertSkillOwnership(inspection, record, context) {
   if (!inspection.managed) {
-    inspection.migration = legacyPlan(inspection, record, context);
+    if (record?.skill || inspection.candidates.length) throw new SetupError("unowned_skill", "Cannot prove managed ownership of existing memocap skill", inspection.candidates);
     return;
   }
   const managed = inspection.managed;
@@ -75,7 +70,7 @@ function remainingReferences(scope, context, skill) {
 
 export function removeSkill(scope, context, record) {
   const skill = record.skill;
-  if (skill?.kind !== "managed") return { status: "retained_legacy", path: skill?.path || null };
+  if (skill?.kind !== "managed") throw new SetupError("unowned_skill", "Cannot remove a skill without managed ownership");
   const references = remainingReferences(scope, context, skill);
   if (references.length) return { status: "retained_shared", path: skill.path, references,
     known_owners: Object.entries(context.manifest.installs).filter(([id, record]) => id !== scope.id && record.skill?.path === skill.path).map(([id]) => id) };

@@ -255,12 +255,24 @@ test("default deadline is three seconds and pre-abort never starts a child", asy
 test("handshake time is deducted from the command deadline", async (context) => {
   const { directory, run } = await fixture(context, `
     require("node:fs").writeFileSync("command-started", "yes");
-    setTimeout(() => { ${success} }, 350);
-  `, `setTimeout(() => console.log("memocap ${version}"), 300)`);
-  const started = Date.now();
-  await assert.rejects(run(["recall", "query"], { cwd: directory, deadlineMs: 600 }), { code: "timeout" });
-  assert.equal(fs.existsSync(path.join(directory, "command-started")), true);
-  assert.ok(Date.now() - started < 850);
+    ${success}
+  `, `
+    require("node:fs").writeFileSync("handshake-completed", String(process.pid));
+    console.log("memocap ${version}");
+  `);
+  const handshakeCompleted = path.join(directory, "handshake-completed");
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  const clock = context.mock.method(Date, "now", () => fs.existsSync(handshakeCompleted) ? 600 : 0);
+  try {
+    await assert.rejects(run(["recall", "query"], { cwd: directory, deadlineMs: 600 }),
+      { code: "timeout", phase: "command", outcome: "not_started" });
+    assert.equal(fs.existsSync(handshakeCompleted), true);
+    assert.equal(fs.existsSync(path.join(directory, "command-started")), false);
+  } finally {
+    clock.mock.restore();
+    context.mock.timers.reset();
+  }
+  await assertGone(Number(fs.readFileSync(handshakeCompleted, "utf8")));
 });
 
 test("invalid argv, cwd and deadline reject before launching", async (context) => {
@@ -270,4 +282,19 @@ test("invalid argv, cwd and deadline reject before launching", async (context) =
     [["recall"], { cwd: directory, deadlineMs: -1 }]]) {
     await assert.rejects(run(argv, options), { code: "invalid_request" });
   }
+});
+
+test("optional stdin carries literal UTF8 to EOF under a copied environment without argv disclosure", async (context) => {
+  const { directory, run } = await fixture(context, `
+    let raw = ''; process.stdin.setEncoding('utf8');
+    process.stdin.on('data', chunk => raw += chunk);
+    process.stdin.on('end', () => console.log(JSON.stringify({format_version:1,status:'ok',
+      stdin:raw,argv:process.argv.slice(2),database:process.env.MEMOCAP_DB})));
+  `);
+  const stdin = JSON.stringify({ content: 'literal $(touch forbidden)\n中文 "quote"' });
+  const { receipt } = await run(['organize', 'apply'], { cwd: directory, stdin,
+    env: { ...process.env, MEMOCAP_DB: '/frozen/db' } });
+  assert.equal(receipt.stdin, stdin);
+  assert.equal(receipt.database, '/frozen/db');
+  assert.deepEqual(receipt.argv, ['organize', 'apply', '--json']);
 });

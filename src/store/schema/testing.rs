@@ -2,10 +2,10 @@ use super::*;
 use rusqlite::hooks::{AuthAction, AuthContext, Authorization, TransactionOperation};
 
 #[test]
-fn bridge_ddl_and_metadata_roll_back_together_on_authorizer_failure() {
+fn upgrade_ddl_and_metadata_roll_back_together_on_authorizer_failure() {
     let mut connection = Connection::open_in_memory().unwrap();
     connection
-        .execute_batch(include_str!("../../../tests/fixtures/schema-1.0.sql"))
+        .execute_batch(include_str!("../../../tests/fixtures/schema-2.0.sql"))
         .unwrap();
     connection.authorizer(Some(|context: AuthContext<'_>| match context.action {
         AuthAction::Update {
@@ -20,10 +20,12 @@ fn bridge_ddl_and_metadata_roll_back_together_on_authorizer_failure() {
     assert!(failed.is_err());
     assert_eq!(
         version(&connection).unwrap(),
-        SchemaVersion { major: 1, minor: 0 }
+        SchemaVersion { major: 2, minor: 0 }
     );
-    assert!(validation::exact_legacy(&connection).unwrap());
-    assert!(connection.prepare("SELECT * FROM activity_events").is_err());
+    assert!(validate(&connection).is_ok());
+    assert!(connection
+        .prepare("SELECT organized_at FROM memories")
+        .is_err());
 }
 
 #[test]
@@ -35,7 +37,7 @@ fn concurrent_creators_and_migrators_recheck_after_lock() {
         anchor.execute_batch("PRAGMA journal_mode=WAL;").unwrap();
         if initialized {
             anchor
-                .execute_batch(include_str!("../../../tests/fixtures/schema-1.0.sql"))
+                .execute_batch(include_str!("../../../tests/fixtures/schema-2.0.sql"))
                 .unwrap();
         }
         let barrier = std::sync::Arc::new(std::sync::Barrier::new(4));
@@ -92,24 +94,28 @@ fn concurrent_creators_and_migrators_recheck_after_lock() {
         );
         assert_eq!(
             version(&anchor).unwrap(),
-            SchemaVersion { major: 2, minor: 0 }
+            SchemaVersion { major: 2, minor: 1 }
         );
     }
 }
 
 #[test]
-fn interrupted_activity_ddl_rolls_back_for_fresh_creation_and_bridge() {
+fn interrupted_ddl_rolls_back_for_fresh_creation_and_upgrade() {
     for legacy in [false, true] {
         let mut connection = Connection::open_in_memory().unwrap();
         if legacy {
             connection
-                .execute_batch(include_str!("../../../tests/fixtures/schema-1.0.sql"))
+                .execute_batch(include_str!("../../../tests/fixtures/schema-2.0.sql"))
                 .unwrap();
         }
         let before = structure::objects(&connection).unwrap();
         connection.authorizer(Some(|context: AuthContext<'_>| match context.action {
             AuthAction::CreateTable {
                 table_name: "repository_metadata",
+            } => Authorization::Deny,
+            AuthAction::AlterTable {
+                table_name: "memories",
+                ..
             } => Authorization::Deny,
             _ => Authorization::Allow,
         }));
