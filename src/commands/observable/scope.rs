@@ -4,6 +4,7 @@ use memocap::operation::{Command as Action, DomainAction};
 
 pub(super) fn action(command: ScopeCommand) -> Result<Action> {
     Ok(match command {
+        ScopeCommand::Resolve => Action::ScopeResolve,
         ScopeCommand::Show => Action::ScopeShow,
         ScopeCommand::List { all: _ } => Action::Inventory,
         ScopeCommand::Copy {

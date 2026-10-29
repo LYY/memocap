@@ -1,5 +1,4 @@
 mod error;
-mod hints;
 mod model;
 mod schema;
 mod serde_ids;

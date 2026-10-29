@@ -12,6 +12,7 @@ pub mod paths;
 mod readonly;
 pub mod receipt;
 pub mod remote;
+pub mod repository;
 pub mod scope;
 pub mod server;
 pub mod store;

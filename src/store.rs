@@ -17,8 +17,8 @@ pub use domains::{
 };
 pub use inspection::{memory_by_id, open_readonly, open_strict_readonly};
 pub use transfers::{
-    copy_move, operation_status, replay_copy_move, CopyMoveAction, CopyMoveInput, CopyMoveRequest,
-    CopyMoveResult,
+    copy_move, copy_move_observed, operation_status, replay_copy_move, CopyMoveAction,
+    CopyMoveInput, CopyMoveRequest, CopyMoveResult,
 };
 pub(crate) use visible::budget_targeted_memories;
 pub use visible::{
@@ -121,6 +121,39 @@ pub fn remember_scoped(
 }
 
 pub fn remember_at(
+    connection: &Connection,
+    placement: &PlacementId,
+    content: &str,
+    kind: &str,
+    tags: &str,
+    options: RememberOptions<'_>,
+) -> Result<i64> {
+    if !connection.is_autocommit() {
+        return remember_in_transaction(connection, placement, content, kind, tags, options);
+    }
+    remember_with_descriptor(connection, placement, content, kind, tags, options, None)
+}
+
+pub fn remember_with_descriptor(
+    connection: &Connection,
+    placement: &PlacementId,
+    content: &str,
+    kind: &str,
+    tags: &str,
+    options: RememberOptions<'_>,
+    descriptor: Option<&crate::repository::Descriptor>,
+) -> Result<i64> {
+    let transaction =
+        rusqlite::Transaction::new_unchecked(connection, rusqlite::TransactionBehavior::Immediate)?;
+    let id = remember_in_transaction(&transaction, placement, content, kind, tags, options)?;
+    if let (PlacementId::Repository(repository), Some(descriptor)) = (placement, descriptor) {
+        crate::repository::record_identity(&transaction, repository, descriptor)?;
+    }
+    transaction.commit()?;
+    Ok(id)
+}
+
+fn remember_in_transaction(
     connection: &Connection,
     placement: &PlacementId,
     content: &str,

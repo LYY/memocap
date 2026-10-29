@@ -12,10 +12,10 @@ OpenCode 是唯一官方支持的集成。插件通过包内绝对路径的 CLI 
 
 ## 安装
 
-为当前用户安装 v0.4.0 CLI、OpenCode 插件和运行时 skill：
+为当前用户安装 v0.5.0 CLI、OpenCode 插件和运行时 skill：
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.4.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.5.0 memocap-setup install --global --yes --json
 ```
 
 需要 Node.js 22.20 或更高版本、npm/npx 和 OpenCode 1.19.3。npm 包包含完整
@@ -30,9 +30,10 @@ Agent 进行已获授权的非交互安装或更新时，按[Agent 指南](docs/
 下面是当前 CLI surface。placement selector 互斥。`<PLACEMENT>` 是
 `repository:<64 lowercase hex>`、`domain:<DOMAIN>` 或 `universal`。
 
-全局 `--repo <PATH>` 显式选择真实仓库路径；只有 recall 可重复指定，最多八个目标。
+全局 `--repo <PATH>` 显式选择真实仓库路径；recall 和 `scope resolve` 可重复指定，最多八个目标。
+也可使用与 `--repo` 互斥的 `--repository-id <ID>` 直接选择明确的 repository ID。
 写操作始终只有一个目标。全局 `--json` 返回 format-1 receipt，供自动化使用；
-`serve` 和 `ui` 不支持它。package `0.4.0`、core schema `2.1`、receipt format
+`serve` 和 `ui` 不支持它。package `0.5.0`、core schema `2.2`、receipt format
 `1` 是彼此独立的标识。
 
 ```text
@@ -41,6 +42,7 @@ memocap recall [--match all|any] [--limit <LIMIT>] [--type <TYPE>] [--max-chars 
 memocap list [--limit <LIMIT>] [--offset <OFFSET>] [--placement <PLACEMENT> | --domain <DOMAIN> | --universal]
 memocap forget [--domain <DOMAIN> | --universal] <ID>
 memocap scope show
+memocap scope resolve --json
 memocap scope list --all
 memocap scope domain create <DOMAIN>
 memocap scope domain attach <DOMAIN> [--before <DOMAIN>]
@@ -86,9 +88,9 @@ activity 状态。本次请求已有有效插件 receipt（包括空结果或有
 `status --read-only --json` 检查 core 和 activity 兼容性，不产生逻辑写入：不写入
 数据或 schema、不初始化或迁移主数据库、不裁剪历史，也不记录 activity。普通记忆命令
 （例如 `memocap list`）使用 read-write open，可能初始化缺失数据库，或将精确支持的
-schema `2.0` 升级到 `2.1`。`activity list/show` 使用 read-only 访问，不会准备数据库。SQLite
+schema `2.1` 升级到 `2.2`。`activity list/show` 使用 read-only 访问，不会准备数据库。SQLite
 `READ_ONLY` 连接仍可能协调 WAL/SHM sidecar；普通 WAL 检查不需要 owner snapshot。
-`activity prepare` 显式准备本地主数据库，创建 schema `2.1` 或升级精确支持的 `2.0`；
+`activity prepare` 显式准备本地主数据库，创建 schema `2.2` 或升级精确支持的 `2.1`；
 准备过程可能裁剪保留的 activity。远程准备由服务器管理员负责。完整边界见
 [schema versioning contract](docs/SCHEMA-VERSIONING.md)。
 
@@ -137,6 +139,22 @@ memocap scope show
 存在受支持的 Git remote 时，repository identity 保持稳定。remote 不明确或
 不支持时使用 Git common directory。Git 外使用规范化的非 Git 目录路径。输出
 的 repository ID 是 opaque 标识，不是用户选择的 ACL 或 tenant 名称。
+
+Schema `2.2` 将可选 identity 描述与 location 观察独立保存。响应中的
+`repository_context` 按完整 repository ID 做键；未知描述为 `identity: null`，
+没有观察为 `locations: []`。名称和 remote 可以重复，不会合并 ID；location 只表示
+曾观察到的路径，不承诺路径仍存在，读取上下文也不会扫描这些路径。
+描述或 checkout 缺失不影响 repository memory：
+
+```sh
+memocap --repository-id 'repository:<64 lowercase hex>' recall 'project convention' --json
+```
+
+`memocap_scope` 接受互斥的 `paths` 或 `repository_ids`，每个明确目标逐项经过
+host permission。`scope resolve --json` 只解析显式路径或 ID，不打开数据库、不写 Git。
+选定 ID 在 recall、list、remember 和 readback 中保持不变，不因可选历史路径消失而
+失效；访问源码仍需有效路径与权限。描述、location 和返回上下文都不授权扩大目标。
+历史语义补全仅在发布并本机安装后提出一次性确认计划，优先正常接口。
 
 默认 visible stack 顺序是：
 
@@ -191,8 +209,8 @@ Bearer 鉴权不提供传输保密性或完整性。默认 Compose 部署只在�
 可信加密网络边界；将 `MEMOCAP_ADDR` 设为其 `https://` endpoint。不要在所有宿主
 接口发布原始 HTTP 端口。
 
-JSON 操作先协商 `/v1/capabilities`，再调用 `/v1/receipt`；服务器不支持新语义时
-在发送操作前失败。既有 `/v1/status` 继续供旧客户端使用。route、trust boundary、
+当前 JSON 操作通过 `/v1/capabilities` 检查 server 版本，再调用 `/v1/receipt`；
+CLI 与 server 必须匹配 0.5.0，版本不符在 mutation 前拒绝，无旧请求 fallback 或新增能力协商。route、trust boundary、
 Compose 和 recovery 流程见[DEPLOYMENT.md](docs/DEPLOYMENT.md)。服务器严格校验
 remote repository ID。
 
@@ -217,11 +235,11 @@ Namespace selection 还是另一层：`--domain`、`--universal` 和默认 visib
 ## Schema 和 data loss
 
 打开旧版本数据库前先读[SCHEMA-VERSIONING.md](docs/SCHEMA-VERSIONING.md)。新数据库使用
-schema `2.1`；只有精确且受支持的 schema `2.0` 可以升级到 `2.1`，不重建 core 表，也不
-改变 memory ID 或 placement。schema `1.0`、预版本、未知、未来版本和畸形数据库会被拒绝，
-不会 reset。升级 `2.0` 前，使用 SQLite backup API 或其他 WAL-aware 方法备份。切换
-package 版本不会更改或恢复数据库数据。不要用旧备份覆盖更新的数据。package `0.4.0`、
-schema `2.1` 和 receipt format `1` 是彼此独立的标识。
+schema `2.2`；只有精确且受支持的 schema `2.1` 可以升级到 `2.2`，不重建 core 表，也不
+改变 memory ID 或 placement。schema `2.0`、`1.0`、预版本、未知、未来版本和畸形数据库会被拒绝，
+不会 reset。升级 `2.1` 前，使用 SQLite backup API 或其他 WAL-aware 方法备份。切换
+package 版本不会更改或恢复数据库数据。不要用旧备份覆盖更新的数据。package `0.5.0`、
+schema `2.2` 和 receipt format `1` 是彼此独立的标识。
 
 ## 对照
 

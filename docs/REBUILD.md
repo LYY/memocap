@@ -1,6 +1,6 @@
 # memocap v0.1.0 重开发基线（历史）
 
-本文记录 v0.1.0 当时的实现基线，不是当前 schema 2.0 规格。当前数据库生命周期见
+本文记录 v0.1.0 当时的实现基线，不是当前 schema 2.2 规格。当前数据库生命周期见
 [Schema Versioning Contract](SCHEMA-VERSIONING.md)；OpenCode 是唯一官方支持的集成。先读
 [README](../README.md)、[DEPLOYMENT](DEPLOYMENT.md) 和
 [Schema Versioning Contract](SCHEMA-VERSIONING.md)。本文只描述当时

@@ -23,6 +23,7 @@ pub struct RememberRequest<'a> {
     pub topic_key: Option<&'a str>,
     pub force: bool,
     pub overwrite_id: Option<i64>,
+    pub target: Option<&'a crate::receipt::Target>,
 }
 
 pub struct RecallRequest<'a> {
@@ -44,6 +45,7 @@ pub(super) enum RequestError {
     Http { status: u16, body: String },
     Transport(Box<ureq::Error>),
     Read(std::io::Error),
+    Protocol(anyhow::Error),
 }
 
 impl std::fmt::Display for RequestError {
@@ -55,6 +57,7 @@ impl std::fmt::Display for RequestError {
             }
             Self::Transport(error) => error.fmt(formatter),
             Self::Read(error) => error.fmt(formatter),
+            Self::Protocol(error) => error.fmt(formatter),
         }
     }
 }
@@ -65,6 +68,7 @@ impl std::error::Error for RequestError {
             Self::Http { .. } => None,
             Self::Transport(error) => Some(error),
             Self::Read(error) => Some(error),
+            Self::Protocol(error) => Some(error.as_ref()),
         }
     }
 }
@@ -84,6 +88,19 @@ pub(super) fn post<T: serde::Serialize>(
     path: &str,
     body: &T,
 ) -> std::result::Result<String, RequestError> {
+    if matches!(
+        path,
+        "/v1/memories/remember"
+            | "/v1/memories/forget"
+            | "/v1/memories/copy"
+            | "/v1/memories/move"
+            | "/v1/domains/create"
+            | "/v1/domains/delete"
+            | "/v1/domains/attach"
+            | "/v1/domains/detach"
+    ) {
+        receipts::verify_version(address, token).map_err(RequestError::Protocol)?;
+    }
     let address = address.trim().trim_end_matches('/');
     let request =
         ureq::post(&format!("{address}{path}")).set("Authorization", &format!("Bearer {token}"));

@@ -1,12 +1,17 @@
 use super::*;
 use rusqlite::hooks::{AuthAction, AuthContext, Authorization, TransactionOperation};
 
-#[test]
-fn upgrade_ddl_and_metadata_roll_back_together_on_authorizer_failure() {
-    let mut connection = Connection::open_in_memory().unwrap();
+fn prior(connection: &Connection) {
     connection
         .execute_batch(include_str!("../../../tests/fixtures/schema-2.0.sql"))
         .unwrap();
+    connection.execute_batch("ALTER TABLE memories ADD COLUMN organized_at TEXT DEFAULT NULL; UPDATE schema_metadata SET minor=1;").unwrap();
+}
+
+#[test]
+fn upgrade_ddl_and_metadata_roll_back_together_on_authorizer_failure() {
+    let mut connection = Connection::open_in_memory().unwrap();
+    prior(&connection);
     connection.authorizer(Some(|context: AuthContext<'_>| match context.action {
         AuthAction::Update {
             table_name: "schema_metadata",
@@ -20,11 +25,11 @@ fn upgrade_ddl_and_metadata_roll_back_together_on_authorizer_failure() {
     assert!(failed.is_err());
     assert_eq!(
         version(&connection).unwrap(),
-        SchemaVersion { major: 2, minor: 0 }
+        SchemaVersion { major: 2, minor: 1 }
     );
     assert!(validate(&connection).is_ok());
     assert!(connection
-        .prepare("SELECT organized_at FROM memories")
+        .prepare("SELECT display_name FROM repository_identities")
         .is_err());
 }
 
@@ -36,9 +41,7 @@ fn concurrent_creators_and_migrators_recheck_after_lock() {
         let anchor = Connection::open(&path).unwrap();
         anchor.execute_batch("PRAGMA journal_mode=WAL;").unwrap();
         if initialized {
-            anchor
-                .execute_batch(include_str!("../../../tests/fixtures/schema-2.0.sql"))
-                .unwrap();
+            prior(&anchor);
         }
         let barrier = std::sync::Arc::new(std::sync::Barrier::new(4));
         let connections = (0..4)
@@ -94,7 +97,7 @@ fn concurrent_creators_and_migrators_recheck_after_lock() {
         );
         assert_eq!(
             version(&anchor).unwrap(),
-            SchemaVersion { major: 2, minor: 1 }
+            SchemaVersion { major: 2, minor: 2 }
         );
     }
 }
@@ -104,18 +107,12 @@ fn interrupted_ddl_rolls_back_for_fresh_creation_and_upgrade() {
     for legacy in [false, true] {
         let mut connection = Connection::open_in_memory().unwrap();
         if legacy {
-            connection
-                .execute_batch(include_str!("../../../tests/fixtures/schema-2.0.sql"))
-                .unwrap();
+            prior(&connection);
         }
         let before = structure::objects(&connection).unwrap();
         connection.authorizer(Some(|context: AuthContext<'_>| match context.action {
             AuthAction::CreateTable {
-                table_name: "repository_metadata",
-            } => Authorization::Deny,
-            AuthAction::AlterTable {
-                table_name: "memories",
-                ..
+                table_name: "repository_locations",
             } => Authorization::Deny,
             _ => Authorization::Allow,
         }));

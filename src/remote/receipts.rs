@@ -10,25 +10,12 @@ use std::time::Duration;
 #[derive(Deserialize)]
 struct Capabilities {
     format_version: u8,
+    package_version: String,
     capabilities: Vec<String>,
 }
 
 pub fn execute_receipt(address: &str, token: &str, request: &Request) -> Result<Receipt> {
-    let capabilities =
-        send(address, token, "/v1/capabilities", &serde_json::json!({})).map_err(|_| {
-            anyhow::anyhow!("remote server does not provide authenticated receipt capabilities")
-        })?;
-    let capabilities: Capabilities = serde_json::from_str(&capabilities)?;
-    ensure!(
-        capabilities.format_version == 1
-            && crate::inspection::CAPABILITIES
-                .iter()
-                .all(|required| capabilities
-                    .capabilities
-                    .iter()
-                    .any(|available| available == required)),
-        "remote server lacks required receipt, match, inventory or activity capability"
-    );
+    verify_version(address, token)?;
     match send(address, token, "/v1/receipt", request) {
         Ok(response) => match serde_json::from_str::<Receipt>(&response) {
             Ok(receipt)
@@ -48,6 +35,31 @@ pub fn execute_receipt(address: &str, token: &str, request: &Request) -> Result<
         }
         Err(_) => bail!("remote receipt request failed"),
     }
+}
+
+pub(super) fn verify_version(address: &str, token: &str) -> Result<()> {
+    let capabilities =
+        send(address, token, "/v1/capabilities", &serde_json::json!({})).map_err(|_| {
+            anyhow::anyhow!("remote server does not provide authenticated receipt capabilities")
+        })?;
+    let capabilities: Capabilities = serde_json::from_str(&capabilities)?;
+    ensure!(
+        capabilities.package_version == env!("CARGO_PKG_VERSION"),
+        "remote package version {} differs from client {}; install the same package version before continuing",
+        capabilities.package_version,
+        env!("CARGO_PKG_VERSION")
+    );
+    ensure!(
+        capabilities.format_version == 1
+            && crate::inspection::CAPABILITIES
+                .iter()
+                .all(|required| capabilities
+                    .capabilities
+                    .iter()
+                    .any(|available| available == required)),
+        "remote server lacks required receipt, match, inventory or activity capability"
+    );
+    Ok(())
 }
 
 fn recover(address: &str, token: &str, request: &Request) -> Result<Receipt> {

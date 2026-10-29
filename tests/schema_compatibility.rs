@@ -33,6 +33,7 @@ fn current_fixture(path: &std::path::Path) -> Connection {
     connection
         .execute_batch(include_str!("fixtures/schema-2.0.sql"))
         .unwrap();
+    connection.execute_batch("ALTER TABLE memories ADD COLUMN organized_at TEXT DEFAULT NULL; UPDATE schema_metadata SET minor=1;").unwrap();
     connection
 }
 
@@ -43,7 +44,7 @@ fn new_store_has_activity_and_hints_in_the_same_main_database() {
 
     let connection = store::open(&path).unwrap();
 
-    assert_eq!(version(&connection), (2, 1));
+    assert_eq!(version(&connection), (2, 2));
     assert!(connection
         .prepare("SELECT organized_at FROM memories")
         .is_ok());
@@ -87,7 +88,7 @@ fn current_upgrade_preserves_all_business_rows_history_and_search() {
 
     let upgraded = store::open(&path).unwrap();
 
-    assert_eq!(version(&upgraded), (2, 1));
+    assert_eq!(version(&upgraded), (2, 2));
     assert_eq!(
         upgraded
             .query_row(
@@ -128,14 +129,14 @@ fn readonly_current_reports_upgrade_without_ddl() {
 
     assert_eq!(inspected.core_status, "upgrade_needed");
     assert_eq!(inspected.activity_status, "upgrade_needed");
-    assert_eq!(inspected.schema_version.as_deref(), Some("2.0"));
+    assert_eq!(inspected.schema_version.as_deref(), Some("2.1"));
     assert!(inspected.visible.is_none());
     assert_eq!(std::fs::read(&path).unwrap(), before);
 }
 
 #[test]
 fn unsupported_versions_refuse_without_mutation() {
-    for (major, minor) in [(1, 0), (2, 2), (3, 0)] {
+    for (major, minor) in [(1, 0), (2, 0), (2, 3), (3, 0)] {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("future.db");
         let connection = current_fixture(&path);
@@ -164,7 +165,7 @@ fn explicit_activity_preparation_upgrades_current_and_ignores_old_auxiliary() {
     let prepared = ActivityStore::open(&path).unwrap();
 
     assert_eq!(prepared.path(), path);
-    assert_eq!(version(&Connection::open(&path).unwrap()), (2, 1));
+    assert_eq!(version(&Connection::open(&path).unwrap()), (2, 2));
     assert_eq!(
         std::fs::read(auxiliary).unwrap(),
         b"old auxiliary is opaque"

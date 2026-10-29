@@ -1,4 +1,4 @@
-use crate::{activity::RepositoryHint, scope::PlacementId, store};
+use crate::{scope::PlacementId, store};
 use anyhow::Result;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
@@ -7,8 +7,6 @@ use serde::{Deserialize, Serialize};
 pub struct PlacementInventory {
     pub placement: String,
     pub count: i64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub repository_hint: Option<RepositoryHint>,
 }
 
 pub fn placements(connection: &Connection) -> Result<Vec<PlacementInventory>> {
@@ -25,7 +23,6 @@ pub fn placements(connection: &Connection) -> Result<Vec<PlacementInventory>> {
         Ok(PlacementInventory {
             placement: row.get(0)?,
             count: row.get(1)?,
-            repository_hint: None,
         })
     })?;
     rows.collect::<rusqlite::Result<Vec<_>>>()

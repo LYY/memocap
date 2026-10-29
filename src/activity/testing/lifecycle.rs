@@ -174,27 +174,16 @@ fn parent_symlink_is_supported_but_main_file_symlink_is_refused() {
 }
 
 #[test]
-fn open_store_record_and_hint_update_report_busy_without_partial_event() {
+fn open_store_record_reports_busy_without_partial_event() {
     let directory = tempfile::tempdir().unwrap();
     let core = directory.path().join("db");
     let mut activity = ActivityStore::open(&core).unwrap();
     let lock = Connection::open(&core).unwrap();
     lock.execute_batch("BEGIN IMMEDIATE").unwrap();
     let original = event("locked-record");
-    let hint = RepositoryHint {
-        repository_id: repository('a'),
-        display_name: None,
-        canonical_path: None,
-        identity_source: None,
-        last_seen: original.started_at.clone(),
-    };
 
     assert!(matches!(
         activity.record(&original),
-        Err(ActivityError::Busy)
-    ));
-    assert!(matches!(
-        activity.update_repository_hint(&hint),
         Err(ActivityError::Busy)
     ));
 

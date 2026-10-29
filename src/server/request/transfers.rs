@@ -26,6 +26,7 @@ struct TransferIn {
     to: String,
     operation_id: String,
     note: Option<String>,
+    target: Option<crate::receipt::Target>,
 }
 
 #[derive(Deserialize)]
@@ -64,6 +65,7 @@ fn transfer(body: &str, action: CopyMoveAction) -> Result<Transfer, ParseError> 
     let repository = repository(&input.repository)?;
     let from = placement(Some(&input.from), &repository)?.ok_or(ParseError::Invalid)?;
     let to = placement(Some(&input.to), &repository)?.ok_or(ParseError::Invalid)?;
+    let target = super::current_target(input.target, &repository)?;
     let operation_id = input
         .operation_id
         .parse()
@@ -79,6 +81,8 @@ fn transfer(body: &str, action: CopyMoveAction) -> Result<Transfer, ParseError> 
             applicability_note: input.note,
         },
     )
+    .map_err(|_| ParseError::Invalid)?
+    .with_target(target)
     .map_err(|_| ParseError::Invalid)?;
     Ok(Transfer { request })
 }

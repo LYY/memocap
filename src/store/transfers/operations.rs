@@ -10,10 +10,17 @@ pub fn copy_move(
     connection: &mut rusqlite::Connection,
     request: CopyMoveRequest,
 ) -> Result<CopyMoveResult> {
+    copy_move_observed(connection, request).map(|(result, _)| result)
+}
+
+pub fn copy_move_observed(
+    connection: &mut rusqlite::Connection,
+    request: CopyMoveRequest,
+) -> Result<(CopyMoveResult, bool)> {
     let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
     if let Some(result) = replay_result(&transaction, &request)? {
         transaction.commit()?;
-        return Ok(result);
+        return Ok((result, true));
     }
     if request.from == request.to {
         bail!("source and destination placements must differ");
@@ -24,6 +31,11 @@ pub fn copy_move(
         CopyMoveAction::Copy => copy_memory(&transaction, &request)?,
         CopyMoveAction::Move => move_memory(&transaction, &request)?,
     };
+    if let (PlacementId::Repository(repository), Some(descriptor)) =
+        (&request.to, &request.descriptor)
+    {
+        crate::repository::record_identity(&transaction, repository, descriptor)?;
+    }
     let created_at = Utc::now().to_rfc3339();
     record_provenance(&transaction, &request, memory_id, &created_at)?;
     let result = CopyMoveResult {
@@ -49,7 +61,7 @@ pub fn copy_move(
         ],
     )?;
     transaction.commit()?;
-    Ok(result)
+    Ok((result, false))
 }
 
 fn validate_placement(

@@ -1,6 +1,6 @@
 # Install and Update
 
-This guide targets package `0.4.0` and Git tag `v0.4.0`. Keep the native CLI,
+This guide targets package `0.5.0` and Git tag `v0.5.0`. Keep the native CLI,
 OpenCode plugin, and managed skill on the same release.
 
 ## Requirements
@@ -25,13 +25,13 @@ See the [official OpenCode release](https://github.com/anomalyco/opencode/releas
 For a user-level integration:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.4.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.5.0 memocap-setup install --global --yes --json
 ```
 
 For one project, pass its absolute path and quote spaces:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.4.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
+npx --yes --package @lyy-gh/memocap@0.5.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
 ```
 
 Global and project select integration ownership, not memory placement. Memories
@@ -40,7 +40,7 @@ inheriting one exact matching global owner reuses it without adding a second
 plugin entry or skill path. Review reported project configuration before commit.
 
 After prerequisites and authorization, local install/update explicitly prepares
-a missing database at schema `2.1` or upgrades current schema `2.0` to `2.1`,
+a missing database at schema `2.2` or upgrades current schema `2.1` to `2.2`,
 then checks core and activity readiness by readback. Preparation may prune retained
 activity. Back up an existing database with SQLite's backup API or another
 WAL-aware method before updating. A raw file copy can omit committed WAL data.
@@ -64,14 +64,14 @@ layer; it does not move the skill directory. Setup preserves JSONC comments,
 unrelated entries, tuple options, and skill paths using a compare-and-swap edit.
 Concurrent edits are retained and reported as conflicts.
 
-Current setup ownership uses manifest format `2`. An installed v0.3.0 format-2
+Current setup ownership uses manifest format `2`. An installed v0.4.0 format-2
 record remains upgradable when it contains inert historical `migration`,
 `adoption`, or `steps.legacy_cleanup` fields. These fields do not authorize
 legacy takeover or cleanup. Unsupported manifest formats are refused. Unknown,
 changed, duplicate, shared, or ambiguous skill sources, remote `skills.urls`, and
 inactive config targets stop preflight. `--yes` never bypasses those protections.
 
-## Check and update from v0.3.0
+## Check and update from v0.4.0
 
 First inspect the selected integration:
 
@@ -80,17 +80,17 @@ memocap-setup check --global --json
 ```
 
 Read its `resolved_version` once, review the exact-target plan, and execute that
-same version after authorization. These examples target v0.4.0:
+same version after authorization. These examples target v0.5.0:
 
 ```sh
-memocap-setup update --to 0.4.0 --global --dry-run --json
-memocap-setup update --to 0.4.0 --global --yes --json
+memocap-setup update --to 0.5.0 --global --dry-run --json
+memocap-setup update --to 0.5.0 --global --yes --json
 ```
 
 To bootstrap the target worker explicitly:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.4.0 memocap-setup update --to 0.4.0 --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.5.0 memocap-setup update --to 0.5.0 --global --yes --json
 ```
 
 Use `--project "/absolute/path/to/repo"` for project scope. A different-version
@@ -107,22 +107,24 @@ npx bootstrap may download its pinned runner and write its npm cache first.
 Check without `--to` can query the stable registry version. Do not resolve
 `latest` again between planning and execution.
 
-The supported upgrade is current managed v0.3.0 format `2`, schema `2.0`, to
-v0.4.0 format `2`, schema `2.1`. Older legacy installers, ownership formats, and
+The supported upgrade is current managed v0.4.0 format `2`, schema `2.1`, to
+v0.5.0 format `2`, schema `2.2`. Older legacy installers, ownership formats, and
 schema-major transitions have no automatic recovery path in this release.
 
 ## Data and compatibility
 
-Package `0.4.0`, database schema `2.1`, setup manifest format `2`, and receipt
-format `1` are separate identities. The additive `2.0` to `2.1` upgrade keeps
+Package `0.5.0`, database schema `2.2`, setup manifest format `2`, and receipt
+format `1` are separate identities. The additive `2.1` to `2.2` upgrade keeps
 existing memories, IDs, placements, domains and attachments, provenance, operation
-ledger, activity, repository hints, and FTS. Existing rows begin pending
-organization; ordinary reads and recall preserve their previous meaning.
+ledger, activity, repository hints, FTS, and organization state. Identity and
+location metadata start empty; existing repository IDs remain authoritative.
 
-Read-only inspection of `2.0` reports `upgrade_needed` with observed version
-`2.0` and leaves it unchanged. Authorized local preparation performs the upgrade.
-Missing databases are created at `2.1`. Pre-versioned, malformed, unknown,
-unsupported schema `1.0`, and future schemas are refused without reset. See
+The new 0.5.0 CLI reports `upgrade_needed` for `2.1` without changing it.
+Before package upgrade, the actual 0.4.0 CLI reports `ready` for `2.1`; setup
+accepts that immediate-prior producer for preflight only. Installation requires
+the 0.5.0 CLI and an independent `ready`/`2.2` readback after preparation.
+Missing databases are created at `2.2`. Pre-versioned, malformed, unknown,
+schemas `2.0` and `1.0`, and future schemas are refused without reset. See
 [SCHEMA-VERSIONING.md](SCHEMA-VERSIONING.md) for the exact compatibility contract.
 
 Outside setup, a local administrator can run:
@@ -155,9 +157,9 @@ and `runtime` fields. Doctor exits zero only for `static_ready`.
 
 | Readiness | Meaning |
 | --- | --- |
-| `static_ready` | CLI, plugin, skill, initialized schema `2.1`, and activity are ready. |
+| `static_ready` | CLI, plugin, skill, initialized schema `2.2`, and activity are ready. |
 | `not_initialized` | Main database is missing; authorized local preparation is required. |
-| `upgrade_needed` | Current schema `2.0` needs explicit local preparation. |
+| `upgrade_needed` | Current schema `2.1` needs explicit local preparation. |
 | `activity_not_initialized` or `activity_degraded` | Activity is unavailable; preserve core success and warnings separately. |
 | `incomplete` | Required inspection or component state is incomplete. |
 
@@ -214,7 +216,7 @@ explicit `--project` path for project removal.
 ## Optional standalone skill for another agent
 
 ```sh
-npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.4.0 --skill memocap --agent '<other-agent-id>' --global --yes
+npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.5.0 --skill memocap --agent '<other-agent-id>' --global --yes
 ```
 
 This separate path uses the versioned GitHub tree and installs neither the CLI
@@ -226,9 +228,9 @@ and exit status to the same setup core.
 ## Windows PowerShell
 
 ```powershell
-npx --yes --package '@lyy-gh/memocap@0.4.0' memocap-setup install --global --yes --json
-npx --yes --package '@lyy-gh/memocap@0.4.0' memocap-setup install --project 'C:\work\my repo' --yes --json
+npx --yes --package '@lyy-gh/memocap@0.5.0' memocap-setup install --global --yes --json
+npx --yes --package '@lyy-gh/memocap@0.5.0' memocap-setup install --project 'C:\work\my repo' --yes --json
 memocap-setup check --global --json
-memocap-setup update --to 0.4.0 --global --dry-run --json
-memocap-setup update --to 0.4.0 --global --yes --json
+memocap-setup update --to 0.5.0 --global --dry-run --json
+memocap-setup update --to 0.5.0 --global --yes --json
 ```

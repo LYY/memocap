@@ -5,6 +5,7 @@ use anyhow::Result;
 use tiny_http::{Header, Method, Response, Server, StatusCode};
 
 mod committed;
+mod context;
 mod recall;
 mod request;
 mod routes;

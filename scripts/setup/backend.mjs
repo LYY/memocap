@@ -27,14 +27,14 @@ function receiptJSON(execution) {
   }
 }
 
-function validateInspection(receipt, status) {
+function validateInspection(receipt, status, priorProducer) {
   const inspection = receipt?.inspection;
   if (receipt?.format_version !== 1 || receipt.status !== "ok" || receipt.backend !== status.backend || !inspection ||
       receipt.origin !== (status.backend === "local" ? "cli" : "server") ||
       (inspection.activity_error !== null && typeof inspection.activity_error !== "string") ||
       (inspection.activity_status === "degraded" ? !inspection.activity_error : inspection.activity_error !== null) ||
       !Array.isArray(inspection.capabilities) || inspection.capabilities.some((name) => typeof name !== "string") ||
-      !validSchemaState(inspection) || !capabilities.every((name) => inspection.capabilities.includes(name))) {
+      !validSchemaState(inspection, priorProducer) || !capabilities.every((name) => inspection.capabilities.includes(name))) {
     throw new SetupError("backend_incompatible", "Backend inspection does not satisfy the single-database contract");
   }
   return inspection;
@@ -47,14 +47,14 @@ function validVisible(inspection) {
     Number.isSafeInteger(visible.effective_total) && visible.effective_total >= 0 && visible.effective_total <= visible.addressable_total;
 }
 
-function validSchemaState(inspection) {
+function validSchemaState(inspection, priorProducer) {
   switch (inspection.core_status) {
     case "not_initialized":
       return inspection.schema_version === null && inspection.visible === null && inspection.activity_status === "not_initialized";
     case "upgrade_needed":
-      return inspection.schema_version === "2.0" && inspection.visible === null && inspection.activity_status === "upgrade_needed";
+      return inspection.schema_version === "2.1" && inspection.visible === null && inspection.activity_status === "upgrade_needed";
     case "ready": {
-      return ["2.0", "2.1"].includes(inspection.schema_version) &&
+      return (inspection.schema_version === "2.2" || (priorProducer && inspection.schema_version === "2.1")) &&
         validVisible(inspection) &&
         ["ready", "degraded"].includes(inspection.activity_status);
     }
@@ -68,7 +68,7 @@ export async function backendStatus(context) {
   const backend = runtime.env.MEMOCAP_ADDR ? "remote" : "local";
   const executable = inspectionExecutable(context);
   const status = { backend, database: backend === "local" ? path.resolve(runtime.cwd, database) : null,
-    status: "not_run", core_schema: { expected: "2.1", status: "not_run" }, activity: { status: "not_run" },
+    status: "not_run", core_schema: { expected: "2.2", status: "not_run" }, activity: { status: "not_run" },
     remote_capabilities: { status: "not_run" }, database_preserved: true, executable_path: executable,
     reason: executable ? null : "cli_unavailable_without_cache_warmup" };
   report.backend = status;
@@ -94,11 +94,12 @@ async function inspectBackend(context, status) {
   const execution = await runtime.run(status.executable_path, ["status", "--read-only", "--json"], { env: runtime.env, cwd: runtime.cwd });
   const receipt = receiptJSON(execution);
   if (execution.code !== 0) throw new SetupError("backend_inspection_failed", "Backend read-only inspection failed", { backend_code: receipt?.error?.code || null });
-  const inspection = validateInspection(receipt, status);
+  const priorProducer = status.backend === "local" && context.report.shared_cli.version === "0.4.0" && context.target === "0.5.0";
+  const inspection = validateInspection(receipt, status, priorProducer);
   const token = runtime.env.MEMOCAP_TOKEN;
   if (token && inspection.activity_error) inspection.activity_error = inspection.activity_error.replaceAll(token, "[redacted]");
   Object.assign(status, { status: "ok", origin: receipt.origin, inspection,
-      core_schema: { expected: "2.1", observed: inspection.schema_version, status: inspection.core_status === "ready" ? "compatible" : inspection.core_status },
+      core_schema: { expected: "2.2", observed: inspection.schema_version, status: inspection.core_status === "ready" ? "compatible" : inspection.core_status },
       memory_status: inspection.core_status, activity: { status: inspection.activity_status, error: inspection.activity_error },
       remote_capabilities: { status: status.backend === "remote" ? "compatible" : "not_applicable", capabilities: inspection.capabilities } });
 }
@@ -107,6 +108,7 @@ export function backendReadiness(report) {
   const backend = report.backend;
   if (backend.status !== "ok") return "incomplete";
   if (backend.memory_status !== "ready") return backend.memory_status;
+  if (backend.core_schema.observed !== "2.2") return "upgrade_needed";
   if (backend.activity.status !== "ready") return `activity_${backend.activity.status}`;
   return report.repair_required || report.update_available ? "incomplete" : "static_ready";
 }
@@ -116,7 +118,7 @@ export function backendWarnings(report) {
   if (backend.activity.status === "degraded") report.warnings.push({ code: "activity_degraded", message: backend.activity.error });
   if (backend.backend === "remote" && ["not_initialized", "upgrade_needed"].includes(backend.memory_status)) report.warnings.push({ code: "server_admin_required", message: "The server administrator must prepare the main database locally" });
   if (backend.memory_status === "not_initialized") report.warnings.push({ code: "memory_not_initialized", message: "The main database requires explicit installation preparation" });
-  if (backend.memory_status === "upgrade_needed") report.warnings.push({ code: "upgrade_needed", message: "The observed schema 2.0 requires explicit installation preparation" });
+  if (backend.memory_status === "upgrade_needed") report.warnings.push({ code: "upgrade_needed", message: "The observed schema 2.1 requires explicit installation preparation" });
 }
 
 export async function prepareBackend(context) {
@@ -131,7 +133,7 @@ export async function prepareBackend(context) {
   catch (error) { executionError = error; }
   try { await backendStatus(context); }
   catch (error) { throw new SetupError("activity_outcome_unknown", "Main database preparation readback failed; inspect storage before retrying", { readback_code: error.code || null }); }
-  if (report.backend.memory_status !== "ready" || report.backend.core_schema.observed !== "2.1" || report.backend.activity.status !== "ready") throw new SetupError(executionError || execution.code ? "activity_outcome_unknown" : "activity_readback_failed", "Main database preparation was not verified; inspect storage before retrying");
+  if (report.backend.memory_status !== "ready" || report.backend.core_schema.observed !== "2.2" || report.backend.activity.status !== "ready") throw new SetupError(executionError || execution.code ? "activity_outcome_unknown" : "activity_readback_failed", "Main database preparation was not verified; inspect storage before retrying");
   context.manifest.backend = { status: "ready", operation: "activity_prepare", database: report.backend.database };
   return { status: "changed", recovered_after_error: Boolean(executionError) || execution.code !== 0 };
 }

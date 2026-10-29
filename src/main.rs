@@ -16,9 +16,13 @@ struct Cli {
     json: bool,
     #[arg(long, global = true)]
     caller_json: Option<memocap::operation::Caller>,
-    /// Select a local repository directory; repeat only for recall (up to 8).
-    #[arg(long, global = true)]
+    /// Select a local repository directory; repeat for recall or scope resolve (up to 8).
+    #[arg(long, global = true, conflicts_with_all = ["repository_id", "targets_json"])]
     repo: Vec<std::path::PathBuf>,
+    #[arg(long, global = true, conflicts_with = "targets_json")]
+    repository_id: Vec<scope::RepositoryId>,
+    #[arg(long, global = true, hide = true)]
+    targets_json: Option<String>,
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -127,6 +131,8 @@ pub(crate) enum Command {
 
 #[derive(Subcommand)]
 pub(crate) enum ScopeCommand {
+    /// Resolve selected targets without opening memory or changing Git configuration.
+    Resolve,
     /// Inspect every placement using core database counts.
     List {
         #[arg(long, required = true)]

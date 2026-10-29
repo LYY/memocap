@@ -12,7 +12,7 @@ fn explicit_remote_targets_select_real_server_repository_namespaces() {
     let server = Server::http("127.0.0.1:0").unwrap();
     let address = format!("http://{}", server.server_addr());
     let worker = thread::spawn(move || {
-        for _ in 0..9 {
+        for _ in 0..16 {
             let mut request = server
                 .recv_timeout(Duration::from_secs(5))
                 .unwrap()

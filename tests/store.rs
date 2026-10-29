@@ -425,7 +425,7 @@ fn empty_topics_do_not_shadow_and_overwrite_preserves_or_clears_topic() {
 }
 
 #[test]
-fn creates_and_reopens_schema_2_1() {
+fn creates_and_reopens_schema_2_2() {
     // Given
     let d = dir();
     let database = d.path().join("db");
@@ -444,7 +444,7 @@ fn creates_and_reopens_schema_2_1() {
                 Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
             })
             .unwrap(),
-        (2, 1)
+        (2, 2)
     );
     assert_eq!(
         reopened

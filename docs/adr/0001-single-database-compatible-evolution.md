@@ -1,18 +1,22 @@
 # ADR-0001：单数据库与兼容演进
 
-**状态：** Accepted；当前兼容范围于 2026-10-28 更新，原始决策保留为历史记录
+**状态：** Accepted；当前兼容范围于 2026-10-29 更新，原始决策保留为历史记录
 **原始日期：** 2026-10-24
-**最近更新：** 2026-10-28
+**最近更新：** 2026-10-29
 **决策者：** 用户
-**当前目标：** package 0.4.0 / schema 2.1；发布状态见 release workflow
+**当前目标：** package 0.5.0 / schema 2.2；发布状态见 release workflow
 
-## 当前决策（2026-10-28）
+## 当前决策（2026-10-29）
 
 用户当前只需管理自己的单一 SQLite 数据库。此前关于通用同主版本 minor 兼容、schema `1.0` 桥接和旧 baseline 二进制互操作的承诺已被本节取代。
 
-- 新数据库直接使用 schema `2.1`。唯一支持的升级是精确 schema `2.0` 到 `2.1`，事务性地新增 nullable `memories.organized_at` 并更新 schema metadata。现有记忆内容、ID、placement、type、tags、topic、时间、provenance、extensions、FTS、activity 和 operation ledger 均须保留。
-- schema `1.0`、预版本、损坏、不兼容和未来版本均明确拒绝，不做 reset 或自动重建。只读检查不执行升级。`2.1` 之后不承诺读取任意更高 minor；具体支持范围以 [当前 schema contract](../SCHEMA-VERSIONING.md) 为准。
-- 不作旧二进制打开 schema `2.1` 的互操作承诺。package `0.4.0`、schema `2.1` 和 receipt format `1` 是彼此独立的标识。
+- 新数据库直接使用 schema `2.2`。唯一支持的升级是精确 schema `2.1` 到 `2.2`，在 `BEGIN IMMEDIATE` 中复检版本、新增 `repository_identities` 和 `repository_locations`、更新 metadata 并验证后原子提交；失败整体 rollback。现有记忆内容、ID、placement、type、tags、topic、时间、organized 状态、domain 与 attachment、provenance、extensions、FTS、activity、operation ledger 和原 repository metadata/hints 均须保留。
+- schema `2.0`、`1.0`、预版本、损坏、不兼容和未来版本均明确拒绝，不串接旧迁移、不 reset 或自动重建。只读检查不升级、不 enrichment、不扫描文件系统；具体支持范围以 [当前 schema contract](../SCHEMA-VERSIONING.md) 为准。
+- repository ID 的派生与 scope 语义保持不变。identity 是可选描述，location 是可选历史观察；没有描述或可访问路径的 ID 仍能访问其记忆。普通运行不读取旧 hint 作为 fallback，不从名称、remote 或路径推断、合并或扩大目标。已选 ID 贯穿权限、操作和 readback，显式选取逐项经过 host permission。
+- known descriptor 与对应 memory 核心变更同事务写入；location 在核心提交后尽力记录，失败报告 warning，不重放 memory。描述不参与 operation fingerprint、replay 或 organization snapshot。
+- 不作旧二进制打开 schema `2.2` 的互操作承诺。CLI、plugin、runtime skill 与 server 使用当前 `0.5.0` 契约，版本不匹配严格拒绝，无旧请求 fallback 或新增 capability negotiation。package `0.5.0`、schema `2.2`、setup manifest format `2` 和 receipt format `1` 是彼此独立的标识。
+- 安装前允许实际已装 0.4.0 CLI 对 schema `2.1` 报告 `ready`；升级到 0.5.0 后只读检查报告 `upgrade_needed`/`2.1`，安装成功必须独立读回当前 CLI 的 `ready`/`2.2`。这只是立即前版安装过渡，不是通用旧版本兼容。
+- 语义补全仅在发布并本机安装 0.5.0 后提出一次性计划。优先正常接口与明确确认的路径；接口不足时再提议有具体清单的一次性受控操作。不增加长期 backfill command/skill、自动文件系统扫描或迁移框架，不自动提升旧 hints。
 - 记忆整理只支持本地数据库。配置了 remote target 时拒绝该功能，不回退到本地或新增网络协议；这不改变已有远程操作。
 - 本次决策保留原 ADR 对原子迁移、保留 core 数据、拒绝不确定结构和不以 reset 修复的原则。下文原始决策中的其他兼容承诺是历史背景，不是当前支持合同。
 

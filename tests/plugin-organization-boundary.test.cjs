@@ -35,6 +35,7 @@ test('database path discovery matches native precedence and freezes relative pat
     const frozen = freezeOrganization({ operation: 'page', request: '{}' }, current.toolContext);
     assert.equal(frozen.database, expected);
     assert.equal(frozen.env.MEMOCAP_DB, expected);
+    assert.equal(frozen.cwd, path.parse(process.cwd()).root);
   }
 });
 

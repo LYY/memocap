@@ -61,6 +61,7 @@ pub enum Command {
         placement: Option<PlacementId>,
     },
     ScopeShow,
+    ScopeResolve,
     Inventory,
     Status {
         read_only: bool,
@@ -125,6 +126,7 @@ impl Command {
             Self::List { .. } => "list",
             Self::Forget { .. } => "forget",
             Self::ScopeShow => "scope_show",
+            Self::ScopeResolve => "scope_resolve",
             Self::Inventory => "inventory",
             Self::Status { .. } => "status",
             Self::ActivityList { .. } => "activity_list",

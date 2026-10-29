@@ -27,7 +27,9 @@ fn run_local(
     command: ScopeCommand,
 ) -> Result<()> {
     match command {
-        ScopeCommand::List { .. } => bail!("inventory requires the observable operation API"),
+        ScopeCommand::Resolve | ScopeCommand::List { .. } => {
+            bail!("scope inspection requires the observable operation API")
+        }
         ScopeCommand::Show => {
             let domains = cli::attached_domains(database, scope.repository())?;
             print!("{}", cli::format_scope_show(scope, &domains));
@@ -85,7 +87,9 @@ fn run_local(
 
 fn run_remote(session: &RemoteSession<'_>, command: ScopeCommand) -> Result<()> {
     match command {
-        ScopeCommand::List { .. } => bail!("inventory requires the observable operation API"),
+        ScopeCommand::Resolve | ScopeCommand::List { .. } => {
+            bail!("scope inspection requires the observable operation API")
+        }
         ScopeCommand::Show => print!("{}", session.scope_show()?),
         ScopeCommand::Copy {
             id,

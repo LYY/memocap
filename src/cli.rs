@@ -83,7 +83,11 @@ pub fn remember_placed(
     let repository = repository_for_selector(selector.as_ref())?;
     let connection = store::open(database)?;
     let placement = exact_placement(&connection, selector.as_ref(), repository.as_ref())?;
-    store::remember_at(
+    let descriptor = match &placement {
+        PlacementId::Repository(_) => crate::scope::descriptor(&env::current_dir()?)?,
+        PlacementId::Domain(_) | PlacementId::Universal => None,
+    };
+    store::remember_with_descriptor(
         &connection,
         &placement,
         memory.content,
@@ -94,6 +98,7 @@ pub fn remember_placed(
             force: memory.force,
             overwrite_id: memory.overwrite_id,
         },
+        descriptor.as_ref(),
     )
 }
 

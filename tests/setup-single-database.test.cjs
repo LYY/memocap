@@ -22,20 +22,20 @@ function backend(context, observed) {
 const receipt=${JSON.stringify(receipt)};
 if(process.argv.includes('--version')) console.log('memocap 0.1.0');
 else if(process.argv.includes('prepare')) { fs.writeFileSync(process.env.MEMOCAP_DB,'prepared'); console.log(JSON.stringify({format_version:1,status:'ok'})); }
-else { if(fs.existsSync(process.env.MEMOCAP_DB)) receipt.inspection=${JSON.stringify(inspection("ready", "2.1"))}; console.log(JSON.stringify(receipt)); }
+else { if(fs.existsSync(process.env.MEMOCAP_DB)) receipt.inspection=${JSON.stringify(inspection("ready", "2.2"))}; console.log(JSON.stringify(receipt)); }
 `);
   setup.env.MEMOCAP_DB = path.join(setup.home, "main.db");
   return setup;
 }
 
-for (const [state, version] of [["not_initialized", null], ["upgrade_needed", "2.0"], ["ready", "2.0"], ["ready", "2.1"]]) {
+for (const [state, version] of [["not_initialized", null], ["upgrade_needed", "2.1"], ["ready", "2.2"]]) {
   test(`check accepts ${state} ${version} without preparing main`, async (context) => {
     const setup = backend(context, inspection(state, version));
     const report = await setup.setup(["check", "--to", "0.1.0"]);
     assert.equal(report.error, null, JSON.stringify(report));
     assert.equal(report.backend.memory_status, state);
     assert.equal(report.backend.core_schema.observed, version);
-    assert.equal(report.backend.core_schema.expected, "2.1");
+    assert.equal(report.backend.core_schema.expected, "2.2");
     assert.equal(fs.existsSync(setup.env.MEMOCAP_DB), false);
     assert.equal(setup.calls.some(({ args }) => args.includes("prepare")), false);
   });
@@ -43,11 +43,11 @@ for (const [state, version] of [["not_initialized", null], ["upgrade_needed", "2
 
 for (const state of ["not_initialized", "upgrade_needed"]) {
   test(`explicit install prepares ${state} main and verifies schema2`, async (context) => {
-    const setup = backend(context, inspection(state, state === "upgrade_needed" ? "2.0" : null));
+    const setup = backend(context, inspection(state, state === "upgrade_needed" ? "2.1" : null));
     const report = await setup.setup(["install", "--yes"]);
     assert.equal(report.exit_code, 0, JSON.stringify(report));
     assert.equal(report.readiness, "static_ready");
-    assert.equal(report.backend.core_schema.observed, "2.1");
+    assert.equal(report.backend.core_schema.observed, "2.2");
     assert.equal(report.backend.activity.status, "ready");
     assert.equal(fs.readFileSync(setup.env.MEMOCAP_DB, "utf8"), "prepared");
     assert.equal(setup.calls.filter(({ args }) => args.includes("prepare")).length, 1);
@@ -55,7 +55,7 @@ for (const state of ["not_initialized", "upgrade_needed"]) {
 }
 
 test("dry-run reports upgrade needed without claiming readiness", async (context) => {
-  const setup = backend(context, inspection("upgrade_needed", "2.0"));
+  const setup = backend(context, inspection("upgrade_needed", "2.1"));
   const report = await setup.setup(["update", "--to", "0.1.0", "--dry-run"]);
   assert.equal(report.error, null, JSON.stringify(report));
   assert.equal(report.readiness, "upgrade_needed");
@@ -63,7 +63,7 @@ test("dry-run reports upgrade needed without claiming readiness", async (context
 });
 
 test("doctor reports current schema upgrade even when component repair is needed", async (context) => {
-  const setup = backend(context, inspection("upgrade_needed", "2.0"));
+  const setup = backend(context, inspection("upgrade_needed", "2.1"));
   const report = await setup.setup(["doctor"]);
   assert.equal(report.readiness, "upgrade_needed", JSON.stringify(report));
   assert.equal(report.exit_code, 1);
@@ -71,7 +71,7 @@ test("doctor reports current schema upgrade even when component repair is needed
 });
 
 test("failed skill installation preserves current main until configuration prerequisites finish", async (context) => {
-  const setup = backend(context, inspection("upgrade_needed", "2.0"));
+  const setup = backend(context, inspection("upgrade_needed", "2.1"));
   failPolicyCopy(context);
   const report = await setup.setup(["install", "--yes"]);
   assert.equal(report.status, "partial", JSON.stringify(report));
@@ -80,7 +80,7 @@ test("failed skill installation preserves current main until configuration prere
 });
 
 test("lost process response after committed preparation is read back without replay on resume", async (context) => {
-  const setup = backend(context, inspection("upgrade_needed", "2.0"));
+  const setup = backend(context, inspection("upgrade_needed", "2.1"));
   const run = setup.runtime.run;
   setup.runtime.run = async (command, args, options) => {
     const execution = await run(command, args, options);
@@ -96,7 +96,7 @@ test("lost process response after committed preparation is read back without rep
 });
 
 test("remote current schema upgrade requires server administration without preparation", async (context) => {
-  const setup = backend(context, inspection("upgrade_needed", "2.0"));
+  const setup = backend(context, inspection("upgrade_needed", "2.1"));
   setup.env.MEMOCAP_ADDR = "http://127.0.0.1:1";
   const script = fs.readFileSync(setup.cliScript, "utf8").replace('"backend":"local","origin":"cli"', '"backend":"remote","origin":"server"');
   fs.writeFileSync(setup.cliScript, script);
@@ -111,20 +111,30 @@ const malformed = {
   future_schema: { schema_version: "2.7" },
   major: { schema_version: "3.0" },
   incoherent: { visible: { schema_version: "2.7", placements: [], addressable_total: 0, effective_total: 0 } },
-  negative_count: { visible: { schema_version: "2.0", placements: [], addressable_total: -1, effective_total: 0 } },
+  negative_count: { visible: { schema_version: "2.2", placements: [], addressable_total: -1, effective_total: 0 } },
   missing_capabilities: { capabilities: capabilities.slice(0, -2) },
   malformed_capability: { capabilities: [...capabilities, { unexpected: true }] },
   false_ready: { activity_status: "upgrade_needed" },
 };
+for (const [state, version] of [["ready", "2.0"], ["upgrade_needed", "2.0"], ["ready", "2.1"]]) {
+  test(`current producer refuses ${state} ${version} before installation writes`, async (context) => {
+    const setup = backend(context, inspection(state, version));
+    const report = await setup.setup(["install", "--yes"]);
+    assert.equal(report.error?.code, "backend_incompatible");
+    assert.equal(setup.calls.some(({ args }) => args.includes("prepare") || args[0] === "install"), false);
+    assert.equal(fs.existsSync(setup.env.MEMOCAP_DB), false);
+  });
+}
+
 for (const [name, patch] of Object.entries(malformed)) test(`malformed ${name} inspection is refused before writes`, async (context) => {
-  const setup = backend(context, { ...inspection("ready", "2.0"), ...patch });
+  const setup = backend(context, { ...inspection("ready", "2.2"), ...patch });
   const report = await setup.setup(["install", "--yes"]);
   assert.equal(report.error?.code, "backend_incompatible", JSON.stringify(report));
   assert.equal(fs.existsSync(setup.env.MEMOCAP_DB), false);
 });
 
 test("POSIX generated shim resolves owned launcher and uses verified native cache", async (context) => {
-  const setup = backend(context, inspection("ready", "2.0"));
+  const setup = backend(context, inspection("ready", "2.2"));
   const { backendStatus } = await import("../scripts/setup/backend.mjs");
   const launcher = path.join(setup.installed, "bin/cli.cjs");
   fs.mkdirSync(path.dirname(launcher), { recursive: true });
@@ -133,7 +143,7 @@ test("POSIX generated shim resolves owned launcher and uses verified native cach
   fs.writeFileSync(shim, `#!/bin/sh\n# cmd-shim-target=${launcher}\nexit 99\n`, { mode: 0o755 });
   const report = { shared_cli: { version: "0.1.0", package_root: setup.installed, executable_path: shim, cache: { status: "verified", binary: setup.cliPath } } };
   const observed = await backendStatus({ report, runtime: setup.runtime });
-  assert.equal(observed.core_schema.observed, "2.0");
+  assert.equal(observed.core_schema.observed, "2.2");
   assert.equal(observed.executable_path, setup.cliPath);
 });
 
@@ -155,7 +165,7 @@ test("a target binary cannot impersonate the released contract without single-da
 });
 
 for (const corruption of ["failed_status", "old_capabilities", "visible_version"]) test(`remote ${corruption} receipt is refused without server preparation`, async (context) => {
-  const observed = inspection("ready", "2.0");
+  const observed = inspection("ready", "2.2");
   if (corruption === "old_capabilities") observed.capabilities = capabilities.slice(0, -2);
   if (corruption === "visible_version") observed.visible.schema_version = "1.0";
   const setup = backend(context, observed);

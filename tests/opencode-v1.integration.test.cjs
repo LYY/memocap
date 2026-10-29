@@ -141,7 +141,7 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       evidence.scope = fixture.directories;
       const why = await command('why');
       assert.deepEqual(why.current.returned_ids, [seedID]);
-      assertDirectoryTargets(why.current.targets, [fixture.directories.A, fixture.directories.B]);
+      assert.deepEqual(why.current.targets, evidence.scope_command_result.targets.map((target) => target.repository_id));
       assert.ok(why.events.some((event) => event.detail.phase === 'injection_prepared'));
       await command('scopes');
       const beforeB = fixture.cli(['list', '--repo', fixture.directories.B]);

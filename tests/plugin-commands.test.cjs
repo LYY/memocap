@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const path = require('node:path');
-const { fixture, receipt, memory, user, repoPath } = require('./plugin-fixture.cjs');
+const { fixture, receipt, memory, user, repoPath, repoID, resolvedTarget } = require('./plugin-fixture.cjs');
 
 async function host(options = {}) {
   const base = fixture();
@@ -37,22 +37,22 @@ async function host(options = {}) {
     degrade: () => { auxiliaryFailure = true; } };
 }
 
-test('SDK scope tool awaits permission before any sidecar and commits only after all target recalls succeed', async () => {
+test('SDK scope tool resolves purely before permission and commits only after all target recalls succeed', async () => {
   const current = await host();
-  current.context.ask = async () => { assert.equal(current.calls.length, 0); throw new Error('denied'); };
+  current.context.ask = async () => { assert.deepEqual(current.calls.map(({ argv }) => argv.slice(0, 2)), [['scope', 'resolve']]); throw new Error('denied'); };
   const denied = JSON.parse((await current.tools.memocap_scope.execute({ paths: [repoPath('B')] }, current.context)).output);
   assert.equal(denied.status, 'denied');
-  assert.equal(current.calls.length, 0);
+  assert.deepEqual(current.calls.map(({ argv }) => argv.slice(0, 2)), [['scope', 'resolve']]);
   current.context.ask = async () => {};
   const message = user();
   await current.runtime.capture({ sessionID: 'A' }, { message: message.info, parts: message.parts });
   const switched = JSON.parse((await current.tools.memocap_scope.execute({ paths: [repoPath('B'), repoPath('C')] }, current.context)).output);
   assert.equal(switched.status, 'ok');
-  assert.deepEqual((await current.runtime.context('A')).targets, [repoPath('B'), repoPath('C')]);
+  assert.deepEqual((await current.runtime.context('A')).targets, [repoPath('B'), repoPath('C')].map(resolvedTarget));
   current.fail(repoPath('missing'));
   const failed = JSON.parse((await current.tools.memocap_scope.execute({ paths: [repoPath('A'), repoPath('missing')] }, current.context)).output);
   assert.equal(failed.status, 'failed');
-  assert.deepEqual((await current.runtime.context('A')).targets, [repoPath('B'), repoPath('C')]);
+  assert.deepEqual((await current.runtime.context('A')).targets, [repoPath('B'), repoPath('C')].map(resolvedTarget));
 });
 
 test('same query on new targets refreshes and auxiliary warnings keep successful scope', async () => {
@@ -65,7 +65,7 @@ test('same query on new targets refreshes and auxiliary warnings keep successful
     assert.equal(typeof answer.warning, 'string');
   }
   assert.equal(current.calls.filter(({ argv }) => argv[0] === 'recall').length, 2);
-  assert.deepEqual((await current.runtime.context('A')).targets, [repoPath('C')]);
+  assert.deepEqual((await current.runtime.context('A')).targets, [resolvedTarget(repoPath('C'))]);
 });
 
 test('manual scope seeds references even when automatic recall is disabled', async () => {
@@ -75,7 +75,7 @@ test('manual scope seeds references even when automatic recall is disabled', asy
   await current.tools.memocap_scope.execute({ paths: [repoPath('B')], query: 'other' }, current.context);
   await current.runtime.transform({}, { messages: [message] });
   assert.equal(current.calls.filter(({ argv }) => argv[0] === 'recall').length, 1);
-  assert.deepEqual(message.parts.at(-1).metadata.memocap.targets, [repoPath('B')]);
+  assert.deepEqual(message.parts.at(-1).metadata.memocap.targets, [repoID(repoPath('B'))]);
   assert.deepEqual(message.parts.at(-1).metadata.memocap.query_terms, ['other']);
 });
 
@@ -93,20 +93,20 @@ test('remember uses one explicit target, structured fields and one write followe
   assert.deepEqual(current.rows, [content]);
   const writes = current.calls.filter(({ argv }) => argv[0] === 'remember');
   assert.equal(writes.length, 1);
-  assert.equal(writes[0].argv.filter((arg) => arg === '--repo').length, 1);
+  assert.deepEqual(JSON.parse(writes[0].argv[writes[0].argv.indexOf('--targets-json') + 1]), [resolvedTarget(repoPath('A'))]);
   assert.equal(writes[0].argv[writes[0].argv.indexOf('--') + 1], content);
   assert.ok(writes[0].argv.indexOf('--json') >= 0 && writes[0].argv.indexOf('--json') < writes[0].argv.indexOf('--'));
   assert.equal(writes[0].argv[writes[0].argv.indexOf('--tags') + 1], 'release,cli');
   assert.equal((await current.runtime.context('A')).cache, undefined);
 });
 
-test('denied recall and remember tools never launch CLI sidecars', async () => {
+test('denied recall and remember tools launch only pure scope resolution', async () => {
   for (const [name, args] of [['memocap_recall', { query: 'release' }], ['memocap_remember', { content: 'decision' }]]) {
     const current = await host();
     current.context.ask = async () => { throw new Error('permission denied'); };
     const answer = JSON.parse((await current.tools[name].execute(args, current.context)).output);
     assert.equal(answer.status, 'denied');
-    assert.equal(current.calls.length, 0);
+    assert.deepEqual(current.calls.map(({ argv }) => argv.slice(0, 2)), [['scope', 'resolve']]);
     assert.equal(current.rows.length, 0);
   }
 });
@@ -131,7 +131,7 @@ test('command registration preserves user conflict and /memory commands render a
     assert.equal(payload.status, 'ok');
   }
   assert.deepEqual(registered.calls.map(({ argv }) => argv.slice(0, 2)),
-    [['status', '--read-only'], ['scope', 'list'], ['list', '--placement'], ['activity', 'list']]);
+    [['scope', 'resolve'], ['status', '--read-only'], ['scope', 'list'], ['list', '--placement'], ['activity', 'list']]);
 });
 
 test('command scope and recall share session targets while remember remains a permission-tool request', async () => {
@@ -139,11 +139,11 @@ test('command scope and recall share session targets while remember remains a pe
   await current.commands.config({});
   const output = { parts: [] };
   await current.commands.execute({ command: 'memory', sessionID: 'A', arguments: `scope "${repoPath('B')}"` }, output);
-  assert.deepEqual((await current.runtime.context('A')).targets, [repoPath('B')]);
+  assert.deepEqual((await current.runtime.context('A')).targets, [resolvedTarget(repoPath('B'))]);
   const query = 'literal "quote" $(anything)\nsecond';
   await current.commands.execute({ command: 'memory', sessionID: 'A', arguments: `recall ${query}` }, output);
   const recall = current.calls.filter(({ argv }) => argv[0] === 'recall').at(-1);
-  assert.equal(recall.argv[recall.argv.indexOf('--repo') + 1], repoPath('B'));
+  assert.deepEqual(JSON.parse(recall.argv[recall.argv.indexOf('--targets-json') + 1]), [resolvedTarget(repoPath('B'))]);
   await current.commands.execute({ command: 'memory', sessionID: 'A', arguments: `remember ${query}` }, output);
   const requested = JSON.parse(output.parts[0].text);
   assert.equal(requested.status, 'not_run');
@@ -161,8 +161,8 @@ test('relative tool targets use the actual session directory and freeze approval
     current.input.client.session.get = async () => ({ data: { directory: sessionDirectory } });
     current.context.directory = path.resolve('/host/A');
     current.context.ask = async (permission) => {
-      assert.equal(current.calls.length, 0);
-      assert.deepEqual(permission.patterns, [approvedChild]);
+      assert.deepEqual(current.calls.map(({ argv }) => argv.slice(0, 2)), [['scope', 'resolve']]);
+      assert.deepEqual(permission.patterns, [repoID(approvedChild)]);
       const state = await current.runtime.context('A');
       state.targets = [path.resolve('/unexpected')];
       if (args.paths) args.paths[0] = path.resolve('/mutated');
@@ -171,8 +171,8 @@ test('relative tool targets use the actual session directory and freeze approval
     const answer = JSON.parse((await current.tools[name].execute(args, current.context)).output);
     assert.ok(['ok', 'inserted'].includes(answer.status), JSON.stringify(answer));
     for (const { argv } of current.calls) {
-      const paths = argv.flatMap((arg, index) => arg === '--repo' ? [argv[index + 1]] : []);
-      assert.deepEqual(paths, [approvedChild]);
+      if (argv[0] === 'scope') assert.deepEqual(argv.flatMap((arg, index) => arg === '--repo' ? [argv[index + 1]] : []), [approvedChild]);
+      else assert.deepEqual(JSON.parse(argv[argv.indexOf('--targets-json') + 1]), [resolvedTarget(approvedChild)]);
     }
   }
 });

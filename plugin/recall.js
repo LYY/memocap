@@ -1,7 +1,9 @@
+import path from "node:path";
 import { recordActivity } from "./activity.js";
 import { run } from "./bridge.js";
 import { budgetChars, failure, queryTerms, referenceBlock, repoArgs, textPart,
   validateMemories, validateReceipt } from "./protocol.js";
+import { freezeTargets, invalidRequest } from "./targets.js";
 
 function realText(parts) {
   return parts.filter((part) => part.type === "text" && !part.synthetic && !part.ignored && !part.metadata?.memocap)
@@ -23,6 +25,12 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
   const warnings = [];
   let ready = false;
   let disposed = false;
+  const configuredCwd = process.cwd();
+  const executionCwd = path.parse(configuredCwd).root;
+  const env = { ...process.env };
+  for (const name of ["MEMOCAP_DB", "MEMOCAP_DATA_DIR", "MEMOCAP_HOME"]) {
+    if (env[name]) env[name] = path.resolve(configuredCwd, env[name]);
+  }
 
   function clear(sessionID) {
     sessions.get(sessionID)?.controller.abort();
@@ -32,7 +40,7 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
   function stateFor(sessionID, directory) {
     let state = sessions.get(sessionID);
     if (!state) {
-      state = { sessionID, directory, targets: directory ? [directory] : undefined,
+      state = { sessionID, directory, targets: undefined,
         controller: new AbortController(), generation: 0, warnings: [] };
     }
     sessions.delete(sessionID);
@@ -55,7 +63,6 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
       const session = await input.client.session.get({ path: { id: sessionID } });
       if (!session.data?.directory) throw Object.assign(new Error("Session directory unavailable"), { code: "invalid_request" });
       state.directory = session.data.directory;
-      state.targets = [state.directory];
     }
     return state;
   }
@@ -67,10 +74,23 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
       message_id: caller.messageID ?? null }), "--json"];
     const jsonArgs = separator < 0 ? [...argv, ...globals] : [...argv.slice(0, separator), ...globals, ...argv.slice(separator)];
     const response = await invoke(jsonArgs, {
-      cwd: state.directory, signal: requestOptions.signal ?? state.controller.signal,
+      cwd: executionCwd, env, signal: requestOptions.signal ?? state.controller.signal,
       deadlineMs: requestOptions.deadlineMs ?? 3000,
     });
+    if ((requestOptions.signal ?? state.controller.signal).aborted) invalidRequest();
     return validateReceipt(response.receipt);
+  }
+
+  async function resolve(state, selectors, requestOptions = {}) {
+    return freezeTargets(await request(state, ["scope", "resolve", ...selectors], requestOptions));
+  }
+
+  async function selected(state, requestOptions = {}) {
+    if (!state.targets) {
+      state.resolving ??= resolve(state, ["--repo", state.directory], requestOptions);
+      try { state.targets = await state.resolving; } finally { state.resolving = undefined; }
+    }
+    return state.targets;
   }
 
   async function notify(state, status) {
@@ -86,12 +106,14 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
 
   async function recall(state, terms, targets = state.targets, requestOptions = {}) {
     if (terms.length === 0) return undefined;
+    targets ??= await selected(state, requestOptions);
     const receipt = await request(state, ["recall", terms.join(" "), "--match", "any", "--limit", "3",
       "--max-chars", String(budgetChars), ...repoArgs(targets)], requestOptions);
     return validateMemories(receipt);
   }
 
   async function automatic(state) {
+    await selected(state);
     const key = JSON.stringify([state.messageID, state.targets, state.terms, "any-v1"]);
     const cacheHit = state.cache?.key === key;
     if (!cacheHit) {
@@ -107,7 +129,7 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
     const generation = state.generation;
     const receipt = recalled.receipt;
     const metadata = { owner: "memocap", trust: "untrusted_reference", session_id: state.sessionID,
-      message_id: state.messageID, targets: state.targets, query_terms: state.terms,
+      message_id: state.messageID, targets: state.targets?.map((target) => target.repository_id), query_terms: state.terms,
       strategy: "any-v1", cache_hit: recalled.cacheHit, status: receipt?.status ?? recalled.failure?.status ?? "skipped",
       operation_id: receipt?.operation_id, returned_ids: receipt?.returned_ids ?? [],
       error: recalled.failure?.error, warnings: [...(receipt?.warning ? [receipt.warning] : []), ...state.warnings, ...warnings] };
@@ -153,16 +175,18 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
     const message = output.messages.findLast((entry) => entry.info.role === "user" && realText(entry.parts).trim());
     if (!message) return;
     let state;
+    let generation;
     try {
       state = await context(message.info.sessionID);
       if (state.messageID !== message.info.id) await capture({ sessionID: message.info.sessionID },
         { message: message.info, parts: message.parts });
       if (options.automatic === false && !state.cache) return;
-      const generation = state.generation;
+      generation = state.generation;
       const recalled = await automatic(state);
       if (disposed || generation !== state.generation || !sessions.has(state.sessionID)) return;
       await inject(message, state, recalled);
     } catch (error) {
+      if (disposed || (state && (generation !== state.generation || sessions.get(state.sessionID) !== state))) return;
       state ??= stateFor(message.info.sessionID);
       state.messageID = message.info.id;
       const metadata = { owner: "memocap", trust: "untrusted_reference", ...failure(error), injection_status: "failed" };
@@ -180,7 +204,7 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
     state.cache = { key, pending: Promise.resolve({ receipt, expiresAt: Date.now() + 3000 }) };
   }
 
-  return { context, request, recall, invalidate, stateFor, capture, transform, seed, warnings,
+  return { context, request, recall, resolve, selected, invalidate, stateFor, capture, transform, seed, warnings, configuredCwd,
     report: async (status) => notify({ warnings }, status),
     get size() { return sessions.size; },
     async compact({ sessionID }) { clear(sessionID); },

@@ -42,6 +42,7 @@ impl<'a> RemoteSession<'a> {
                 topic_key: memory.topic,
                 force: memory.force,
                 overwrite_id: memory.overwrite_id,
+                target: None,
             },
         )
     }

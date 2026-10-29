@@ -118,6 +118,7 @@ struct TransferBody<'a> {
     to: String,
     operation_id: &'a str,
     note: Option<&'a str>,
+    target: Option<&'a crate::receipt::Target>,
 }
 
 #[derive(Serialize)]
@@ -195,6 +196,7 @@ fn send_transfer(
         to: request.to().to_string(),
         operation_id: request.operation_id().as_str(),
         note: request.applicability_note(),
+        target: request.target(),
     };
     let response = post(address, token, path, &body)?;
     let envelope = serde_json::from_str::<TransferEnvelope>(&response)

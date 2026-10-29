@@ -1,9 +1,6 @@
 import path from "node:path";
 import { failure, packageVersion, queryTerms, repoArgs, validateInventory } from "./protocol.js";
-
-function invalidRequest() {
-  throw Object.assign(new Error("Invalid memory request"), { code: "invalid_request" });
-}
+import { invalidRequest, repositoryID } from "./targets.js";
 
 function localPaths(paths, directory) {
   if (!Array.isArray(paths) || paths.length < 1 || paths.length > 8 ||
@@ -14,9 +11,32 @@ function localPaths(paths, directory) {
 }
 
 export function createOperations(runtime) {
+  const approvals = new WeakMap();
   async function targets(context, args = {}) {
     const state = await current(context);
-    return Object.freeze(localPaths(args.paths ?? (args.repository ? [args.repository] : state.targets), state.directory));
+    const generation = state.generation;
+    const signal = signalFor(state, context);
+    if (args.paths !== undefined && args.repository_ids !== undefined) invalidRequest();
+    let selected;
+    if (args.repository_ids !== undefined) {
+      const ids = args.repository_ids;
+      if (!Array.isArray(ids) || ids.length < 1 || ids.length > 8 || new Set(ids).size !== ids.length ||
+          ids.some((id) => typeof id !== "string" || !repositoryID.test(id))) invalidRequest();
+      selected = await runtime.resolve(state, ids.flatMap((id) => ["--repository-id", id]), { signal, caller: context });
+    } else if (args.paths !== undefined || args.repository !== undefined) {
+      const paths = localPaths(args.paths ?? [args.repository], state.directory);
+      selected = await runtime.resolve(state, paths.flatMap((directory) => ["--repo", directory]), { signal, caller: context });
+    } else selected = await runtime.selected(state, { signal, caller: context });
+    if (generation !== state.generation || signal.aborted) invalidRequest();
+    approvals.set(selected, { state, generation, signal });
+    return selected;
+  }
+
+  function approved(context, state) {
+    const selected = context.approvedTargets;
+    const approval = approvals.get(selected);
+    if (!approval || approval.state !== state || approval.generation !== state.generation || approval.signal.aborted) invalidRequest();
+    return selected;
   }
 
   async function current(context) {
@@ -35,13 +55,10 @@ export function createOperations(runtime) {
 
   async function scope(args, context) {
     const state = await current(context);
-    const proposed = context.approvedTargets ?? localPaths(args.paths, state.directory);
+    if (args.paths === undefined && args.repository_ids === undefined) invalidRequest();
+    const proposed = context.approvedTargets ? approved(context, state) : await targets(context, args);
     const generation = state.generation;
     const signal = signalFor(state, context);
-    for (const directory of proposed) {
-      const receipt = await request(state, ["scope", "show", "--repo", directory], context);
-      if (receipt.targets.length !== 1 || !receipt.targets[0].canonical_path) invalidRequest();
-    }
     const terms = args.query ? queryTerms(args.query) : state.terms ?? ["memory"];
     const receipt = await runtime.recall(state, terms, proposed, { signal, caller: context });
     if (!receipt || generation !== state.generation || signal.aborted) invalidRequest();
@@ -56,7 +73,7 @@ export function createOperations(runtime) {
     const state = await current(context);
     const signal = signalFor(state, context);
     const terms = queryTerms(args.query);
-    const receipt = await runtime.recall(state, terms, context.approvedTargets ?? state.targets, { signal, caller: context });
+    const receipt = await runtime.recall(state, terms, context.approvedTargets ? approved(context, state) : await runtime.selected(state), { signal, caller: context });
     if (signal.aborted) invalidRequest();
     runtime.invalidate(state);
     runtime.seed(state, terms, receipt);
@@ -68,7 +85,7 @@ export function createOperations(runtime) {
       const placement = receipt.searched_placements[0];
       for (let offset = 0; ; offset += 20) {
         const checked = validateInventory(await request(state,
-          ["list", "--placement", placement, "--limit", "20", "--offset", String(offset), "--repo", context.approvedTargets[0]], context));
+          ["list", "--placement", placement, "--limit", "20", "--offset", String(offset), ...repoArgs(context.approvedTargets)], context));
         const found = receipt.returned_ids.every((id) => checked.returned_ids.includes(id));
         if (found || checked.results.length < 20) return { status: found ? "ok" : "failed",
           operation_id: checked.operation_id, returned_ids: checked.returned_ids };
@@ -80,7 +97,7 @@ export function createOperations(runtime) {
     if (typeof args.content !== "string" || !args.content.trim() || args.content.includes("\0") ||
         (args.domain && args.universal)) invalidRequest();
     const state = await current(context);
-    const selected = context.approvedTargets ?? localPaths(args.repository ? [args.repository] : state.targets, state.directory);
+    const selected = context.approvedTargets ? approved(context, state) : await targets(context, args);
     if (selected.length !== 1) invalidRequest();
     const argv = ["remember", "--type", args.type ?? "context", "--tags", (args.tags ?? []).join(",")];
     if (args.topic) argv.push("--topic", args.topic);
@@ -100,7 +117,7 @@ export function createOperations(runtime) {
     const state = await current(context);
     if (command === "status") {
       const receipts = [];
-      for (const directory of state.targets) receipts.push(await request(state, ["status", "--read-only", "--repo", directory], context));
+      for (const target of await runtime.selected(state)) receipts.push(await request(state, ["status", "--read-only", ...repoArgs([target])], context));
       return { status: "ok", plugin_version: packageVersion, targets: state.targets, receipts,
         current: state.last ?? { status: "not_run" }, warnings: runtime.warnings };
     }
@@ -115,7 +132,7 @@ export function createOperations(runtime) {
       const [placement, offset = "0"] = argument;
       if (!/^(repository:|domain:|universal$)/.test(placement ?? "") || !/^\d+$/.test(offset)) invalidRequest();
       return request(state, ["list", "--placement", placement, "--limit", "20", "--offset", offset,
-        "--repo", state.targets[0]], context);
+        ...repoArgs([...(await runtime.selected(state))].slice(0, 1))], context);
     }
     invalidRequest();
   }

@@ -6,7 +6,7 @@ use crate::scope::{OperationId, PlacementId, RepositoryId};
 
 mod operations;
 
-pub use operations::{copy_move, operation_status, replay_copy_move};
+pub use operations::{copy_move, copy_move_observed, operation_status, replay_copy_move};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -54,6 +54,8 @@ pub struct CopyMoveRequest {
     applicability_note: Option<String>,
     request_fingerprint: RequestFingerprint,
     mutation_json: String,
+    descriptor: Option<crate::repository::Descriptor>,
+    target: Option<crate::receipt::Target>,
 }
 
 impl CopyMoveRequest {
@@ -85,7 +87,32 @@ impl CopyMoveRequest {
             applicability_note,
             request_fingerprint,
             mutation_json,
+            descriptor: None,
+            target: None,
         })
+    }
+
+    #[must_use]
+    pub fn with_descriptor(mut self, descriptor: Option<crate::repository::Descriptor>) -> Self {
+        self.descriptor = descriptor;
+        self
+    }
+
+    pub fn with_target(mut self, target: Option<crate::receipt::Target>) -> Result<Self> {
+        if let Some(target) = &target {
+            target.validate()?;
+            anyhow::ensure!(
+                target.repository_id == self.repository,
+                "target repository differs from request"
+            );
+            self.descriptor = target.descriptor.clone();
+        }
+        self.target = target;
+        Ok(self)
+    }
+
+    pub fn target(&self) -> Option<&crate::receipt::Target> {
+        self.target.as_ref()
     }
 
     #[must_use]

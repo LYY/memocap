@@ -4,7 +4,7 @@ CREATE TABLE schema_metadata (
     major INTEGER NOT NULL CHECK (major >= 1),
     minor INTEGER NOT NULL CHECK (minor >= 0)
 );
-INSERT INTO schema_metadata (singleton, major, minor) VALUES (1, 2, 1);
+INSERT INTO schema_metadata (singleton, major, minor) VALUES (1, 2, 2);
 CREATE TABLE domains (
     domain_id TEXT PRIMARY KEY,
     created_at TEXT NOT NULL
