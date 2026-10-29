@@ -33,6 +33,29 @@ fn permissions(section: &str, indent: usize) -> Vec<(&str, &str)> {
 }
 
 #[test]
+fn workflow_jobs_run_only_on_their_intended_events() {
+    let workflow = CI_WORKFLOW.replace("\r\n", "\n");
+    assert!(
+        workflow.starts_with("name: CI\n\non:\n  push:\n    branches: [main]\n  pull_request:\n")
+    );
+
+    for name in ["test", "package-contract"] {
+        let section = job(&workflow, name);
+        let header = section.split_once("    steps:").expect("missing steps").0;
+        assert!(!header.lines().any(|line| line.trim().starts_with("if:")));
+    }
+
+    let release_build = job(&workflow, "release-build");
+    let header = release_build
+        .split_once("    steps:")
+        .expect("missing steps")
+        .0;
+    assert!(header
+        .lines()
+        .any(|line| line.trim() == "if: github.event_name == 'pull_request'"));
+}
+
+#[test]
 fn package_contract_runs_release_gates_before_packaging() {
     let package_contract = job(CI_WORKFLOW, "package-contract");
     assert_eq!(permissions(package_contract, 4), vec![("contents", "read")]);

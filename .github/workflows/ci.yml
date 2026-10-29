@@ -76,6 +76,7 @@ jobs:
 
   release-build:
     name: build (${{ matrix.target }})
+    if: github.event_name == 'pull_request'
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
