@@ -11,13 +11,14 @@ function receipt(operation, overrides = {}) {
     format_version: 1, package_version: version, operation_id: '00000000-0000-0000-0000-000000000311',
     operation, status: 'ok', backend: 'local', origin: 'cli',
     targets: [resolvedTarget(repoPath('A'))],
-    results: [], returned_ids: [], activity_status: 'recorded', ...overrides,
+    results: [], returned_ids: [], activity_status: 'recorded',
+    ...(operation === 'recall' ? { discovery: { kind: 'library' } } : {}), ...overrides,
   };
 }
 
 function memory(id = 1, content = 'release convention') {
-  return { memory: { id, content, placement: 'repository:A', kind: 'decision', tags: '' },
-    source_order: 0, visibility: 'visible', applicable_repositories: ['repository:A'] };
+  return { memory: { id, content, placement: repoID(repoPath('A')), kind: 'decision', tags: '' },
+    source_order: 0, visibility: 'visible', applicability: 'unknown', applicable_repositories: [] };
 }
 
 function user(sessionID = 'A', id = 'msg-1', text = 'release convention') {
@@ -30,18 +31,23 @@ function fixture() {
   const calls = [];
   const notices = [];
   const directories = { A: repoPath('A'), B: repoPath('B'), child: repoPath('child') };
+  const config = { permission: { memocap_recall: { library: 'allow' }, memocap_read: { library: 'allow' } } };
   const input = { directory: directories.A, worktree: directories.A, project: { id: 'project' }, client: {
-    session: { get: async ({ path }) => ({ data: { id: path.id, directory: directories[path.id] ?? directories.A } }) },
+    session: { get: async ({ path }) => ({ data: { id: path.id, agent: 'build', permission: [], directory: directories[path.id] ?? directories.A } }) },
+    app: { agents: async () => ({ data: [{ name: 'build', permission: [{ permission: '*', pattern: '*', action: 'allow' }] }] }) },
     tui: { showToast: async (notice) => { notices.push(notice); } },
   } };
   const run = async (argv, options) => {
     calls.push({ argv, options });
     const paths = argv.flatMap((arg, index) => arg === '--repo' ? [argv[index + 1]] : []);
     const targets = argv.includes('--targets-json') ? JSON.parse(argv[argv.indexOf('--targets-json') + 1]) : paths.map(resolvedTarget);
+    const placements = argv.flatMap((arg, index) => arg === '--placement' ? [argv[index + 1]] : []);
+    const results = !placements.length || placements.includes(memory().memory.placement) ? [memory()] : [];
     return { receipt: receipt(argv[0] === 'scope' && argv[1] === 'resolve' ? 'scope_resolve' : argv[0], { targets,
-      ...(argv[0] === 'recall' ? { results: [memory()], returned_ids: [1] } : {}) }) };
+      ...(argv[0] === 'recall' ? { discovery: placements.length ? { kind: 'origins', placements } : { kind: 'library' },
+        results, returned_ids: results.map((row) => row.memory.id), status: results.length ? 'ok' : 'empty' } : {}) }) };
   };
-  return { calls, notices, input, run };
+  return { calls, notices, input, run, config };
 }
 
 async function sandbox() {
@@ -83,12 +89,14 @@ const envelope = {format_version:1,package_version:version,operation_id:'0000000
 if (operation === 'remember') {
  const positional = args.slice(args.indexOf('--')+1);
  if(positional.length !== 1) { process.stderr.write('separator mishandled'); process.exit(2); }
- rows.push({memory:{id:rows.length+1,content:positional[0],placement:targets[0].repository_id,kind:'decision',tags:''},source_order:0,visibility:'visible',applicable_repositories:[targets[0].repository_id]});
+  rows.push({memory:{id:rows.length+1,content:positional[0],placement:targets[0].repository_id,kind:'decision',tags:''},source_order:0,visibility:'visible',applicability:'unknown',applicable_repositories:[]});
  fs.writeFileSync(file,JSON.stringify(rows));
  envelope.status='inserted'; envelope.returned_ids=[rows.at(-1).memory.id]; envelope.searched_placements=[targets[0].repository_id];
 }
-if(operation === 'recall') envelope.results=[{memory:{id:91,content:'fixture release convention',placement:targets[0].repository_id,kind:'decision',tags:''},source_order:0,visibility:'visible',applicable_repositories:[targets[0].repository_id]}];
+if(operation === 'recall') envelope.results=[{memory:{id:91,content:'fixture release convention',placement:targets[0].repository_id,kind:'decision',tags:''},source_order:0,visibility:'visible',applicability:'unknown',applicable_repositories:[]}];
+if(operation === 'recall') envelope.discovery=args.includes('--placement')?{kind:'origins',placements:args.flatMap((arg,index)=>arg==='--placement'?[args[index+1]]:[])}:{kind:'library'};
 if(operation === 'list') envelope.results=rows.filter(row=>row.memory.placement === args[args.indexOf('--placement')+1]);
+if(operation === 'read') envelope.results=rows.filter(row=>row.memory.id===Number(args[1])&&row.memory.placement === args[args.indexOf('--placement')+1]);
 if(operation !== 'remember') envelope.returned_ids=envelope.results.map(row=>row.memory.id);
 process.stdout.write(JSON.stringify(envelope));
 `);
@@ -121,6 +129,7 @@ async function organizationHost(context, respond) {
   const { createCommands } = await import('../plugin/commands.js');
   const { loadPolicy } = await import('../plugin/policy.js');
   const runtime = createRecallRuntime(base.input, {}, base.run);
+  runtime.config(base.config);
   const policy = loadPolicy();
   const organizationCalls = [];
   const invoke = async (argv, options) => {

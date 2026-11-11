@@ -66,7 +66,7 @@ export async function step(context, component, scope, action) {
     record.version = context.target;
     record.manager = context.report.shared_cli.manager;
     record.updated_at = new Date().toISOString();
-    if (component === "plugin") record.plugin = entry.plugin;
+    if (component === "plugin") { record.plugin = entry.plugin; if (entry.permissions) record.permissions = entry.permissions; }
     if (component === "skill" && ["changed", "unchanged"].includes(entry.status)) record.skill = entry;
   }
   if (component === "cli") context.manifest.cli = entry.observed;

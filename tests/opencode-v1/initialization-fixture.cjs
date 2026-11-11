@@ -25,7 +25,9 @@ host.prepare = async (root, evidence) => {
   const script = path.join(__dirname, 'initialization-host.cjs');
   for (const entry of ['serve', 'debug']) fs.writeFileSync(path.join(root, entry), `require(${JSON.stringify(script)});\n`);
   const config = path.join(root, 'opencode.json');
-  fs.writeFileSync(config, JSON.stringify({ skills: { paths: [root] } }));
+  fs.writeFileSync(config, JSON.stringify({ skills: { paths: [root] }, permission: {
+    memocap_recall: { library: 'allow' }, memocap_read: { library: 'allow' },
+  } }));
   evidence.host = {};
   const active = new Set();
   const command = runner(env, evidence, active, root);

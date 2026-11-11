@@ -3,7 +3,7 @@ import path from "node:path";
 import { compareVersions, exactVersion, packageName, SetupError } from "./arguments.mjs";
 import { inspectCache } from "./cache.mjs";
 import { readJSON } from "./files.mjs";
-import { inspectHost } from "./host.mjs";
+import { inspectHost, isSupportedHost } from "./host.mjs";
 import { pnpmRoot } from "./pnpm.mjs";
 import { checked, executable, launcherScript } from "./process.mjs";
 
@@ -99,7 +99,7 @@ export async function prerequisites(runtime) {
   if (major < 22 || (major === 22 && minor < 20)) throw new SetupError("node_version", "Node >=22.20.0 is required");
   if (!["linux/x64", "darwin/arm64", "win32/x64"].includes(`${runtime.platform}/${runtime.arch}`)) throw new SetupError("unsupported_platform", `${runtime.platform}/${runtime.arch}`);
   const host = inspectHost(runtime);
-  if (host.version && host.version !== "1.19.3") throw new SetupError("unsupported_host", `Verified OpenCode version is 1.19.3; found ${host.version}`);
+  if (host.version && !isSupportedHost(host.version)) throw new SetupError("unsupported_host", `Verified OpenCode versions are 1.19.3 and 1.19.5; found ${host.version}`);
   return { node: process.versions.node, platform: `${runtime.platform}/${runtime.arch}`, opencode: host.version, host };
 }
 

@@ -31,6 +31,7 @@ pub(super) fn event(event: &ActivityEvent) -> Result<i64> {
         ));
     }
     match &event.detail {
+        ActivityDetail::CaptureReview(review) => super::capture::validate(review)?,
         ActivityDetail::Recall(recall) => {
             if recall.query_terms.len() > 64 || recall.searched_placements.len() > 100 {
                 return Err(ActivityError::InvalidInput(
@@ -50,7 +51,10 @@ pub(super) fn event(event: &ActivityEvent) -> Result<i64> {
             }
         }
         ActivityDetail::InjectionPrepared(injection)
-        | ActivityDetail::InjectionObserved(injection) => ids(&injection.injected_ids)?,
+        | ActivityDetail::InjectionObserved(injection) => {
+            ids(&injection.injected_ids)?;
+            super::references::validate(injection, event.receipt.as_ref())?;
+        }
     }
     if let Some(receipt) = &event.receipt {
         if let Some(code) = &receipt.error_code {

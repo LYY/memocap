@@ -7,6 +7,7 @@ import { isMemocap, managedConfigText, parseConfig, writeManagedConfig } from ".
 import { digest, readText } from "./files.mjs";
 import { lockManifest, saveManifest, step } from "./manifest.mjs";
 import { installCLI, removeCLI } from "./packages.mjs";
+import { plannedPermissions, verifyPermissions } from "./permissions.mjs";
 import { inspectOwner, installIntent, preflightOwner, resolveOwners } from "./skill-owner.mjs";
 import { installSkill, removeSkill } from "./skills.mjs";
 
@@ -25,6 +26,7 @@ export function scopeReports(inspections, target) {
       plugin_expected_path: Array.isArray(plugin.entries[0]) ? plugin.entries[0][1]?.skillDirectory || null : null,
       host_expected_path: skill.selected?.path || null, digest: skill.observed?.digest || null, other_discovery: skill.discovered, checked_roots: skill.roots,
       agent_references: skill.references, uninspected_projects: skill.uninspected_projects, drift: skill.inspectionError || (skill.observed && skill.observed.digest !== skill.managed?.digest ? "digest_mismatch" : null) },
+    permissions: plugin.permissions,
     manifest_owned: Boolean(record), adoption: record?.adoption?.plugin ? { plugin: record.adoption.plugin } : null }));
 }
 
@@ -50,9 +52,10 @@ function persistIntent(context, inspection) {
   const { scope } = inspection;
   const intent = installIntent(inspection, context);
   if (inspection.record?.intent) {
-    if (inspection.committed && inspection.skill.observed?.digest === intent.skill.digest && JSON.stringify(inspection.record.plugin?.entry) !== JSON.stringify(intent.entry)) {
+    if (inspection.committed && inspection.skill.observed?.digest === intent.skill.digest && (JSON.stringify(inspection.record.plugin?.entry) !== JSON.stringify(intent.entry) || JSON.stringify(inspection.record.permissions) !== JSON.stringify(intent.permissions?.owned))) {
       inspection.record.plugin = { entry: intent.entry, config: scope.config, config_digest: digest(scope.text), backup: null };
       inspection.record.skill = { ...intent.skill, status: "unchanged" };
+      if (intent.permissions) inspection.record.permissions = intent.permissions.owned;
       saveManifest(context);
       context.report.steps.push({ component: "intent", scope: scope.id, status: "changed", recovered_after_error: true });
     }
@@ -75,11 +78,12 @@ async function switchConfig(context, scope) {
   if (!intent) return { status: "unchanged", plugin: record.plugin };
   const saved = writeManagedConfig(scope, intent);
   const observed = parseConfig(scope.config);
+  verifyPermissions(observed, intent);
   const entries = (observed.plugin || []).filter(isMemocap);
   if (JSON.stringify(entries) !== JSON.stringify(intent.entry ? [intent.entry] : []) || (intent.entry && !(observed.skills?.paths || []).includes(intent.skill.path))) throw new SetupError("plugin_readback", scope.config);
   if (saved.backup) context.report.backups.push(saved.backup);
   scope.text = readText(scope.config);
-  return { status: saved.status, plugin: intent.entry ? { entry: intent.entry, config: scope.config, config_digest: saved.digest, backup: saved.backup } : record.plugin };
+  return { status: saved.status, permissions: intent.permissions?.owned || record.permissions, plugin: intent.entry ? { entry: intent.entry, config: scope.config, config_digest: saved.digest, backup: saved.backup } : record.plugin };
 }
 
 export async function mutateInstall(context) {
@@ -121,8 +125,9 @@ export async function mutateUninstall(context, original) {
       record.steps ||= {};
       if (!record.intent) {
         const removePaths = record.skill?.kind === "managed" ? record.skill.owned_paths : [];
+        const permissions = plannedPermissions(scope, record.permissions, "uninstall");
         record.intent = { operation: "uninstall", target: context.target, entry: null, previous_entry: record.plugin?.entry || null, remove_paths: removePaths,
-          before_digest: digest(scope.text), after_digest: digest(managedConfigText(scope, null, removePaths)) };
+          permissions, before_digest: digest(scope.text), after_digest: digest(managedConfigText(scope, { entry: null, remove_paths: removePaths, permissions })) };
         saveManifest(context);
       }
       await step(context, "plugin", scope, () => switchConfig(context, scope));

@@ -1,0 +1,1357 @@
+{
+  "schema": 1,
+  "decidedAt": "2026-11-11T10:10:45.373Z",
+  "decision": "REJECT",
+  "releaseAcceptance": false,
+  "reason": "Zero fixed positive cases; forbidden-environment and forbidden-topic gates fail, and no-answer noise persists. Resource fit on this machine does not constitute strict quality benefit.",
+  "config": {
+    "id": "k10-w0.5-t0.60",
+    "k": 10,
+    "semanticWeight": 0.5,
+    "threshold": 0.6
+  },
+  "freezeSha256": "33e37ef2d0b0538b45a7f3372b626d74d3129e5438afe90980a49b0b5186d787",
+  "holdoutSha256": "4e8e39d7d7a5fa3676c3a1445119e7fd9dcdf341ff531829a2e35fb04f9bd161",
+  "firstHoldoutOpenedAt": "2026-11-11T10:06:55.374Z",
+  "holdoutRuns": 1,
+  "quality": {
+    "config": {
+      "id": "k10-w0.5-t0.60",
+      "k": 10,
+      "semanticWeight": 0.5,
+      "threshold": 0.6
+    },
+    "summary": {
+      "cases": 12,
+      "positives": 11,
+      "negatives": 1,
+      "successes": 7,
+      "hit1": 0.8181818181818182,
+      "hit3": 0.8181818181818182,
+      "MRR": 0.8181818181818182,
+      "candidateCoverage": 1,
+      "negativeNoise": 1,
+      "negativeReturnedItems": 3,
+      "wrongEnvironmentRate": 0.5,
+      "p50Ms": 38.091499999999996,
+      "p95Ms": 49.586541000000125
+    },
+    "fixed": [],
+    "broken": [],
+    "fixedPositives": [],
+    "brokenPositives": [],
+    "extraNegativeNoise": [],
+    "safety": {
+      "forbiddenEnvironment": [
+        "h-beta"
+      ],
+      "forbiddenIDs": [
+        "h-beta",
+        "h-topic"
+      ],
+      "selectorLeakage": [],
+      "partialAsFull": []
+    },
+    "qualityPass": false
+  },
+  "resourceGates": {
+    "deadline": true,
+    "warmP95": true,
+    "pythonRSS": true,
+    "nodeRSS": true,
+    "nativeRSS": true,
+    "fixedAssets": true,
+    "onnxRuntime": true,
+    "allRuntimeDistributions": true
+  },
+  "coldFirstQueryE2EMs": 1147.6545410000003,
+  "warmMaximumMs": 49.586541000000125,
+  "resourceCaveats": "Component peak RSS values are independent high-water marks, not simultaneous totals. Python peak includes model SHA verification, Pydantic and two tokenizers including full-token diagnostic counting. Node peak includes retained raw grid/report data. Native peak via /usr/bin/time -l includes a wrapper in elapsed time. Cold means new process, OS file cache not flushed. 12 cases provide descriptive nearest-rank quantiles only.",
+  "frozenResourceCeilings": {
+    "queryE2EMaxMs": 3000,
+    "warmQueryP95Ms": 74.78266600000006,
+    "pythonPeakRssBytes": 939524096,
+    "nodePeakRssBytes": 201326592,
+    "nativePeakRssBytes": 16777216,
+    "fixedAssetsBytes": 135392208,
+    "installedOnnxRuntimeBytes": 65278097,
+    "installedAllRuntimeDistributionsBytes": 147070538,
+    "fixedAssetsPlusAllDistributionsBytes": 282462746,
+    "rationale": "3000ms is existing plugin request deadline, applies to cold startup plus first query too. Warm p95 <=2x measured corrected lexical p95 keeps relative cost explicit. RSS caps round measured component peaks to next128/32/16MiB on this 32GiB M2Pro device; local experiment envelopes, not universal product memory budgets. Disk caps are exact already pinned bytes, excluding Python interpreter, pyc, experiment scripts and corpus vector JSON separately inventoried."
+  },
+  "measuredResources": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "startupWallMs": 1098.0680000000002,
+    "encoderReady": {
+      "ready": true,
+      "startupMs": 780.4250000044703,
+      "peakRssBytes": 900857856
+    },
+    "pythonPeakRssBytes": 902316032,
+    "nodePeakRssBytes": 172556288,
+    "nativePeakRssBytes": 15564800,
+    "assetBytes": 135392208,
+    "onnxRuntimeInstalledBytes": 65278097,
+    "totalRuntimeInstalledBytes": 147070538,
+    "databaseBytes": {
+      "afterSeed": 172032,
+      "afterEvaluation": 184320
+    }
+  },
+  "tuningGroups": {
+    "byFamily": {
+      "incident-routing": {
+        "cases": [
+          "t-issue",
+          "t-issue-en"
+        ],
+        "lexical": {
+          "cases": 2,
+          "positives": 2,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 29.054125000000113,
+          "p95Ms": 37.39133300000003
+        },
+        "hybrid": {
+          "cases": 2,
+          "positives": 2,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 33.06383199999982,
+          "p95Ms": 49.086874999999964
+        }
+      },
+      "verified-service-routing": {
+        "cases": [
+          "t-alpha-cross",
+          "t-alpha-local"
+        ],
+        "lexical": {
+          "cases": 2,
+          "positives": 2,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 28.212999999999738,
+          "p95Ms": 31.918125000000146
+        },
+        "hybrid": {
+          "cases": 2,
+          "positives": 2,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 31.21025099999997,
+          "p95Ms": 35.84620899999936
+        }
+      },
+      "chinese-paraphrase": {
+        "cases": [
+          "t-db-cn",
+          "t-db-control"
+        ],
+        "lexical": {
+          "cases": 2,
+          "positives": 2,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 31.924709000000348,
+          "p95Ms": 37.10366699999986
+        },
+        "hybrid": {
+          "cases": 2,
+          "positives": 2,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 34.655583999999635,
+          "p95Ms": 40.87045699999953
+        }
+      },
+      "late-entity": {
+        "cases": [
+          "t-late",
+          "t-deployment-control"
+        ],
+        "lexical": {
+          "cases": 2,
+          "positives": 2,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 35.60137500000019,
+          "p95Ms": 36.196500000000015
+        },
+        "hybrid": {
+          "cases": 2,
+          "positives": 2,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 38.35649999999987,
+          "p95Ms": 43.99924999999985
+        }
+      },
+      "exact-error": {
+        "cases": [
+          "t-error"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 28.65145900000016,
+          "p95Ms": 28.65145900000016
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 31.77879200000052,
+          "p95Ms": 31.77879200000052
+        }
+      },
+      "unknown-service": {
+        "cases": [
+          "t-unknown-service"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 0,
+          "negatives": 1,
+          "successes": 0,
+          "hit1": null,
+          "hit3": null,
+          "MRR": null,
+          "candidateCoverage": null,
+          "negativeNoise": 1,
+          "negativeReturnedItems": 3,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 28.083082999999988,
+          "p95Ms": 28.083082999999988
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 0,
+          "negatives": 1,
+          "successes": 0,
+          "hit1": null,
+          "hit3": null,
+          "MRR": null,
+          "candidateCoverage": null,
+          "negativeNoise": 1,
+          "negativeReturnedItems": 3,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 31.896042000000307,
+          "p95Ms": 31.896042000000307
+        }
+      },
+      "domain-origin": {
+        "cases": [
+          "t-shared"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 33.103458000000046,
+          "p95Ms": 33.103458000000046
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 36.215749999999844,
+          "p95Ms": 36.215749999999844
+        }
+      },
+      "distant-negative": {
+        "cases": [
+          "t-noanswer"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 0,
+          "negatives": 1,
+          "successes": 1,
+          "hit1": null,
+          "hit3": null,
+          "MRR": null,
+          "candidateCoverage": null,
+          "negativeNoise": 0,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 32.52879199999961,
+          "p95Ms": 32.52879199999961
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 0,
+          "negatives": 1,
+          "successes": 1,
+          "hit1": null,
+          "hit3": null,
+          "MRR": null,
+          "candidateCoverage": null,
+          "negativeNoise": 0,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 35.45037600000023,
+          "p95Ms": 35.45037600000023
+        }
+      }
+    },
+    "byExpectedOrigin": {
+      "A": {
+        "cases": [
+          "t-issue",
+          "t-issue-en",
+          "t-db-cn",
+          "t-db-control",
+          "t-late",
+          "t-deployment-control",
+          "t-error"
+        ],
+        "lexical": {
+          "cases": 7,
+          "positives": 7,
+          "negatives": 0,
+          "successes": 7,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 35.60137500000019,
+          "p95Ms": 37.39133300000003
+        },
+        "hybrid": {
+          "cases": 7,
+          "positives": 7,
+          "negatives": 0,
+          "successes": 7,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 38.35649999999987,
+          "p95Ms": 49.086874999999964
+        }
+      },
+      "B": {
+        "cases": [
+          "t-alpha-cross",
+          "t-alpha-local"
+        ],
+        "lexical": {
+          "cases": 2,
+          "positives": 2,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 28.212999999999738,
+          "p95Ms": 31.918125000000146
+        },
+        "hybrid": {
+          "cases": 2,
+          "positives": 2,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 31.21025099999997,
+          "p95Ms": 35.84620899999936
+        }
+      },
+      "no-answer": {
+        "cases": [
+          "t-unknown-service",
+          "t-noanswer"
+        ],
+        "lexical": {
+          "cases": 2,
+          "positives": 0,
+          "negatives": 2,
+          "successes": 1,
+          "hit1": null,
+          "hit3": null,
+          "MRR": null,
+          "candidateCoverage": null,
+          "negativeNoise": 0.5,
+          "negativeReturnedItems": 3,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 28.083082999999988,
+          "p95Ms": 32.52879199999961
+        },
+        "hybrid": {
+          "cases": 2,
+          "positives": 0,
+          "negatives": 2,
+          "successes": 1,
+          "hit1": null,
+          "hit3": null,
+          "MRR": null,
+          "candidateCoverage": null,
+          "negativeNoise": 0.5,
+          "negativeReturnedItems": 3,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 31.896042000000307,
+          "p95Ms": 35.45037600000023
+        }
+      },
+      "domain": {
+        "cases": [
+          "t-shared"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 33.103458000000046,
+          "p95Ms": 33.103458000000046
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 36.215749999999844,
+          "p95Ms": 36.215749999999844
+        }
+      }
+    }
+  },
+  "holdoutGroups": {
+    "byFamily": {
+      "exact-path": {
+        "cases": [
+          "h-path"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 34.844416999999794,
+          "p95Ms": 34.844416999999794
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 49.586541000000125,
+          "p95Ms": 49.586541000000125
+        }
+      },
+      "exact-version": {
+        "cases": [
+          "h-version"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 31.80975000000035,
+          "p95Ms": 31.80975000000035
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 36.86979100000008,
+          "p95Ms": 36.86979100000008
+        }
+      },
+      "environment-conflict": {
+        "cases": [
+          "h-beta"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 0,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": 1,
+          "p50Ms": 31.53420799999958,
+          "p95Ms": 31.53420799999958
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 0,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": 1,
+          "p50Ms": 35.128250999999636,
+          "p95Ms": 35.128250999999636
+        }
+      },
+      "topic-conflict": {
+        "cases": [
+          "h-topic"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 0,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 41.865084000000024,
+          "p95Ms": 41.865084000000024
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 0,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 45.087042999999994,
+          "p95Ms": 45.087042999999994
+        }
+      },
+      "close-negative": {
+        "cases": [
+          "h-close-negative"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 0,
+          "negatives": 1,
+          "successes": 0,
+          "hit1": null,
+          "hit3": null,
+          "MRR": null,
+          "candidateCoverage": null,
+          "negativeNoise": 1,
+          "negativeReturnedItems": 3,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 32.24508399999968,
+          "p95Ms": 32.24508399999968
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 0,
+          "negatives": 1,
+          "successes": 0,
+          "hit1": null,
+          "hit3": null,
+          "MRR": null,
+          "candidateCoverage": null,
+          "negativeNoise": 1,
+          "negativeReturnedItems": 3,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 35.31062500000007,
+          "p95Ms": 35.31062500000007
+        }
+      },
+      "scope-first-ranking": {
+        "cases": [
+          "h-ranking"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 34.41512499999999,
+          "p95Ms": 34.41512499999999
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 38.091499999999996,
+          "p95Ms": 38.091499999999996
+        }
+      },
+      "cross-origin-convention": {
+        "cases": [
+          "h-cross-fact"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 35.39058299999988,
+          "p95Ms": 35.39058299999988
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 38.87658400000009,
+          "p95Ms": 38.87658400000009
+        }
+      },
+      "explicit-origin-filter": {
+        "cases": [
+          "h-origin-filter"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": 0,
+          "p50Ms": 39.845916000000216,
+          "p95Ms": 39.845916000000216
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": 0,
+          "p50Ms": 43.26558300000033,
+          "p95Ms": 43.26558300000033
+        }
+      },
+      "invalidated-route": {
+        "cases": [
+          "h-stale"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 34.97020900000007,
+          "p95Ms": 34.97020900000007
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 38.47291700000051,
+          "p95Ms": 38.47291700000051
+        }
+      },
+      "duplicate-reference": {
+        "cases": [
+          "h-duplicate"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 32.07958400000007,
+          "p95Ms": 32.07958400000007
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 35.48716699999977,
+          "p95Ms": 35.48716699999977
+        }
+      },
+      "tail-integrity": {
+        "cases": [
+          "h-tail"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 0,
+          "hit1": 0,
+          "hit3": 0,
+          "MRR": 0,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 35.624209000000064,
+          "p95Ms": 35.624209000000064
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 0,
+          "hit1": 0,
+          "hit3": 0,
+          "MRR": 0,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 38.3307090000003,
+          "p95Ms": 38.3307090000003
+        }
+      },
+      "unicode-integrity": {
+        "cases": [
+          "h-unicode"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 0,
+          "hit1": 0,
+          "hit3": 0,
+          "MRR": 0,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 33.52320800000007,
+          "p95Ms": 33.52320800000007
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 0,
+          "hit1": 0,
+          "hit3": 0,
+          "MRR": 0,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 35.766333999999915,
+          "p95Ms": 35.766333999999915
+        }
+      }
+    },
+    "byExpectedOrigin": {
+      "A": {
+        "cases": [
+          "h-path"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 34.844416999999794,
+          "p95Ms": 34.844416999999794
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 49.586541000000125,
+          "p95Ms": 49.586541000000125
+        }
+      },
+      "universal": {
+        "cases": [
+          "h-version",
+          "h-beta",
+          "h-topic",
+          "h-ranking",
+          "h-origin-filter"
+        ],
+        "lexical": {
+          "cases": 5,
+          "positives": 5,
+          "negatives": 0,
+          "successes": 3,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": 0.5,
+          "p50Ms": 34.41512499999999,
+          "p95Ms": 41.865084000000024
+        },
+        "hybrid": {
+          "cases": 5,
+          "positives": 5,
+          "negatives": 0,
+          "successes": 3,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": 0.5,
+          "p50Ms": 38.091499999999996,
+          "p95Ms": 45.087042999999994
+        }
+      },
+      "no-answer": {
+        "cases": [
+          "h-close-negative"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 0,
+          "negatives": 1,
+          "successes": 0,
+          "hit1": null,
+          "hit3": null,
+          "MRR": null,
+          "candidateCoverage": null,
+          "negativeNoise": 1,
+          "negativeReturnedItems": 3,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 32.24508399999968,
+          "p95Ms": 32.24508399999968
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 0,
+          "negatives": 1,
+          "successes": 0,
+          "hit1": null,
+          "hit3": null,
+          "MRR": null,
+          "candidateCoverage": null,
+          "negativeNoise": 1,
+          "negativeReturnedItems": 3,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 35.31062500000007,
+          "p95Ms": 35.31062500000007
+        }
+      },
+      "B": {
+        "cases": [
+          "h-cross-fact",
+          "h-stale",
+          "h-tail",
+          "h-unicode"
+        ],
+        "lexical": {
+          "cases": 4,
+          "positives": 4,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 0.5,
+          "hit3": 0.5,
+          "MRR": 0.5,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 34.97020900000007,
+          "p95Ms": 35.624209000000064
+        },
+        "hybrid": {
+          "cases": 4,
+          "positives": 4,
+          "negatives": 0,
+          "successes": 2,
+          "hit1": 0.5,
+          "hit3": 0.5,
+          "MRR": 0.5,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 38.3307090000003,
+          "p95Ms": 38.87658400000009
+        }
+      },
+      "B+universal": {
+        "cases": [
+          "h-duplicate"
+        ],
+        "lexical": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 32.07958400000007,
+          "p95Ms": 32.07958400000007
+        },
+        "hybrid": {
+          "cases": 1,
+          "positives": 1,
+          "negatives": 0,
+          "successes": 1,
+          "hit1": 1,
+          "hit3": 1,
+          "MRR": 1,
+          "candidateCoverage": 1,
+          "negativeNoise": null,
+          "negativeReturnedItems": 0,
+          "wrongEnvironmentRate": null,
+          "p50Ms": 35.48716699999977,
+          "p95Ms": 35.48716699999977
+        }
+      }
+    }
+  },
+  "exactAnchors": [
+    {
+      "id": "t-error",
+      "family": "exact-error",
+      "lexical": [
+        "error-anchor"
+      ],
+      "hybrid": [
+        "error-anchor"
+      ],
+      "success": true
+    },
+    {
+      "id": "h-path",
+      "family": "exact-path",
+      "lexical": [
+        "path-anchor"
+      ],
+      "hybrid": [
+        "path-anchor"
+      ],
+      "success": true
+    },
+    {
+      "id": "h-version",
+      "family": "exact-version",
+      "lexical": [
+        "version-anchor"
+      ],
+      "hybrid": [
+        "version-anchor"
+      ],
+      "success": true
+    }
+  ],
+  "fullReadDiagnostics": [
+    {
+      "caseID": "h-tail",
+      "diagnosticOnly": true,
+      "explanation": "Recall returned no body and emitted no read route for this candidate. Explicit native read by already observed matched ID/placement creates a separate partial rendering; following THAT actual route returns full authoritative body. Neither read changes the v1 recall score or claims an automatically available workflow.",
+      "originalRecallReturned": [],
+      "originalHybridReturned": [],
+      "originalV1Success": false,
+      "canonicalScalarChars": 7265,
+      "canonicalUTF16Chars": 7265,
+      "canonicalUTF8Bytes": 7265,
+      "initialReadWallMs": 61.312875,
+      "partialRenderChars": 6000,
+      "partialBodyChars": 4241,
+      "partialReference": {
+        "source_order": 0,
+        "visibility": "visible",
+        "applicable_repositories": [],
+        "applicability": "unknown",
+        "shadowed_by": null,
+        "completeness": "partial",
+        "content_hash": "1007181cec65de44e26ae2e03e08051112e7dd227d8ee6df4cfb008b5c61f468",
+        "id": 20,
+        "placement": "repository:a6218f4e69044b22975263967bc29ea325ba74730662981003c96e525d80e72b",
+        "memory_metadata": {
+          "kind": "context",
+          "tags": "",
+          "created_at": "2026-11-11T10:06:54.064584+00:00",
+          "updated_at": "2026-11-11T10:06:54.064584+00:00",
+          "scope": "repository:a6218f4e69044b22975263967bc29ea325ba74730662981003c96e525d80e72b",
+          "topic_key": ""
+        },
+        "read": {
+          "tool": "memocap_read",
+          "arguments": {
+            "id": 20,
+            "placement": "repository:a6218f4e69044b22975263967bc29ea325ba74730662981003c96e525d80e72b",
+            "content_hash": "1007181cec65de44e26ae2e03e08051112e7dd227d8ee6df4cfb008b5c61f468"
+          }
+        },
+        "content": "TailGuard fixture operational reference. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic expla"
+      },
+      "followedRouteWallMs": 29.37833400000001,
+      "fullBody": "TailGuard fixture operational reference. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. Synthetic explanatory context. PROHIBITION: do not execute against beta or production. Read the full reference before action.",
+      "fullBodySHA256": "1007181cec65de44e26ae2e03e08051112e7dd227d8ee6df4cfb008b5c61f468",
+      "recordChanged": false
+    },
+    {
+      "caseID": "h-unicode",
+      "diagnosticOnly": true,
+      "explanation": "Recall returned no body and emitted no read route for this candidate. Explicit native read by already observed matched ID/placement creates a separate partial rendering; following THAT actual route returns full authoritative body. Neither read changes the v1 recall score or claims an automatically available workflow.",
+      "originalRecallReturned": [],
+      "originalHybridReturned": [],
+      "originalV1Success": false,
+      "canonicalScalarChars": 6116,
+      "canonicalUTF16Chars": 6496,
+      "canonicalUTF8Bytes": 17182,
+      "initialReadWallMs": 28.765749999999997,
+      "partialRenderChars": 6000,
+      "partialBodyChars": 3796,
+      "partialReference": {
+        "source_order": 0,
+        "visibility": "visible",
+        "applicable_repositories": [],
+        "applicability": "unknown",
+        "shadowed_by": null,
+        "completeness": "partial",
+        "content_hash": "ad20d8e597cd65000cb905957bee0537b45630315a4516a867f845a4c41e4f74",
+        "id": 21,
+        "placement": "repository:a6218f4e69044b22975263967bc29ea325ba74730662981003c96e525d80e72b",
+        "memory_metadata": {
+          "kind": "context",
+          "tags": "",
+          "created_at": "2026-11-11T10:06:54.103425+00:00",
+          "updated_at": "2026-11-11T10:06:54.103425+00:00",
+          "scope": "repository:a6218f4e69044b22975263967bc29ea325ba74730662981003c96e525d80e72b",
+          "topic_key": ""
+        },
+        "read": {
+          "tool": "memocap_read",
+          "arguments": {
+            "id": 21,
+            "placement": "repository:a6218f4e69044b22975263967bc29ea325ba74730662981003c96e525d80e72b",
+            "content_hash": "ad20d8e597cd65000cb905957bee0537b45630315a4516a867f845a4c41e4f74"
+          }
+        },
+        "content": "UnicodeGuard 合成参考。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\""
+      },
+      "followedRouteWallMs": 33.785042000000004,
+      "fullBody": "UnicodeGuard 合成参考。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。说明：\"候选\"与😀需要保留边界。禁止用于生产；必须先读全文核对环境。",
+      "fullBodySHA256": "ad20d8e597cd65000cb905957bee0537b45630315a4516a867f845a4c41e4f74",
+      "recordChanged": false
+    }
+  ],
+  "retainedHashes": [
+    {
+      "name": "capture.json",
+      "sha256": "04a15b9079b8118b01bb9d82a8e28579f64a0f03e084449f23d9aa8ded9f3f5f",
+      "unchanged": true
+    },
+    {
+      "name": "cjk-before-tuning.json",
+      "sha256": "1039102442715a770ccdc4ecf7dc1eddb778a627cb2bf3d0051a18a0d48ab228",
+      "unchanged": true
+    },
+    {
+      "name": "cjk-bigram-tuning.json",
+      "sha256": "3f8afb9e9b2931dd9bb9ed2e1f85a1954aadb2cebfaeba25c28770735c4e9ee5",
+      "unchanged": true
+    },
+    {
+      "name": "cjk-corrected-lexical-tuning.json",
+      "sha256": "c8647135d4726cdf75875e2bda30ee7e497e898b0bc2b579aab4e95c9d1304c5",
+      "unchanged": true
+    },
+    {
+      "name": "cjk-trigram-tuning.json",
+      "sha256": "73bff69c31da32bc28aa5e0bdc9ef8831715c7eac44ca259656ac382f1f795cd",
+      "unchanged": true
+    },
+    {
+      "name": "corpus.json",
+      "sha256": "936448108abe6e56b163e21a2a306ca1f7e2b27f6f87834ea4d27be05e0ac860",
+      "unchanged": true
+    },
+    {
+      "name": "current-0.5.0-holdout.json",
+      "sha256": "261423bf59692cd18276faf5aced219fb429c52fb6b0dc0fb5794d198ac43a47",
+      "unchanged": true
+    },
+    {
+      "name": "current-0.5.0-tuning.json",
+      "sha256": "89cb465f4f111da56117b0126907ff33e1f0670817d44e210e76e2e022b51d3b",
+      "unchanged": true
+    },
+    {
+      "name": "freeze.json",
+      "sha256": "a11bcb3cf90e87d96b061adf81402bf8137ae8e295029fe5ec79803ce022694d",
+      "unchanged": true
+    },
+    {
+      "name": "holdout.expected.json",
+      "sha256": "95a80bec68d4866b4b33ff446b41d41ffa1b9f5357506b27258744d674cb5208",
+      "unchanged": true
+    },
+    {
+      "name": "holdout.queries.json",
+      "sha256": "d91e7eebc3bd4d8a5766b428c55a32cb878d64280782b39b3460db2a01a849ae",
+      "unchanged": true
+    },
+    {
+      "name": "tuning.expected.json",
+      "sha256": "312756e0560551a788945e27e40be4ccc471f92e6e46389c8338514feb801aa1",
+      "unchanged": true
+    },
+    {
+      "name": "tuning.queries.json",
+      "sha256": "54cd22db5e0c9dcd7106a1a15c4065f126305ca9a0010d77b4effece50f41f26",
+      "unchanged": true
+    }
+  ],
+  "implementationSources": {
+    "paired.mjs": "import assert from 'node:assert/strict';\nimport { spawn } from 'node:child_process';\nimport { createInterface } from 'node:readline';\nimport { writeFileSync, statSync } from 'node:fs';\nimport path from 'node:path';\nimport { root, assets, fixtures, digest, load, protocol, scorer, frozen, seed, observe, fuse } from './native_fixture.mjs';\n\nconst split = process.argv[2];\nassert.ok(['tuning','holdout'].includes(split));\nconst prefix = 'semantic-paired-20261111-r1';\nconst output = path.join(fixtures, `${prefix}-${split}.json`);\nconst freezePath = path.join(fixtures, `${prefix}-freeze.json`);\nconst declarationPath = path.join(fixtures, `${prefix}-declaration.json`);\nconst declaration = load(declarationPath);\nconst selection = split==='holdout' ? load(freezePath) : null;\nif (selection) {\n  assert.equal(digest(path.join(assets,'paired.mjs')), selection.implementation.driverSha256);\n  assert.equal(digest(path.join(assets,'native_fixture.mjs')), selection.implementation.fixtureDriverSha256);\n  assert.equal(digest(path.join(assets,'query_server.py')), selection.implementation.serverSha256);\n}\nconst configs = selection ? [selection.config] : declaration.configs;\nconst binarySha256 = digest(path.join(assets,'paired-native'));\nassert.equal(binarySha256,'485c241c1e05278bbfb3cd6e13b53e6d47849cd7a91665211828c0b193f7ba54');\nconst fixture = seed();\nconst startup = performance.now();\nconst python = spawn('/Users/liuyuyu/.cache/uv/environments-v2/runner-62575ba291bdd0dc/bin/python',\n  [path.join(assets,'query_server.py')], {cwd:assets, env:{...process.env,HF_HUB_OFFLINE:'1',TRANSFORMERS_OFFLINE:'1'}, stdio:['pipe','pipe','inherit']});\nconst lines = createInterface({input:python.stdout})[Symbol.asyncIterator]();\nconst readyLine = await lines.next();\nassert.equal(readyLine.done,false);\nconst ready = JSON.parse(readyLine.value);\nassert.equal(ready.ready,true);\nconst startupWallMs = performance.now()-startup;\nif (selection) writeFileSync(path.join(assets,'holdout-started.json'),JSON.stringify({at:new Date().toISOString(),freezeSha256:digest(freezePath)}),{flag:'wx'});\nconst expectations = load(path.join(fixtures,`${split}.expected.json`));\nconst queries = load(path.join(fixtures,`${split}.queries.json`)).map((query)=>({...query,expected:expectations[query.id]}));\nassert.deepEqual(Object.keys(expectations).sort(),queries.map((query)=>query.id).sort());\nconst rows = [];\nfor (const query of queries) {\n  const started = performance.now();\n  const terms = protocol.queryTerms(query.prompt);\n  const argv = ['recall',terms.join(' '),'--match','any','--limit','3','--max-chars','6000',\n    '--targets-json',JSON.stringify(fixture.targets[query.context]),...(query.selector??[])];\n  const lexical = fixture.cli(argv);\n  const lexicalObserved = observe(fixture,query,lexical.receipt);\n  const lexicalThroughRenderMs = performance.now()-started;\n  const semanticStarted = performance.now();\n  python.stdin.write(`${JSON.stringify({text:query.prompt})}\\n`);\n  const response = await lines.next();\n  assert.equal(response.done,false);\n  const semantic = JSON.parse(response.value);\n  assert.equal(semantic.ranking.length,22);\n  const semanticIpcMs = performance.now()-semanticStarted;\n  const commonMs = performance.now()-started;\n  const hybrid = configs.map((config)=>{\n    const fusionStarted = performance.now();\n    const result = fuse(fixture,query,{config,lexical,semantic});\n    const fusionRenderMs = performance.now()-fusionStarted;\n    return {config, ...result, fusionRenderMs, wallMs:commonMs+fusionRenderMs};\n  });\n  rows.push({...query, split, argv:[...argv,'--json'].map((arg)=>arg.replaceAll(fixture.sandbox,'<sandbox>')),\n    lexical:{...lexicalObserved,wallMs:lexical.wallMs,throughRenderMs:lexicalThroughRenderMs,peakRssBytes:lexical.peakRssBytes},\n    semantic:{...semantic,ipcMs:semanticIpcMs}, hybrid });\n}\npython.stdin.end();\nawait new Promise((resolve,reject)=>{python.on('exit',(code)=>code===0?resolve():reject(new Error(`encoder exit ${code}`)));python.on('error',reject);});\nconst lexicalRows = rows.map((row)=>({...row.lexical,id:row.id}));\nconst comparison = (config) => {\n  const paired = rows.map((row)=>({id:row.id,expected:row.expected,lexical:row.lexical,hybrid:row.hybrid.find((item)=>item.config.id===config.id)}));\n  const fixed = paired.filter((row)=>!row.lexical.score.success&&row.hybrid.score.success).map((row)=>row.id);\n  const broken = paired.filter((row)=>row.lexical.score.success&&!row.hybrid.score.success).map((row)=>row.id);\n  const fixedPositives = paired.filter((row)=>row.expected.expectedIDs.length&&!row.lexical.score.success&&row.hybrid.score.success).map((row)=>row.id);\n  const brokenPositives = paired.filter((row)=>row.expected.expectedIDs.length&&row.lexical.score.success&&!row.hybrid.score.success).map((row)=>row.id);\n  const extraNegativeNoise = paired.filter((row)=>!row.expected.expectedIDs.length &&\n    (Number(row.hybrid.score.negativeNoise)>Number(row.lexical.score.negativeNoise)||row.hybrid.returned.length>row.lexical.returned.length)).map((row)=>row.id);\n  const safety = {forbiddenEnvironment:paired.filter((row)=>row.hybrid.score.wrongEnvironment).map((row)=>row.id),\n    forbiddenIDs:paired.filter((row)=>row.hybrid.score.forbidden.length).map((row)=>row.id),\n    selectorLeakage:paired.filter((row)=>row.hybrid.selectorLeakage.length).map((row)=>row.id),\n    partialAsFull:paired.filter((row)=>row.hybrid.partialAsFull.length).map((row)=>row.id)};\n  return {config, summary:scorer.summarize(paired.map((row)=>row.hybrid)), fixed,broken,fixedPositives,brokenPositives,extraNegativeNoise,safety,\n    qualityPass:fixedPositives.length>0&&brokenPositives.length===0&&extraNegativeNoise.length===0&&Object.values(safety).every((value)=>value.length===0)};\n};\nconst report = {schema:1,kind:'paired-local-semantic',split,measuredAt:new Date().toISOString(),declarationSha256:digest(declarationPath),\n  freezeSha256:selection?digest(freezePath):null,fixtureFreeze:frozen,binarySha256,packageVersion:rows[0].lexical.receipt.package_version,\n  implementation:{driverSha256:digest(path.join(assets,'paired.mjs')),fixtureDriverSha256:digest(path.join(assets,'native_fixture.mjs')),serverSha256:digest(path.join(assets,'query_server.py')),\n    protocolSha256:digest(path.join(root,'plugin/protocol.js')),referencesSha256:digest(path.join(root,'plugin/references.js')),querySha256:digest(path.join(root,'plugin/query.js')),scoringSha256:digest(path.join(fixtures,'scoring.mjs'))},\n  model:{revision:'2c4055b12046f11709e9df2c122e59ffbdc2f900',sha256:digest(path.join(assets,'model_quantized.onnx')),vectorsSha256:digest(path.join(assets,'vectors.json')),canonicalFullBodiesVerified:22},\n  resources:{platform:process.platform,arch:process.arch,startupWallMs,encoderReady:ready,\n    pythonPeakRssBytes:Math.max(ready.peakRssBytes,...rows.map((row)=>row.semantic.peakRssBytes)),\n    nodePeakRssBytes:process.resourceUsage().maxRSS*1024,nativePeakRssBytes:Math.max(...rows.map((row)=>row.lexical.peakRssBytes)),\n    assetBytes:135392208,onnxRuntimeInstalledBytes:65278097,totalRuntimeInstalledBytes:147070538,\n    databaseBytes:{afterSeed:fixture.seedBytes,afterEvaluation:statSync(fixture.db).size}},\n  lexical:scorer.summarize(lexicalRows),comparisons:configs.map(comparison),cases:rows};\nwriteFileSync(output,JSON.stringify(report,null,2)+'\\n',{flag:'wx'});\nconsole.log(JSON.stringify({output,lexical:report.lexical,resources:report.resources,comparisons:report.comparisons},null,2));\n",
+    "native_fixture.mjs": "import assert from 'node:assert/strict';\nimport { spawnSync } from 'node:child_process';\nimport { createHash } from 'node:crypto';\nimport { mkdirSync, mkdtempSync, readFileSync, statSync } from 'node:fs';\nimport path from 'node:path';\n\nexport const root = '/Users/liuyuyu/program/github/LYY/memocap-memory-recall-v0.6.0';\nexport const assets = '/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/opencode/memocap-semantic.XEF9ebX0';\nexport const fixtures = path.join(root, 'tests/retrieval-evaluation');\nexport const digest = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');\nexport const load = (file) => JSON.parse(readFileSync(file, 'utf8'));\nexport const protocol = await import(path.join(root, 'plugin/protocol.js'));\nexport const scorer = await import(path.join(fixtures, 'scoring.mjs'));\nexport const frozen = load(path.join(fixtures, 'freeze.json'));\nfor (const [name, hash] of Object.entries(frozen.sha256)) assert.equal(digest(path.join(fixtures, name)), hash);\nexport const records = load(path.join(fixtures, 'corpus.json')).records.map((record) => ({ ...record,\n  content: record.content + (record.repeat ? record.repeat.text.repeat(record.repeat.count) : '') + (record.suffix ?? '') }));\nconst vectors = load(path.join(assets, 'vectors.json'));\nassert.equal(vectors.length, records.length);\nfor (const record of records) {\n  const vector = vectors.find((row) => row.id === record.id);\n  assert.equal(vector.body_sha256, createHash('sha256').update(record.content).digest('hex'));\n  assert.equal(vector.body_utf8_bytes, Buffer.byteLength(record.content));\n  assert.equal(vector.vector.length, 384);\n}\n\nexport function seed() {\n  const sandbox = mkdtempSync(path.join(assets, 'paired-sandbox-'));\n  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>\n    !key.startsWith('MEMOCAP_') && !key.startsWith('GIT_') && !['HOME','XDG_CONFIG_HOME','XDG_DATA_HOME','XDG_CACHE_HOME'].includes(key)));\n  Object.assign(env, { HOME:sandbox, MEMOCAP_HOME:sandbox, MEMOCAP_DB:path.join(sandbox,'fixture.db'),\n    MEMOCAP_DATA_DIR:path.join(sandbox,'data'), XDG_CONFIG_HOME:path.join(sandbox,'config'),\n    XDG_DATA_HOME:path.join(sandbox,'data'), XDG_CACHE_HOME:path.join(sandbox,'cache') });\n  for (const name of ['A','B','config','data','cache']) mkdirSync(path.join(sandbox,name));\n  const binary = path.join(assets, 'paired-native');\n  const cli = (argv) => {\n    const start = performance.now();\n    const result = spawnSync('/usr/bin/time', ['-l', binary, ...argv, '--json'],\n      { cwd:sandbox, env, encoding:'utf8', timeout:30000, maxBuffer:4*1024*1024 });\n    const wallMs = performance.now() - start;\n    if (result.error) throw result.error;\n    assert.equal(result.status, 0, `${result.stderr}\\n${result.stdout}`);\n    const receipt = JSON.parse(result.stdout);\n    assert.equal(receipt.backend, 'local');\n    assert.ok(['ok','empty','inserted'].includes(receipt.status));\n    const rss = result.stderr.match(/(\\d+)\\s+maximum resident set size/u);\n    assert.ok(rss);\n    return { receipt, wallMs, peakRssBytes:Number(rss[1]) };\n  };\n  const targets = Object.fromEntries(['A','B'].map((name) => [name, cli(['scope','resolve','--repo',path.join(sandbox,name)]).receipt.targets]));\n  cli(['scope','domain','create','synthetic-ops','--repo',path.join(sandbox,'A')]);\n  for (const name of ['A','B']) cli(['scope','domain','attach','synthetic-ops','--repo',path.join(sandbox,name)]);\n  const ids = new Map();\n  const entries = new Map();\n  for (const record of records) {\n    const selector = record.origin === 'universal' ? ['--universal'] : record.origin === 'domain' ? ['--domain','synthetic-ops'] : [];\n    const argv = ['remember',record.content,'--force','--repo',path.join(sandbox,record.origin === 'B' ? 'B':'A'),...selector];\n    if (record.topic) argv.push('--topic',record.topic);\n    const { receipt } = cli(argv);\n    ids.set(receipt.returned_ids[0],record.id);\n    entries.set(record.id, receipt.results[0]);\n  }\n  for (const placement of new Set([...entries.values()].map((entry) => entry.memory.placement))) {\n    const listed = cli(['list','--placement',placement,'--limit','100','--repo',path.join(sandbox,'A')]).receipt;\n    for (const entry of listed.results) assert.equal(entry.memory.content, records.find((record) => record.id === ids.get(entry.memory.id)).content);\n  }\n  return { sandbox, cli, ids, entries, targets, seedBytes:statSync(env.MEMOCAP_DB).size, db:env.MEMOCAP_DB,\n    logical:(id) => { assert.ok(ids.has(id)); return ids.get(id); } };\n}\n\nexport function observe(fixture, query, receipt) {\n  protocol.validateMemories(receipt);\n  const block = protocol.referenceBlock(receipt, {});\n  assert.ok(block.text.length <= 6000);\n  const references = JSON.parse(block.text.slice(block.text.indexOf('\\n')+1)).references;\n  const logical = fixture.logical;\n  const complete = references.filter((reference) => reference.content === records.find((record) => record.id === logical(reference.id)).content).map((reference) => logical(reference.id));\n  const observed = { returned:receipt.returned_ids.map(logical), candidates:receipt.matched_ids.map(logical), complete };\n  const selectorLeakage = query.selector ? observed.returned.filter((id) => records.find((record) => record.id === id).origin !== 'universal') : [];\n  const partialAsFull = references.filter((reference) => reference.completeness === 'full' && !complete.includes(logical(reference.id))).map((reference) => logical(reference.id));\n  for (const reference of references) {\n    const entry = fixture.entries.get(logical(reference.id));\n    assert.equal(reference.content_hash, createHash('sha256').update(entry.memory.content).digest('hex'));\n    assert.deepEqual(reference.read, {tool:'memocap_read', arguments:{id:entry.memory.id, placement:entry.memory.placement, content_hash:reference.content_hash}});\n  }\n  const score = scorer.scoreCase(query.expected, observed, records);\n  return { ...observed, selectorLeakage, partialAsFull, score:{...score,success:score.success && selectorLeakage.length===0 && partialAsFull.length===0},\n    referenceChars:block.text.length, injected:references.map((reference)=>logical(reference.id)),\n    partial:references.filter((reference)=>reference.completeness==='partial').map((reference)=>logical(reference.id)),\n    truncated:receipt.truncated, rendered:block.text.replaceAll(fixture.sandbox,'<sandbox>'), receipt };\n}\n\nexport function fuse(fixture, query, pair) {\n  const { config, lexical, semantic } = pair;\n  const rank = new Map(lexical.receipt.matched_ids.map((id,index)=>[fixture.logical(id),index+1]));\n  const typeIndex = (query.selector??[]).indexOf('--type');\n  const kind = typeIndex>=0 ? query.selector[typeIndex+1].trim() : '';\n  const allowed = semantic.ranking.filter((item) => {\n    const entry = fixture.entries.get(item.id);\n    return lexical.receipt.searched_placements.includes(entry.memory.placement) && (!kind || entry.memory.kind === kind);\n  });\n  const semanticRank = new Map(allowed.map((item,index)=>[item.id,index+1]));\n  const admitted = allowed.filter((item)=>item.cosine>=config.threshold);\n  const union = [...new Set([...rank.keys(),...admitted.map((item)=>item.id)])];\n  const fused = union.map((id)=>({id, lexicalRank:rank.get(id)??null, semanticRank:semanticRank.get(id)??null,\n    cosine:semantic.ranking.find((item)=>item.id===id).cosine,\n    fusion:(rank.has(id)?1/(config.k+rank.get(id)):0)+(admitted.some((item)=>item.id===id)?config.semanticWeight/(config.k+semanticRank.get(id)):0)}))\n    .sort((left,right)=>right.fusion-left.fusion || (left.lexicalRank??Infinity)-(right.lexicalRank??Infinity) || left.id.localeCompare(right.id));\n  const selected = [];\n  let remaining = 6000;\n  for (const item of fused.slice(0,3)) {\n    const entry = fixture.entries.get(item.id);\n    const chars = Array.from(entry.memory.content).length;\n    if (chars>remaining) break;\n    remaining -= chars;\n    selected.push({...entry, source_order:0, visibility:'visible', applicable_repositories:[], applicability:'unknown', shadowed_by:null});\n  }\n  const receipt = {...lexical.receipt, results:selected, returned_ids:selected.map((entry)=>entry.memory.id),\n    matched_ids:fused.map((item)=>fixture.entries.get(item.id).memory.id), truncated:selected.length<fused.length,\n    status:selected.length ? 'ok':'empty'};\n  return {...observe(fixture, query, receipt), fused, authorizedSemantic:allowed};\n}\n",
+    "query_server.py": "# /// script\n# requires-python = \"==3.13.*\"\n# dependencies = [\"onnxruntime==1.23.2\", \"tokenizers==0.22.1\", \"numpy==2.3.5\", \"pydantic==2.12.4\"]\n# ///\n# How to run: existing uv runner environment/bin/python query_server.py\n\nfrom __future__ import annotations\n\nimport hashlib\nimport json\nimport resource\nimport sys\nimport time\nfrom typing import ClassVar, Final\nfrom math import sqrt\nfrom array import array\n\nfrom pydantic import BaseModel, ConfigDict, TypeAdapter\n\nfrom runner import Encoder, MODEL_SHA, ROOT\n\n\nclass Query(BaseModel):\n    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, strict=True)\n    text: str\n\n\nclass VectorRow(BaseModel):\n    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, strict=True)\n    id: str\n    body_sha256: str\n    vector: tuple[float, ...]\n\n\nstarted: Final = time.perf_counter()\nassert (\n    hashlib.sha256((ROOT / \"model_quantized.onnx\").read_bytes()).hexdigest()\n    == MODEL_SHA\n)\nrows: Final = TypeAdapter(tuple[VectorRow, ...]).validate_json(\n    (ROOT / \"vectors.json\").read_bytes()\n)\nassert len(rows) == 22 and all(len(row.vector) == 384 for row in rows)\nassert all(\n    abs(sqrt(sum(value * value for value in row.vector)) - 1) < 1e-6 for row in rows\n)\nencoder: Final = Encoder()\nprint(\n    json.dumps(\n        {\n            \"ready\": True,\n            \"startupMs\": (time.perf_counter() - started) * 1000,\n            \"peakRssBytes\": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,\n        }\n    ),\n    flush=True,\n)\nfor line in sys.stdin:\n    query = Query.model_validate_json(line)\n    query_started = time.perf_counter()\n    encoded = encoder.encode(query.text)\n    query_vector = array(\"f\")\n    query_vector.frombytes(encoded.vector.tobytes())\n    scores = [\n        sum(left * right for left, right in zip(query_vector, row.vector, strict=True))\n        for row in rows\n    ]\n    order = sorted(\n        range(len(rows)), key=lambda index: float(scores[index]), reverse=True\n    )\n    print(\n        json.dumps(\n            {\n                \"ranking\": [\n                    {\"id\": rows[int(index)].id, \"cosine\": float(scores[index])}\n                    for index in order\n                ],\n                \"encodeMs\": encoded.elapsed_seconds * 1000,\n                \"encodeAndRankMs\": (time.perf_counter() - query_started) * 1000,\n                \"tokens\": encoded.encoded_tokens,\n                \"tokensBeforeTruncation\": encoded.tokens_before_truncation,\n                \"peakRssBytes\": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,\n            }\n        ),\n        flush=True,\n    )\n",
+    "freeze_selection.mjs": "import assert from 'node:assert/strict';\nimport { writeFileSync, statSync, readdirSync } from 'node:fs';\nimport path from 'node:path';\nimport { root, assets, fixtures, digest, load, frozen } from './native_fixture.mjs';\n\nconst prefix = 'semantic-paired-20261111-r1';\nconst tuningPath = path.join(fixtures,`${prefix}-tuning.json`);\nconst tuning = load(tuningPath);\nconst declarationPath = path.join(fixtures,`${prefix}-declaration.json`);\nassert.equal(digest(declarationPath),tuning.declarationSha256);\nconst ordered = [...tuning.comparisons].sort((left,right)=>right.summary.successes-left.summary.successes ||\n  Object.values(left.safety).flat().length-Object.values(right.safety).flat().length ||\n  left.brokenPositives.length-right.brokenPositives.length ||\n  left.summary.negativeReturnedItems-right.summary.negativeReturnedItems || right.summary.hit1-left.summary.hit1 ||\n  right.config.threshold-left.config.threshold || left.config.semanticWeight-right.config.semanticWeight || left.config.k-right.config.k);\nconst config = ordered[0].config;\nconst round = (value,quantum)=>Math.ceil(value/quantum)*quantum;\nconst warm = tuning.cases.map((row)=>row.hybrid.find((item)=>item.config.id===config.id).wallMs);\nconst allFiles = readdirSync(assets).filter((name)=>statSync(path.join(assets,name)).isFile()).map((name)=>({name,bytes:statSync(path.join(assets,name)).size,sha256:digest(path.join(assets,name))}));\nconst freeze = {schema:1,frozenAt:new Date().toISOString(),holdoutOpened:false,config,\n  selection:'All twelve tie on quality and noise; predeclared conservative tie-break selects threshold .60, weight .5, k10. Tuning has zero newly fixed positives; no adoption claim.',\n  tuningSha256:digest(tuningPath),declarationSha256:digest(declarationPath),fixtureFreeze:frozen,implementation:tuning.implementation,\n  binarySha256:tuning.binarySha256,model:tuning.model,budget:{limit:3,nativeCompleteBodyScalarChars:6000,pluginUTF16Chars:6000},\n  qualityContract:{minimumFixedPositives:1,maximumBrokenPreviouslySuccessfulPositives:0,maximumExtraNegativeNoise:0,\n    forbiddenEnvironment:0,forbiddenIDs:0,selectorLeakage:0,partialAsFull:0,exactAnchorPreservation:true,\n    score:'unaltered v1 scoring.mjs; full-read results never count as fully injected concepts'},\n  measuredTuning:{correctedLexicalP95Ms:tuning.lexical.p95Ms,hybridWarmP95Ms:ordered[0].summary.p95Ms,\n    hybridWarmMaximumMs:Math.max(...warm),coldFirstQueryE2EMs:tuning.resources.startupWallMs+warm[0],...tuning.resources},\n  ceilings:{queryE2EMaxMs:3000,warmQueryP95Ms:tuning.lexical.p95Ms*2,\n    pythonPeakRssBytes:round(tuning.resources.pythonPeakRssBytes,128*1024*1024),\n    nodePeakRssBytes:round(tuning.resources.nodePeakRssBytes,32*1024*1024),\n    nativePeakRssBytes:round(tuning.resources.nativePeakRssBytes,16*1024*1024),\n    fixedAssetsBytes:135392208,installedOnnxRuntimeBytes:65278097,installedAllRuntimeDistributionsBytes:147070538,\n    fixedAssetsPlusAllDistributionsBytes:282462746,\n    rationale:'3000ms is existing plugin request deadline, applies to cold startup plus first query too. Warm p95 <=2x measured corrected lexical p95 keeps relative cost explicit. RSS caps round measured component peaks to next128/32/16MiB on this 32GiB M2Pro device; local experiment envelopes, not universal product memory budgets. Disk caps are exact already pinned bytes, excluding Python interpreter, pyc, experiment scripts and corpus vector JSON separately inventoried.'},\n  machine:{memoryBytes:34359738368,logicalCPU:12,chip:'Apple M2 Pro',platform:'darwin/arm64'},\n  files:allFiles,priorReports:readdirSync(fixtures).filter((name)=>name.endsWith('.json')&&!name.startsWith(prefix)).map((name)=>({name,sha256:digest(path.join(fixtures,name))})),\n  sequence:'This exclusive freeze file must exist and its SHA must be read before paired.mjs holdout. Only one lexical and one frozen hybrid outcome per holdout query. No parameter or implementation changes thereafter.'};\nconst out = path.join(fixtures,`${prefix}-freeze.json`);\nwriteFileSync(out,`${JSON.stringify(freeze,null,2)}\\n`,{flag:'wx'});\nconsole.log(JSON.stringify({path:out,sha256:digest(out),frozenAt:freeze.frozenAt,config,ceilings:freeze.ceilings},null,2));\n",
+    "decision.mjs": "import assert from 'node:assert/strict';\nimport { spawnSync } from 'node:child_process';\nimport { readFileSync, statSync, writeFileSync } from 'node:fs';\nimport { createHash } from 'node:crypto';\nimport path from 'node:path';\nimport { assets, fixtures, digest, load, protocol, scorer, records } from './native_fixture.mjs';\n\nconst prefix = 'semantic-paired-20261111-r1';\nconst tuning = load(path.join(fixtures,`${prefix}-tuning.json`));\nconst holdout = load(path.join(fixtures,`${prefix}-holdout.json`));\nconst freezePath = path.join(fixtures,`${prefix}-freeze.json`);\nconst freeze = load(freezePath);\nassert.equal(holdout.freezeSha256,digest(freezePath));\nassert.equal(freeze.tuningSha256,digest(path.join(fixtures,`${prefix}-tuning.json`)));\nassert.ok(load(path.join(assets,'holdout-started.json')).at>freeze.frozenAt);\nassert.equal(digest(path.join(assets,'paired.mjs')),freeze.implementation.driverSha256);\nassert.equal(digest(path.join(assets,'native_fixture.mjs')),freeze.implementation.fixtureDriverSha256);\nassert.equal(digest(path.join(assets,'query_server.py')),freeze.implementation.serverSha256);\nconst retainedHashes = freeze.priorReports.map(({name,sha256})=>({name,sha256,unchanged:digest(path.join(fixtures,name))===sha256}));\nassert.ok(retainedHashes.every((item)=>item.unchanged));\nconst groupBy = (cases,key) => Object.fromEntries([...new Set(cases.map(key))].map((group)=>{\n  const rows = cases.filter((row)=>key(row)===group);\n  return [group,{cases:rows.map((row)=>row.id),lexical:scorer.summarize(rows.map((row)=>row.lexical)),\n    hybrid:scorer.summarize(rows.map((row)=>row.hybrid.find((item)=>item.config.id===freeze.config.id)))}];\n}));\nconst groups = (report)=>({byFamily:groupBy(report.cases,(row)=>row.family),\n  byExpectedOrigin:groupBy(report.cases,(row)=>[...new Set(row.expected.expectedIDs.map((id)=>records.find((record)=>record.id===id).origin))].sort().join('+')||'no-answer')});\nconst fullReadDiagnostics = [];\nfor (const caseID of ['h-tail','h-unicode']) {\n  const row = holdout.cases.find((item)=>item.id===caseID);\n  const target = row.lexical.receipt.targets[0];\n  const sandbox = path.dirname(target.canonical_path);\n  const env = Object.fromEntries(Object.entries(process.env).filter(([key])=>!key.startsWith('MEMOCAP_')&&!key.startsWith('GIT_')&&!['HOME','XDG_CONFIG_HOME','XDG_DATA_HOME','XDG_CACHE_HOME'].includes(key)));\n  Object.assign(env,{HOME:sandbox,MEMOCAP_HOME:sandbox,MEMOCAP_DB:path.join(sandbox,'fixture.db'),MEMOCAP_DATA_DIR:path.join(sandbox,'data'),\n    XDG_CONFIG_HOME:path.join(sandbox,'config'),XDG_DATA_HOME:path.join(sandbox,'data'),XDG_CACHE_HOME:path.join(sandbox,'cache')});\n  const requested = {id:row.lexical.receipt.matched_ids[0],placement:target.repository_id};\n  const read = (request)=>{\n    const started = performance.now();\n    const result = spawnSync(path.join(assets,'paired-native'),['read',String(request.id),'--placement',request.placement,'--repo',target.canonical_path,'--json'],\n      {cwd:sandbox,env,encoding:'utf8',timeout:3000,maxBuffer:4*1024*1024});\n    assert.equal(result.status,0,result.stderr);\n    return {receipt:protocol.validateRead(JSON.parse(result.stdout),request),wallMs:performance.now()-started};\n  };\n  const initial = read(requested);\n  const record = records.find((item)=>item.id===row.expected.expectedIDs[0]);\n  assert.equal(initial.receipt.results[0].memory.content,record.content);\n  const rendered = protocol.referenceBlock(initial.receipt,{});\n  const reference = JSON.parse(rendered.text.slice(rendered.text.indexOf('\\n')+1)).references[0];\n  assert.equal(reference.completeness,'partial');\n  assert.ok(reference.content.length<record.content.length);\n  assert.equal(reference.content_hash,createHash('sha256').update(record.content).digest('hex'));\n  assert.equal(reference.read.tool,'memocap_read');\n  const followed = read(reference.read.arguments);\n  assert.equal(followed.receipt.record_changed,false);\n  assert.equal(followed.receipt.results[0].memory.content,record.content);\n  assert.equal(followed.receipt.results[0].completeness,'full');\n  fullReadDiagnostics.push({caseID,diagnosticOnly:true,\n    explanation:'Recall returned no body and emitted no read route for this candidate. Explicit native read by already observed matched ID/placement creates a separate partial rendering; following THAT actual route returns full authoritative body. Neither read changes the v1 recall score or claims an automatically available workflow.',\n    originalRecallReturned:row.lexical.returned,originalHybridReturned:row.hybrid[0].returned,originalV1Success:row.hybrid[0].score.success,\n    canonicalScalarChars:Array.from(record.content).length,canonicalUTF16Chars:record.content.length,canonicalUTF8Bytes:Buffer.byteLength(record.content),\n    initialReadWallMs:initial.wallMs,partialRenderChars:rendered.text.length,partialBodyChars:reference.content.length,\n    partialReference:reference,followedRouteWallMs:followed.wallMs,fullBody:followed.receipt.results[0].memory.content,\n    fullBodySHA256:followed.receipt.results[0].content_hash,recordChanged:followed.receipt.record_changed});\n}\nconst selected = holdout.comparisons[0];\nconst warm = holdout.cases.map((row)=>row.hybrid[0].wallMs);\nconst coldFirstQueryE2EMs = holdout.resources.startupWallMs+warm[0];\nconst manifest = load(path.join(assets,'manifest.json'));\nconst fixedAssets = ['model_quantized.onnx','tokenizer.json','tokenizer_config.json','config.json'].reduce((sum,name)=>sum+statSync(path.join(assets,name)).size,0);\nconst installedDistributionsBytes = manifest.distributions.reduce((sum,distribution)=>sum+distribution.installed_bytes,0);\nconst onnxRuntimeBytes = manifest.distributions.find((distribution)=>distribution.name==='onnxruntime').installed_bytes;\nconst resourceGates = {deadline:Math.max(coldFirstQueryE2EMs,...warm)<=freeze.ceilings.queryE2EMaxMs,\n  warmP95:selected.summary.p95Ms<=freeze.ceilings.warmQueryP95Ms,\n  pythonRSS:holdout.resources.pythonPeakRssBytes<=freeze.ceilings.pythonPeakRssBytes,\n  nodeRSS:holdout.resources.nodePeakRssBytes<=freeze.ceilings.nodePeakRssBytes,\n  nativeRSS:holdout.resources.nativePeakRssBytes<=freeze.ceilings.nativePeakRssBytes,\n  fixedAssets:fixedAssets===freeze.ceilings.fixedAssetsBytes,onnxRuntime:onnxRuntimeBytes===freeze.ceilings.installedOnnxRuntimeBytes,\n  allRuntimeDistributions:installedDistributionsBytes===freeze.ceilings.installedAllRuntimeDistributionsBytes};\nconst exactAnchors = [...tuning.cases,...holdout.cases].filter((row)=>['exact-path','exact-version','exact-error','exact-deployment'].includes(row.family))\n  .map((row)=>({id:row.id,family:row.family,lexical:row.lexical.returned,hybrid:row.hybrid.find((item)=>item.config.id===freeze.config.id).returned,\n    success:row.hybrid.find((item)=>item.config.id===freeze.config.id).score.success}));\nconst decision = {schema:1,decidedAt:new Date().toISOString(),decision:'REJECT',releaseAcceptance:false,\n  reason:'Zero fixed positive cases; forbidden-environment and forbidden-topic gates fail, and no-answer noise persists. Resource fit on this machine does not constitute strict quality benefit.',\n  config:freeze.config,freezeSha256:digest(freezePath),holdoutSha256:digest(path.join(fixtures,`${prefix}-holdout.json`)),\n  firstHoldoutOpenedAt:load(path.join(assets,'holdout-started.json')).at,holdoutRuns:1,\n  quality:selected,resourceGates,coldFirstQueryE2EMs,warmMaximumMs:Math.max(...warm),\n  resourceCaveats:'Component peak RSS values are independent high-water marks, not simultaneous totals. Python peak includes model SHA verification, Pydantic and two tokenizers including full-token diagnostic counting. Node peak includes retained raw grid/report data. Native peak via /usr/bin/time -l includes a wrapper in elapsed time. Cold means new process, OS file cache not flushed. 12 cases provide descriptive nearest-rank quantiles only.',\n  frozenResourceCeilings:freeze.ceilings,measuredResources:holdout.resources,\n  tuningGroups:groups(tuning),holdoutGroups:groups(holdout),exactAnchors,fullReadDiagnostics,retainedHashes,\n  implementationSources:Object.fromEntries(['paired.mjs','native_fixture.mjs','query_server.py','freeze_selection.mjs','decision.mjs'].map((name)=>[name,readFileSync(path.join(assets,name),'utf8')])),\n  limits:['No production integration. Python/ONNX prototype only; native runtime/distribution on macOS, Linux and Windows remains unproven.',\n    'All fixtures are synthetic; this is a fixed regression holdout, not statistical population inference.',\n    'No case exercises a nondefault --type selector; the generic union still applies actual native kind semantics, and all22 fixture records are context.',\n    'No primary recall rendering was partial, since native complete-body budget omitted both long records before plugin rendering. Separate direct-read diagnostics exercise actual partial/full/hash/read-route behavior without changing v1 gates.']};\nassert.equal(selected.qualityPass,false);\nassert.ok(exactAnchors.every((row)=>row.success));\nconst out = path.join(fixtures,`${prefix}-decision.json`);\nwriteFileSync(out,`${JSON.stringify(decision,null,2)}\\n`,{flag:'wx'});\nconsole.log(JSON.stringify({out,sha256:digest(out),decision:decision.decision,resourceGates,coldFirstQueryE2EMs,exactAnchors,\n  fullReadDiagnostics:fullReadDiagnostics.map(({caseID,canonicalScalarChars,canonicalUTF16Chars,partialRenderChars,partialBodyChars,initialReadWallMs,followedRouteWallMs})=>({caseID,canonicalScalarChars,canonicalUTF16Chars,partialRenderChars,partialBodyChars,initialReadWallMs,followedRouteWallMs}))},null,2));\n"
+  },
+  "limits": [
+    "No production integration. Python/ONNX prototype only; native runtime/distribution on macOS, Linux and Windows remains unproven.",
+    "All fixtures are synthetic; this is a fixed regression holdout, not statistical population inference.",
+    "No case exercises a nondefault --type selector; the generic union still applies actual native kind semantics, and all22 fixture records are context.",
+    "No primary recall rendering was partial, since native complete-body budget omitted both long records before plugin rendering. Separate direct-read diagnostics exercise actual partial/full/hash/read-route behavior without changing v1 gates."
+  ]
+}

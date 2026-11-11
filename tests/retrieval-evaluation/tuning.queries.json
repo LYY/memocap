@@ -1,0 +1,14 @@
+[
+  {"id":"t-issue","family":"incident-routing","context":"A","prompt":"线上 issue 调查从哪里开始"},
+  {"id":"t-issue-en","family":"incident-routing","context":"A","prompt":"Investigate a production issue"},
+  {"id":"t-alpha-cross","family":"verified-service-routing","context":"A","prompt":"把 Aster 服务发布到 alpha 环境"},
+  {"id":"t-alpha-local","family":"verified-service-routing","context":"B","prompt":"Aster alpha deployment"},
+  {"id":"t-db-cn","family":"chinese-paraphrase","context":"A","prompt":"数据库迁移有什么要求"},
+  {"id":"t-db-control","family":"chinese-paraphrase","context":"A","prompt":"数据库变更必须保留用户数据"},
+  {"id":"t-late","family":"late-entity","context":"A","prompt":"please help me inspect this particular synthetic workload after checking all available context Deployment"},
+  {"id":"t-deployment-control","family":"late-entity","context":"A","prompt":"Deployment"},
+  {"id":"t-error","family":"exact-error","context":"A","prompt":"E_SYNTH_LOCK_73"},
+  {"id":"t-unknown-service","family":"unknown-service","context":"A","prompt":"Deploy UnknownFinch to alpha"},
+  {"id":"t-shared","family":"domain-origin","context":"A","prompt":"Snapshot rehearsal"},
+  {"id":"t-noanswer","family":"distant-negative","context":"A","prompt":"quasar marmalade oceanography"}
+]

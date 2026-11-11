@@ -33,8 +33,8 @@ async function identityHost(resolvedTargets = (targets) => targets) {
       rows.push(entry);
       Object.assign(envelope, { status: 'inserted', returned_ids: [entry.memory.id], searched_placements: [entry.memory.placement] });
     }
-    if (['recall', 'list'].includes(operation)) {
-      envelope.results = rows.filter((entry) => targets.some((selected) => selected.repository_id === entry.memory.placement));
+    if (['recall', 'list', 'read'].includes(operation)) {
+      envelope.results = operation === 'read' ? rows.filter((entry) => entry.memory.id === Number(argv[1]) && entry.memory.placement === argv[argv.indexOf('--placement') + 1]) : rows;
       envelope.returned_ids = envelope.results.map((entry) => entry.memory.id);
     }
     return { receipt: envelope };
@@ -57,7 +57,7 @@ test('permission binds frozen ID when path changes during ask, including indepen
   assert.equal(saved.status, 'inserted');
   assert.equal(saved.readback.status, 'ok');
   assert.equal(host.rows[0].memory.placement, firstID);
-  assert.deepEqual(host.calls.filter(({ argv }) => ['remember', 'list'].includes(argv[0]))
+  assert.deepEqual(host.calls.filter(({ argv }) => ['remember', 'read'].includes(argv[0]))
     .map(({ argv }) => JSON.parse(argv[argv.indexOf('--targets-json') + 1])[0].repository_id), [firstID, firstID]);
 });
 
@@ -72,7 +72,7 @@ test('selected IDs survive deleted paths and require permission for new ID-only 
   host.context.ask = async () => {};
   assert.deepEqual((await host.execute('recall', { query: 'checkout' })).returned_ids, [1]);
   assert.equal((await host.execute('scope', { repository_ids: [secondID] })).status, 'ok');
-  assert.deepEqual((await host.execute('recall', { query: 'checkout' })).returned_ids, []);
+  assert.deepEqual((await host.execute('recall', { query: 'checkout' })).returned_ids, [1]);
 });
 
 test('scope boundary rejects empty, duplicate, invalid and mixed selectors before permission', async () => {
@@ -105,6 +105,7 @@ test('distinct checkout paths sharing an ID stay frozen through scope and subseq
   const saved = await host.execute('remember', { content: 'sharedcheckoutanchor' });
   host.context.ask = async (permission) => {
     host.asks.push(permission);
+    if (permission.permission === 'memocap_recall') return;
     assert.ok(Object.isFrozen(permission.metadata.targets));
     for (const selected of permission.metadata.targets) {
       assert.ok(Object.isFrozen(selected));
@@ -123,7 +124,7 @@ test('distinct checkout paths sharing an ID stay frozen through scope and subseq
   const recalled = await host.execute('recall', { query: 'sharedcheckoutanchor' });
   assert.deepEqual(recalled.targets, expected);
   assert.deepEqual(recalled.returned_ids, saved.returned_ids);
-  assert.deepEqual(host.asks.slice(1).map((permission) => permission.metadata.targets), [expected, expected]);
+  assert.deepEqual(host.asks.slice(1).map((permission) => permission.metadata.targets), [expected, expected, expected]);
   const asksBeforeWrite = host.asks.length;
   const callsBeforeWrite = host.calls.length;
   assert.equal((await host.execute('remember', { content: 'no fanout' })).status, 'failed');
@@ -174,6 +175,7 @@ test('session cancellation during pure resolution cannot inject a stale failure 
     await pending;
     return base.run(argv, {});
   });
+  runtime.config(base.config);
   const message = user();
   const transform = runtime.transform({}, { messages: [message] });
   await resolving;

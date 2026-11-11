@@ -19,19 +19,21 @@ async function host(options = {}) {
     if (argv[0] === 'remember') {
       rows.push(argv.at(argv.indexOf('--') + 1));
       answer.receipt = receipt('remember', { status: 'inserted', results: [], returned_ids: [rows.length],
-        searched_placements: ['repository:A'] });
+        searched_placements: [argv.includes('--universal') ? 'universal' : JSON.parse(argv[argv.indexOf('--targets-json') + 1])[0].repository_id] });
     }
-    if (argv[0] === 'list') {
+    if (['list', 'read'].includes(argv[0])) {
       const entries = options.inventory ? options.inventory(argv) : rows.map((content, index) => memory(index + 1, content));
-      answer.receipt = receipt('list', { results: entries, returned_ids: entries.map((entry) => entry.memory.id) });
+      if (argv[0] === 'read') for (const entry of entries) entry.memory.placement = argv[argv.indexOf('--placement') + 1];
+      answer.receipt = receipt(argv[0], { results: entries, returned_ids: entries.map((entry) => entry.memory.id) });
     }
     return answer;
   });
+  runtime.config(base.config);
   const operations = createOperations(runtime);
   const tools = createTools(operations);
   const commands = createCommands(operations, runtime);
   const askCalls = [];
-  const context = { sessionID: 'A', messageID: 'tool-msg', directory: repoPath('A'), worktree: repoPath('A'),
+  const context = { sessionID: 'A', messageID: 'tool-msg', agent: 'build', directory: repoPath('A'), worktree: repoPath('A'),
     abort: new AbortController().signal, ask: async (permission) => { askCalls.push(permission); }, metadata() {} };
   return { ...base, runtime, tools, commands, context, rows, askCalls, fail: (path) => { failPath = path; },
     degrade: () => { auxiliaryFailure = true; } };
@@ -158,11 +160,11 @@ test('relative tool targets use the actual session directory and freeze approval
     const current = await host();
     const sessionDirectory = path.resolve('/session/B');
     const approvedChild = path.join(sessionDirectory, 'child');
-    current.input.client.session.get = async () => ({ data: { directory: sessionDirectory } });
+    current.input.client.session.get = async () => ({ data: { directory: sessionDirectory, agent: 'build', permission: [] } });
     current.context.directory = path.resolve('/host/A');
     current.context.ask = async (permission) => {
       assert.deepEqual(current.calls.map(({ argv }) => argv.slice(0, 2)), [['scope', 'resolve']]);
-      assert.deepEqual(permission.patterns, [repoID(approvedChild)]);
+      assert.deepEqual(permission.patterns, permission.permission === 'memocap_recall' ? ['library'] : [repoID(approvedChild)]);
       const state = await current.runtime.context('A');
       state.targets = [path.resolve('/unexpected')];
       if (args.paths) args.paths[0] = path.resolve('/mutated');
@@ -187,18 +189,20 @@ test('permission paths containing wildcard metacharacters never widen approval o
   }
 });
 
-test('exact inventory readback accepts shadowed rows and follows pages until the committed ID', async () => {
+test('exact readback accepts the committed shadowed row without inventory pagination', async () => {
   const current = await host({ inventory: (argv) => {
-    const offset = Number(argv[argv.indexOf('--offset') + 1]);
-    const entries = offset === 0 ? Array.from({ length: 20 }, (_, index) => memory(index + 2)) : [memory(1)];
+    assert.equal(argv[0], 'read');
+    const entries = [memory(1, 'shadowed rule')];
     for (const entry of entries) entry.visibility = 'shadowed';
     return entries;
   } });
   const saved = JSON.parse((await current.tools.memocap_remember.execute({ content: 'shadowed rule', universal: true }, current.context)).output);
   assert.equal(saved.status, 'inserted');
   assert.equal(saved.readback.status, 'ok');
-  const lists = current.calls.filter(({ argv }) => argv[0] === 'list');
-  assert.deepEqual(lists.map(({ argv }) => argv[argv.indexOf('--offset') + 1]), ['0', '20']);
+  assert.equal(current.calls.filter(({ argv }) => argv[0] === 'list').length, 0);
+  const exact = current.calls.find(({ argv }) => argv[0] === 'read').argv;
+  assert.equal(exact[1], '1');
+  assert.equal(exact[exact.indexOf('--placement') + 1], 'universal');
   assert.equal(current.calls.filter(({ argv }) => argv[0] === 'remember').length, 1);
 });
 

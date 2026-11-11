@@ -26,7 +26,7 @@ test('native plugin selects primary and linked worktree together and recalls the
       assert.equal(response.status, 0, response.stderr);
     }
     const host = fixture();
-    host.input.client.session.get = async () => ({ data: { directory: current.A } });
+    host.input.client.session.get = async () => ({ data: { id: 'A', agent: 'build', permission: [], directory: current.A } });
     const hooks = await current.module.default.server(host.input);
     context.after(() => hooks.dispose());
     const asks = [];
@@ -78,7 +78,7 @@ test('native plugin freezes symlink identity before permission and uses IDs afte
     const originalID = cli(['scope', 'resolve', '--repo', alias]).targets[0].repository_id;
     const replacementID = cli(['scope', 'resolve', '--repo', current.B]).targets[0].repository_id;
     const host = fixture();
-    host.input.client.session.get = async () => ({ data: { directory: current.A } });
+    host.input.client.session.get = async () => ({ data: { id: 'A', agent: 'build', permission: [], directory: current.A } });
     const previousCwd = process.cwd();
     let hooks;
     try {
@@ -88,7 +88,8 @@ test('native plugin freezes symlink identity before permission and uses IDs afte
     context.after(() => hooks.dispose());
     const toolContext = { sessionID: 'A', messageID: 'native-identity', abort: new AbortController().signal,
       metadata() {}, ask: async (permission) => {
-        assert.deepEqual(permission.patterns, [originalID]);
+        assert.deepEqual(permission.patterns, permission.permission === 'memocap_recall' ? ['library'] : [originalID]);
+        if (permission.permission === 'memocap_recall') return;
         fs.unlinkSync(alias);
         fs.symlinkSync(fs.realpathSync(current.B), alias, process.platform === 'win32' ? 'junction' : 'dir');
       } };
@@ -96,7 +97,8 @@ test('native plugin freezes symlink identity before permission and uses IDs afte
     const selected = await execute('scope', { paths: [alias] });
     assert.equal(selected.status, 'empty', JSON.stringify(selected));
     assert.equal(selected.targets[0].repository_id, originalID);
-    toolContext.ask = async (permission) => assert.deepEqual(permission.patterns, [originalID]);
+    toolContext.ask = async (permission) => assert.deepEqual(permission.patterns,
+      permission.permission === 'memocap_recall' ? ['library'] : [originalID]);
     fs.unlinkSync(alias);
     fs.rmSync(current.A, { recursive: true });
     fs.rmSync(current.B, { recursive: true });
@@ -111,9 +113,13 @@ test('native plugin freezes symlink identity before permission and uses IDs afte
     assert.equal(fs.existsSync(database), true);
     const missing = await execute('scope', { paths: [current.A] });
     assert.equal(missing.status, 'failed');
-    toolContext.ask = async (permission) => assert.deepEqual(permission.patterns, [replacementID]);
+    toolContext.ask = async (permission) => assert.deepEqual(permission.patterns,
+      permission.permission === 'memocap_recall' ? ['library'] : [replacementID]);
     const switched = await execute('scope', { repository_ids: [replacementID] });
-    assert.equal(switched.status, 'empty', JSON.stringify(switched));
+    assert.equal(switched.status, 'ok', JSON.stringify(switched));
+    assert.deepEqual(switched.discovery, { kind: 'library' });
+    assert.deepEqual(switched.returned_ids, saved.returned_ids);
+    assert.equal(switched.targets[0].repository_id, replacementID);
     const idOnly = await execute('remember', { content: 'idonlyanchor has no descriptor' });
     assert.equal(idOnly.readback.status, 'ok', JSON.stringify(idOnly));
     assert.deepEqual(idOnly.repository_context[replacementID], { identity: null, locations: [] });

@@ -4,6 +4,7 @@ import path from "node:path";
 import { applyEdits, createScanner, findNodeAtLocation, modify, parse, parseTree, SyntaxKind } from "jsonc-parser";
 import { packageName, SetupError } from "./arguments.mjs";
 import { ancestors, atomicWrite, digest, readText } from "./files.mjs";
+import { inspectPermissions } from "./permissions.mjs";
 
 export function parseConfig(filename, text = readText(filename)) {
   const errors = [];
@@ -83,21 +84,29 @@ export function inspectConfig(scope, record, runtime) {
   for (const filename of managedConfigFiles(runtime)) if (fs.existsSync(filename)) conflicts.push({ code: "managed_config", path: filename });
   if (entries.length > 1) conflicts.push({ code: "duplicate_plugin", path: scope.config });
   if (record?.plugin && entries.length && JSON.stringify(entries[0]) !== JSON.stringify(record.plugin.entry)) conflicts.push({ code: "plugin_modified", path: scope.config });
-  const registrations = configFiles.flatMap((filename) => (parseConfig(filename).plugin || []).filter(isMemocap).map((entry) => ({ config: filename, entry })));
-  return { config, entries, registrations, conflicts, digest: digest(scope.text) };
+  const layers = configFiles.map((filename) => ({ filename, config: parseConfig(filename) }));
+  const registrations = layers.flatMap(({ filename, config }) => (config.plugin || []).filter(isMemocap).map((entry) => ({ config: filename, entry })));
+  const permissions = inspectPermissions(config, layers);
+  return { config, entries, registrations, conflicts, permissions, digest: digest(scope.text) };
 }
 
-function removeArrayEntry(text, location) {
+function removeConfigEntry(text, location) {
   const tree = parseTree(text, [], { allowTrailingComma: true });
-  const node = findNodeAtLocation(tree, location);
-  const edits = [{ offset: node.offset, length: node.length, content: "" }];
+  const selected = findNodeAtLocation(tree, location);
+  const node = selected.parent.type === "property" ? selected.parent : selected;
+  const siblings = node.parent.children;
+  const index = siblings.indexOf(node);
+  const trivia = createScanner(text.slice(node.offset, node.offset + node.length), false);
+  let comments = "";
+  while (trivia.scan() !== SyntaxKind.EOF) if ([SyntaxKind.LineCommentTrivia, SyntaxKind.BlockCommentTrivia, SyntaxKind.LineBreakTrivia, SyntaxKind.Trivia].includes(trivia.getToken())) comments += trivia.getTokenValue();
+  const edits = [{ offset: node.offset, length: node.length, content: node.type === "property" ? comments : "" }];
   // Keep trivia outside the owned value; jsonc-parser's array removal consumes it.
   const scanner = createScanner(text, true);
   scanner.setPosition(node.offset + node.length);
   if (scanner.scan() === SyntaxKind.CommaToken) {
     edits.push({ offset: scanner.getTokenOffset(), length: scanner.getTokenLength(), content: "" });
-  } else if (location.at(-1) > 0) {
-    const previous = findNodeAtLocation(tree, [...location.slice(0, -1), location.at(-1) - 1]);
+  } else if (index > 0) {
+    const previous = siblings[index - 1];
     scanner.setPosition(previous.offset + previous.length);
     scanner.scan();
     edits.push({ offset: scanner.getTokenOffset(), length: scanner.getTokenLength(), content: "" });
@@ -111,7 +120,8 @@ export function managedEntry(previous, target, directory) {
   return [`${packageName}@${target}`, { ...options, skillDirectory: directory }];
 }
 
-export function managedConfigText(scope, entry, ownedPaths = []) {
+export function managedConfigText(scope, intent) {
+  const { entry, remove_paths: ownedPaths = [] } = intent;
   const formattingOptions = { insertSpaces: true, tabSize: 2, eol: scope.text?.includes("\r\n") ? "\r\n" : "\n" };
   let changed = scope.text ?? "{}\n";
   const edit = (location, replacement) => { changed = applyEdits(changed, modify(changed, location, replacement, { formattingOptions })); };
@@ -122,25 +132,30 @@ export function managedConfigText(scope, entry, ownedPaths = []) {
       edit(["plugin", index, 0], entry[0]);
       edit(["plugin", index, 1, "skillDirectory"], entry[1].skillDirectory);
     } else edit(current.plugin ? ["plugin", index < 0 ? -1 : index] : ["plugin"], current.plugin ? entry : [entry]);
-  } else if (index >= 0) changed = removeArrayEntry(changed, ["plugin", index]);
+  } else if (index >= 0) changed = removeConfigEntry(changed, ["plugin", index]);
   for (const directory of ownedPaths) {
     const paths = parseConfig(scope.config, changed).skills?.paths || [];
     const offset = paths.indexOf(directory);
-    if (offset >= 0 && directory !== entry?.[1].skillDirectory) changed = removeArrayEntry(changed, ["skills", "paths", offset]);
+    if (offset >= 0 && directory !== entry?.[1].skillDirectory) changed = removeConfigEntry(changed, ["skills", "paths", offset]);
   }
   if (entry) {
     const paths = parseConfig(scope.config, changed).skills?.paths;
     if (!paths?.includes(entry[1].skillDirectory)) edit(paths ? ["skills", "paths", -1] : ["skills", "paths"], paths ? entry[1].skillDirectory : [entry[1].skillDirectory]);
+  }
+  for (const change of intent.permissions?.edits || []) {
+    if (change.remove) changed = removeConfigEntry(changed, change.path);
+    else edit(change.path, change.value);
   }
   parseConfig(scope.config, changed);
   return changed;
 }
 
 export function writeManagedConfig(scope, intent) {
+  if (intent.after_digest && digest(scope.text) === intent.after_digest) return { status: "unchanged", backup: null, digest: intent.after_digest };
   const current = parseConfig(scope.config, scope.text);
   const existing = (current.plugin || []).find(isMemocap);
   if (!intent.entry && existing && JSON.stringify(existing) !== JSON.stringify(intent.previous_entry)) throw new SetupError("plugin_modified", `Preserving changed plugin: ${scope.config}`);
-  const changed = managedConfigText(scope, intent.entry, intent.remove_paths);
+  const changed = managedConfigText(scope, intent);
   if (changed === scope.text) return { status: "unchanged", backup: null, digest: digest(changed) };
   const saved = atomicWrite(scope.config, changed, scope.text);
   if (readText(scope.config) !== changed) throw new SetupError("config_outcome_unknown", `Config commit readback differs: ${scope.config}`);

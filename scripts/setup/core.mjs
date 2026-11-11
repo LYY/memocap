@@ -6,7 +6,7 @@ import { commands, packageName, parseArguments, SetupError } from "./arguments.m
 import { backendReadiness, backendStatus, backendWarnings } from "./backend.mjs";
 import { configScopes, pluginSource } from "./config.mjs";
 import { readJSON, readText } from "./files.mjs";
-import { verifyHost } from "./host.mjs";
+import { isSupportedHost, verifyHost } from "./host.mjs";
 import { appendPendingSteps, inspectScopes, mutateInstall, mutateUninstall, preflight, scopeReports } from "./lifecycle.mjs";
 import { loadManifest } from "./manifest.mjs";
 import { discoverCLI, prerequisites, refuseDowngrade, resolveVersion } from "./packages.mjs";
@@ -40,7 +40,7 @@ function componentAvailability(context, inspections) {
   ])].filter(Boolean);
   report.update_available = versions.some((version) => version !== target);
   report.repair_required = !report.shared_cli.version || !report.shared_cli.executable_path || inspections.some(({ plugin, skill }) =>
-    plugin.entries.length !== 1 || pluginSource(plugin.entries[0]) !== `${packageName}@${target}` || !skill.selected?.discovery_path || skill.managed?.version !== target || skill.observed?.digest !== context.bundle.digest || skill.inspectionError || !Array.isArray(plugin.entries[0]) || plugin.entries[0][1]?.skillDirectory !== skill.observed?.directory);
+    plugin.entries.length !== 1 || pluginSource(plugin.entries[0]) !== `${packageName}@${target}` || !skill.selected?.discovery_path || skill.managed?.version !== target || skill.observed?.digest !== context.bundle.digest || skill.inspectionError || !Array.isArray(plugin.entries[0]) || plugin.entries[0][1]?.skillDirectory !== skill.observed?.directory || plugin.permissions.grants.some(({ status }) => status !== "explicit_allow"));
 }
 
 async function inspectCurrentState(context) {
@@ -78,7 +78,7 @@ function readOnlyResult(context, inspections) {
   report.plan = installationPlan(context, inspections);
   backendWarnings(report);
   if (options.command === "check") { report.status = "ok"; report.readiness = backendReadiness(report); report.exit_code = 0; return true; }
-  const complete = report.prerequisites.opencode === "1.19.3" && report.shared_cli.version === target && report.shared_cli.executable_path && report.shared_cli.cache.status === "verified" && !report.repair_required && inspections.every(({ plugin }) => !plugin.conflicts.length);
+  const complete = isSupportedHost(report.prerequisites.opencode) && report.shared_cli.version === target && report.shared_cli.executable_path && report.shared_cli.cache.status === "verified" && !report.repair_required && inspections.every(({ plugin }) => !plugin.conflicts.length);
   const readiness = backendReadiness(report);
   report.status = !complete && readiness === "static_ready" ? "incomplete" : readiness;
   report.readiness = report.status;

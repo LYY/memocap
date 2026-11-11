@@ -133,13 +133,13 @@ for (const owned of ['"@lyy-gh/memocap@0.2.0"', '["@lyy-gh/memocap@0.2.0", {"aut
           if (separators[index]) separators[index] = "";
           else if (index > 0) separators[index - 1] = "";
           const expected = render();
-          const changed = managedConfigText({ config: "/fixture.jsonc", text }, null);
+          const changed = managedConfigText({ config: "/fixture.jsonc", text }, { entry: null });
           const errors = [];
           const remaining = parse(changed, errors, { allowTrailingComma: true });
           assert.deepEqual(errors, [], changed);
           assert.deepEqual(remaining, { plugin: position === "sole" ? [] : others.map((entry) => JSON.parse(entry)), model: "keep,setting" });
           assert.equal(changed, expected);
-          assert.equal(managedConfigText({ config: "/fixture.jsonc", text: changed }, null), changed);
+          assert.equal(managedConfigText({ config: "/fixture.jsonc", text: changed }, { entry: null }), changed);
         });
       }
     }
@@ -151,13 +151,13 @@ test("JSONC uninstall after compact 0.1 to 0.2 source update preserves unrelated
   const { parse } = await import("jsonc-parser");
   const text = '{"plugin":[["other",{"enabled":true}],"@lyy-gh/memocap@0.1.0"]}';
   const entry = managedEntry(parse(text).plugin[1], "0.2.0", "/managed policy");
-  const updated = managedConfigText({ config: "/fixture.jsonc", text }, entry);
+  const updated = managedConfigText({ config: "/fixture.jsonc", text }, { entry });
   const updateErrors = [];
   const config = parse(updated, updateErrors, { allowTrailingComma: true });
   assert.deepEqual(updateErrors, []);
   assert.deepEqual(config.plugin, [["other", { enabled: true }], entry]);
   assert.deepEqual(config.skills.paths, ["/managed policy"]);
-  const changed = managedConfigText({ config: "/fixture.jsonc", text: updated }, null, ["/managed policy"]);
+  const changed = managedConfigText({ config: "/fixture.jsonc", text: updated }, { entry: null, remove_paths: ["/managed policy"] });
   const errors = [];
   assert.deepEqual(parse(changed, errors, { allowTrailingComma: true }).plugin, [["other", { enabled: true }]]);
   assert.deepEqual(errors, []);

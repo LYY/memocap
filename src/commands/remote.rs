@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use memocap::{
-    cli::{self, PlacementSelector, ScopedRecall, ScopedRemember},
+    cli::{self, PlacementSelector, ScopedRemember},
     remote,
     scope::{PlacementId, RepositoryId, ResolvedScope},
     store::{CopyMoveInput, CopyMoveRequest, CopyMoveResult, InventoryMemory},
@@ -43,26 +43,6 @@ impl<'a> RemoteSession<'a> {
                 force: memory.force,
                 overwrite_id: memory.overwrite_id,
                 target: None,
-            },
-        )
-    }
-
-    pub(crate) fn recall(
-        &self,
-        selector: Option<PlacementSelector>,
-        query: ScopedRecall<'_>,
-    ) -> Result<Vec<InventoryMemory>> {
-        let placement = self.selected_placement(selector);
-        remote::recall(
-            self.address,
-            self.token,
-            remote::RecallRequest {
-                repository: self.repository(),
-                placement: placement.as_ref(),
-                query: query.query,
-                limit: query.limit,
-                kind: query.kind,
-                max_chars: query.max_chars,
             },
         )
     }

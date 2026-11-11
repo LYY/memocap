@@ -128,6 +128,42 @@ test("JSON package version is checked even after a successful handshake", async 
   await assert.rejects(run(["recall", "query"], { cwd: directory }), { code: "version_mismatch" });
 });
 
+test("a withdrawn candidate during a delayed handshake never starts the command", async (context) => {
+  const { directory, run } = await fixture(context,
+    `require('node:fs').writeFileSync('command-started', 'yes'); ${success}`, `
+    require('node:fs').writeFileSync('handshake-started', 'yes');
+    const timer = setInterval(() => {
+      if (require('node:fs').existsSync('release-handshake')) {
+        clearInterval(timer); console.log('memocap ${version}');
+      }
+    }, 5);
+  `);
+  let valid = true;
+  let barriers = 0;
+  const pending = run(['remember', 'withdrawn'], { cwd: directory, beforeSpawn() {
+    barriers++;
+    if (!valid) throw Object.assign(new Error('withdrawn'), { code: 'cancelled', outcome: 'outcome_unknown' });
+  } });
+  const rejected = assert.rejects(pending, { code: 'cancelled', phase: 'command', outcome: 'not_started' });
+  await waitForFile(path.join(directory, 'handshake-started'));
+  valid = false;
+  fs.writeFileSync(path.join(directory, 'release-handshake'), 'yes');
+  await rejected;
+  assert.equal(barriers, 1);
+  assert.equal(fs.existsSync(path.join(directory, 'command-started')), false);
+});
+
+test("beforeSpawn runs only for a command after a successful handshake", async (context) => {
+  let barriers = 0;
+  const beforeSpawn = () => { barriers++; };
+  const failed = await fixture(context, success, `console.log('memocap 999.0.0')`);
+  await assert.rejects(failed.run(['remember', 'body'], { cwd: failed.directory, beforeSpawn }), { code: 'version_mismatch' });
+  assert.equal(barriers, 0);
+  const accepted = await fixture(context, success);
+  await accepted.run(['remember', 'body'], { cwd: accepted.directory, beforeSpawn });
+  assert.equal(barriers, 1);
+});
+
 test("malformed JSON and incompatible envelopes are protocol failures", async (context) => {
   for (const stdout of ["not json", "{}", "null", "[]", '{"format_version":2,"status":"ok"}',
     '{"format_version":1,"status":""}', '{"format_version":1,"status":"ok","results":{}}']) {

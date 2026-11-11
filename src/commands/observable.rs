@@ -109,6 +109,8 @@ fn prepare(command: Command, options: &crate::Cli, caller: Caller) -> Result<Req
             limit,
             r#type,
             max_chars,
+            library: _,
+            placement,
             domain,
             universal,
         } => Action::Recall {
@@ -117,8 +119,9 @@ fn prepare(command: Command, options: &crate::Cli, caller: Caller) -> Result<Req
             limit,
             kind: r#type,
             max_chars,
-            placement: selected(domain, universal),
+            discovery: super::recall::discovery(placement, domain, universal)?,
         },
+        Command::Read { id, placement } => Action::Read { id, placement },
         Command::List {
             limit,
             offset,

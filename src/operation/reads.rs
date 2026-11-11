@@ -1,6 +1,6 @@
 use super::{Command, DomainAction, Request};
 use crate::{
-    activity::{ActivityDetail, RecallActivity, RecallStatus},
+    activity::ActivityDetail,
     receipt::{MemoryResult, Receipt, Status},
     store,
 };
@@ -14,96 +14,25 @@ pub(super) fn execute(
 ) -> Result<Option<ActivityDetail>> {
     let repository = super::repository(request)?;
     match &request.command {
-        Command::Recall {
-            query,
-            match_mode,
-            limit,
-            kind,
-            max_chars,
-            placement,
-        } => {
-            let mut targets = Vec::new();
-            for (index, target) in request.targets.iter().enumerate() {
-                let sources =
-                    super::sources(connection, &target.repository_id, placement.as_ref())?;
-                let placements = sources
-                    .iter()
-                    .map(|source| source.placement().to_string())
-                    .collect::<Vec<_>>();
-                receipt.targets[index].placements = placements.clone();
-                for placement in placements {
-                    if !receipt.searched_placements.contains(&placement) {
-                        receipt.searched_placements.push(placement);
-                    }
-                }
-                targets.push(store::RecallTarget {
-                    repository: target.repository_id.clone(),
-                    sources,
-                });
-            }
-            let options = store::RecallOptions {
-                query,
-                match_mode: *match_mode,
-                kind: kind.as_deref(),
-                limit: *limit,
-                max_chars: *max_chars,
-            };
-            let mut returned = store::recall_targets(
-                connection,
-                &targets,
-                store::RecallOptions {
-                    limit: usize::try_from(i64::MAX).unwrap_or(usize::MAX),
-                    max_chars: None,
-                    ..options
-                },
-            )?;
-            receipt.matched_ids = returned.iter().map(|entry| entry.memory.id).collect();
-            store::budget_targeted_memories(&mut returned, options.limit, options.max_chars)?;
-            receipt.truncated = returned.len() < receipt.matched_ids.len();
-            receipt.results = returned
-                .into_iter()
-                .map(|entry| MemoryResult {
-                    source_order: entry
-                        .applicability
-                        .first()
-                        .map_or(0, |app| app.source_order),
-                    applicable_repositories: entry
-                        .applicability
-                        .into_iter()
-                        .map(|app| app.repository)
-                        .collect(),
-                    memory: entry.memory,
+        Command::Recall { .. } => return super::recall::execute(connection, request, receipt),
+        Command::Read { id, placement } => {
+            receipt.searched_placements = vec![placement.to_string()];
+            if let Some(memory) = store::memory_by_id(connection, *id)?
+                .filter(|memory| memory.placement == placement.to_string())
+            {
+                receipt.matched_ids = vec![memory.id];
+                receipt.returned_ids = vec![memory.id];
+                receipt.results = vec![MemoryResult {
+                    memory,
+                    source_order: 0,
                     visibility: "visible".into(),
+                    applicable_repositories: vec![],
+                    applicability: Some(crate::receipt::Applicability::Unknown),
                     shadowed_by: None,
-                })
-                .collect();
-            receipt.returned_ids = receipt
-                .results
-                .iter()
-                .map(|entry| entry.memory.id)
-                .collect();
-            receipt.query_terms = query
-                .split_whitespace()
-                .map(|term| term.replace('"', ""))
-                .filter(|term| !term.is_empty())
-                .collect();
-            let status = if receipt.results.is_empty() {
-                receipt.status = Status::Empty;
-                RecallStatus::Empty
+                }];
             } else {
-                RecallStatus::Ok
-            };
-            return Ok(Some(ActivityDetail::Recall(RecallActivity {
-                status,
-                searched_placements: receipt
-                    .searched_placements
-                    .iter()
-                    .map(|placement| placement.parse())
-                    .collect::<Result<_, _>>()?,
-                query_terms: receipt.query_terms.clone(),
-                matched_ids: receipt.matched_ids.clone(),
-                returned_ids: receipt.returned_ids.clone(),
-            })));
+                receipt.status = Status::Empty;
+            }
         }
         Command::List {
             placement,

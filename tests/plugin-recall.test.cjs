@@ -6,7 +6,9 @@ const load = () => import('../plugin/recall.js');
 async function runtime(options = {}, run) {
   const host = fixture();
   const { createRecallRuntime } = await load();
-  return { ...host, runtime: createRecallRuntime(host.input, options, run ?? host.run) };
+  const runtime = createRecallRuntime(host.input, options, run ?? host.run);
+  runtime.config(host.config);
+  return { ...host, runtime };
 }
 
 test('transform reuses one real turn recall across tool loops and assigns fresh owned part IDs', async () => {
@@ -84,7 +86,7 @@ test('query filters synthetic input and bounds multilingual terms and reference 
   assert.ok(block.text.length <= 6000);
   assert.equal(block.metadata.memocap.trust, 'untrusted_reference');
   assert.equal(block.metadata.memocap.injection_status, 'prepared');
-  assert.ok(block.metadata.memocap.query_terms.length <= 12);
+  assert.ok(block.metadata.memocap.query_terms.length <= 48);
   assert.equal(block.metadata.memocap.query_terms.includes('synthetic_secret'), false);
   assert.equal(block.metadata.memocap.query_terms[0], '中文');
 });

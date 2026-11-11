@@ -98,6 +98,9 @@ fn operation_show_preserves_recall_and_both_injection_stages() {
         status: InjectionStatus::Ok,
         injected_ids: vec![7],
         cache_hit: false,
+        references: vec![],
+        discovery: None,
+        truncated: None,
     };
     let mut prepared = recalled.clone();
     prepared.detail = ActivityDetail::InjectionPrepared(injected.clone());

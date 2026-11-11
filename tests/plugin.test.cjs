@@ -11,13 +11,14 @@ test('real bridge retains targets and anchored database after deleting every che
   const expectedExecutionCwd = fs.realpathSync(path.parse(current.A).root);
   context.mock.property(process, 'env', { ...process.env, MEMOCAP_DB: '../anchored.db' });
   const host = fixture();
-  host.input.client.session.get = async () => ({ data: { directory: current.A } });
+  host.input.client.session.get = async () => ({ data: { directory: current.A, agent: 'build', permission: [] } });
   let hooks;
   try {
     process.chdir(current.A);
     hooks = await current.module.default.server(host.input);
   } finally { process.chdir(previousCwd); }
   context.after(() => hooks.dispose());
+  await hooks.config(host.config);
   const toolContext = { sessionID: 'A', messageID: 'deletion', abort: new AbortController().signal,
     ask: async () => {}, metadata() {} };
   const scoped = JSON.parse((await hooks.tool.memocap_scope.execute({ paths: [current.B] }, toolContext)).output);
@@ -43,11 +44,11 @@ test('V1 exported server executes hooks through the real bridge and fixture chil
   context.after(fixturePackage.cleanup);
   assert.equal(fixturePackage.module.default.id, 'memocap');
   const host = fixture();
-  host.input.client.session.get = async () => ({ data: { directory: fixturePackage.A } });
+  host.input.client.session.get = async () => ({ data: { directory: fixturePackage.A, agent: 'build', permission: [] } });
   const hooks = await fixturePackage.module.default.server(host.input);
-  const config = {};
+  const config = host.config;
   await hooks.config(config);
-  assert.deepEqual(Object.keys(hooks.tool).sort(), ['memocap_organize', 'memocap_recall', 'memocap_remember', 'memocap_scope']);
+  assert.deepEqual(Object.keys(hooks.tool).sort(), ['memocap_organize', 'memocap_read', 'memocap_recall', 'memocap_remember', 'memocap_scope']);
   const message = user();
   await hooks['chat.message']({ sessionID: 'A' }, { message: message.info, parts: message.parts });
   await hooks['experimental.chat.messages.transform']({}, { messages: [message] });
@@ -72,4 +73,29 @@ test('V1 exported server executes hooks through the real bridge and fixture chil
   await hooks['experimental.session.compacting']({ sessionID: 'A' }, compact);
   assert.equal(compact.context.length, 1);
   await hooks.dispose();
+});
+
+test('the exported read hook restores the complete exact receipt after native output truncation', async (context) => {
+  const fixturePackage = await sandbox();
+  context.after(fixturePackage.cleanup);
+  const host = fixture();
+  host.input.client.session.get = async () => ({ data: { directory: fixturePackage.A, agent: 'build', permission: [] } });
+  const hooks = await fixturePackage.module.default.server(host.input);
+  context.after(() => hooks.dispose());
+  await hooks.config(host.config);
+  const toolContext = { sessionID: 'A', messageID: 'read-full', agent: 'build', abort: new AbortController().signal,
+    ask: async () => {}, metadata() {} };
+  const body = 'complete 😀 body\n'.repeat(1000);
+  const write = JSON.parse((await hooks.tool.memocap_remember.execute({ content: body }, toolContext)).output);
+  const output = await hooks.tool.memocap_read.execute({ id: write.returned_ids[0], placement: write.searched_placements[0] }, toolContext);
+  output.output = '{"host":"truncated"}';
+  output.metadata.truncated = true;
+  output.metadata.outputPath = '/host/truncation.txt';
+  await hooks['tool.execute.after']({ tool: 'memocap_read' }, output);
+  const result = JSON.parse(output.output);
+  assert.equal(result.results[0].memory.content, body);
+  assert.equal(result.results[0].completeness, 'full');
+  assert.equal(output.metadata.truncated, false);
+  assert.equal(output.metadata.outputPath, undefined);
+  assert.equal(output.metadata.memocap_complete_output, undefined);
 });

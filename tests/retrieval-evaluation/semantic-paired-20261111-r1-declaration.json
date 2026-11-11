@@ -1,0 +1,22 @@
+{
+  "declaredAt": "2026-11-11T10:04:46Z",
+  "status": "tuning-only; candidate and resource ceilings freeze after measured tuning",
+  "algorithm": "Union all native scope/kind-authorized lexical matched_ids with scope/kind-authorized semantic candidates whose cosine >= threshold. Score 1/(k+lexicalRank) plus semanticWeight/(k+authorizedSemanticRank) when above threshold. Missing list contributes zero. Sort descending score, lexical rank, logical ID. Native top3 complete-body prefix <=6000 Unicode scalar chars, then actual plugin referenceBlock <=6000 UTF16 chars. No query-ID, expected-ID, environment keyword, or per-query rule.",
+  "semanticInput": "full original query prompt; corpus features are existing canonical-full-body SHA verified normalized vectors (512 token truncation declared)",
+  "selection": "Maximize tuning case successes, then minimize forbidden exposures, broken positives, negative returned items, then maximize hit1; ties choose larger threshold, smaller semanticWeight, smaller k. Strict benefit is evaluated separately; no tuning gain is not adoption.",
+  "timing": "One sequential native invocation per case via /usr/bin/time -l (observer included); actual Python encode including diagnostic token count + cosine + IPC; hybrid total includes native call, lexical render, encode/IPC, candidate fusion and actual render, measured common prefix reused across grid. Cold bound adds startupWallMs. Seed/resolve excluded. No corpus-encoding timing used as query cost.",
+  "configs": [
+    {"id":"k10-w0.5-t0.30","k":10,"semanticWeight":0.5,"threshold":0.30},
+    {"id":"k10-w0.5-t0.45","k":10,"semanticWeight":0.5,"threshold":0.45},
+    {"id":"k10-w0.5-t0.60","k":10,"semanticWeight":0.5,"threshold":0.60},
+    {"id":"k10-w1-t0.30","k":10,"semanticWeight":1,"threshold":0.30},
+    {"id":"k10-w1-t0.45","k":10,"semanticWeight":1,"threshold":0.45},
+    {"id":"k10-w1-t0.60","k":10,"semanticWeight":1,"threshold":0.60},
+    {"id":"k60-w0.5-t0.30","k":60,"semanticWeight":0.5,"threshold":0.30},
+    {"id":"k60-w0.5-t0.45","k":60,"semanticWeight":0.5,"threshold":0.45},
+    {"id":"k60-w0.5-t0.60","k":60,"semanticWeight":0.5,"threshold":0.60},
+    {"id":"k60-w1-t0.30","k":60,"semanticWeight":1,"threshold":0.30},
+    {"id":"k60-w1-t0.45","k":60,"semanticWeight":1,"threshold":0.45},
+    {"id":"k60-w1-t0.60","k":60,"semanticWeight":1,"threshold":0.60}
+  ]
+}

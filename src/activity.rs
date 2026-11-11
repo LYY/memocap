@@ -1,11 +1,15 @@
+mod capture;
 mod error;
 mod model;
+mod references;
 mod schema;
 mod serde_ids;
 mod validation;
 
+pub use capture::{CaptureReviewActivity, CaptureReviewStatus};
 pub use error::ActivityError;
 pub use model::*;
+pub use references::*;
 
 use chrono::Utc;
 use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};

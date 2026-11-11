@@ -17,7 +17,7 @@ mod targets;
 mod transfers;
 
 pub use targets::{
-    format_targeted_memories, recall_targeted, resolve_targets, RepositoryContext,
+    format_targeted_memories, recall_placed, recall_targeted, resolve_targets, RepositoryContext,
     RepositoryTarget, TargetedRecall,
 };
 
@@ -99,24 +99,6 @@ pub fn remember_placed(
             overwrite_id: memory.overwrite_id,
         },
         descriptor.as_ref(),
-    )
-}
-
-pub fn recall_placed(
-    database: &Path,
-    selector: Option<PlacementSelector>,
-    query: ScopedRecall<'_>,
-) -> Result<Vec<InventoryMemory>> {
-    let repository = repository_for_selector(selector.as_ref())?;
-    let connection = store::open(database)?;
-    let sources = read_sources(&connection, selector.as_ref(), repository.as_ref())?;
-    store::recall_visible(
-        &connection,
-        &sources,
-        query.query,
-        query.limit,
-        query.kind,
-        query.max_chars,
     )
 }
 

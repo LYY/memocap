@@ -1,7 +1,8 @@
 # Deployment and Operations
 
-This guide describes the operator contract implemented for package 0.5.0; it
-does not claim that the package has been published. The server owns one main
+This guide describes the target operator contract for package 0.6.0; it
+does not claim publication, a local update, or runtime verification. Follow the
+versioned guide shipped with the exact target package. The server owns one main
 SQLite database for core memories, activity, and repository metadata. It is not
 a multi-tenant service.
 
@@ -174,7 +175,7 @@ The server exposes these authenticated `POST` routes under `/v1`:
 
 | Route | Purpose |
 | --- | --- |
-| `/v1/capabilities` | Check the current server version before receipt operations; CLI and server must match 0.5.0. |
+| `/v1/capabilities` | Check the current server version before receipt operations; CLI and server must match 0.6.0. |
 | `/v1/receipt` | Execute typed operations and return one format-1 receipt, including core outcome and independent activity outcome. |
 | `/v1/memories/remember` | Store one memory at an exact placement. |
 | `/v1/memories/recall` | Recall effective memories from the visible stack or one selected placement. |
@@ -194,7 +195,7 @@ Legacy unversioned routes such as `/remember`, `/recall`, `/list`, `/forget`,
 and `/status` are removed, not deprecated. There is no route fallback and no
 remote-to-local fallback.
 
-CLI, plugin, skill, and server use the current 0.5.0 contract. The existing
+CLI, plugin, skill, and server use the target 0.6.0 contract. The existing
 `/v1/capabilities` endpoint provides the server version check before mutation;
 versions must match. There is no old-request fallback or new capability
 negotiation. Binary support fields do not prove database readiness; inspect
@@ -236,8 +237,11 @@ upgrade and must wait until old writers are quiesced. To prepare a new or
 existing server database, an administrator runs the local
 `memocap activity prepare --json` command with `MEMOCAP_ADDR` unset and the
 server's `MEMOCAP_DB`. This prepares the whole main schema: it creates a missing
-schema `2.2` or upgrades exact schema `2.1`, and may prune retained activity.
-Inspect afterward with `memocap status --read-only --json`. Remote preparation
+schema `2.3` or upgrades exact schema `2.2`, and may prune retained activity.
+Before any preparation that mutates an existing database, use SQLite's backup
+API or another WAL-aware backup method. Inspect afterward with
+`memocap status --read-only --json` and require `ready`/`2.3` with activity ready.
+Remote preparation
 is refused. If recording fails after a successful core write, preserve its
 success and report the activity warning; never repeat the write to obtain a
 history entry.
@@ -280,15 +284,25 @@ Write, delete, and legacy host actions are removed from the TUI, not deprecated.
 ## Schema and recovery maintenance
 
 Schema policy is authoritative in [SCHEMA-VERSIONING.md](SCHEMA-VERSIONING.md).
-The current baseline is schema `2.2` in the main database. Read-only status
-reports an exact `2.1` database as `upgrade_needed` without migrating it. A
-read-write open or explicit local preparation applies only exact `2.1` to `2.2`,
-adding identity/location tables while retaining all existing data and organization
-state. Schemas `2.0`, `1.0`, pre-versioned, malformed, unknown, and future versions
+The target baseline is schema `2.3` in the main database. The 0.6.0 read-only
+status reports an exact `2.2` database as `upgrade_needed` without migrating it.
+A read-write open or explicit local preparation applies only exact `2.2` to
+`2.3`, adding `capture_review` to the activity phase CHECK constraint while
+retaining existing data, organization state, identity/location metadata,
+FTS, provenance, operation ledger, and activity. Schemas `2.1`, `2.0`, `1.0`,
+pre-versioned, malformed, unknown, and future versions
 are refused without reset; there is no migration chain or older-consumer promise.
+
+For managed local setup, only the installed 0.5.0 CLI's `ready`/`2.2` receipt is
+accepted as immediate-prior preflight when the requested target is exactly 0.6.0.
+It never establishes target readiness. After authorized package upgrade and
+preparation, the exact 0.6.0 CLI must independently report `ready`/`2.3` with
+activity ready. A 0.6.0 CLI claiming `ready`/`2.2` is refused. Check, doctor, and
+dry-run do not initialize, migrate, prune, or record activity. This local
+preflight exception does not permit an older remote client or server.
 
 Before upgrading, use SQLite's backup API or another WAL-aware backup method.
 Switching to an older binary is not a downgrade or backup restore. Never overwrite
-newer schema `2.2` data with an older backup. For ordinary deletion, use the exact
+newer schema `2.3` data with an older backup. For ordinary deletion, use the exact
 `forget` placement and ID. For a transfer, record its operation ID and recovery
 handle in the operator log.

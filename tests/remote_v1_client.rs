@@ -99,7 +99,8 @@ fn remote_client_uses_authenticated_v1_for_memory_domains_and_status() {
         TOKEN,
         remote::RecallRequest {
             repository: &repository,
-            placement: None,
+            discovery: &memocap::discovery::Discovery::Library,
+            match_mode: memocap::store::MatchMode::All,
             query: "remote",
             limit: 20,
             kind: None,

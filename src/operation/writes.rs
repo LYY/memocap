@@ -161,6 +161,7 @@ fn materialize(connection: &Connection, receipt: &mut Receipt) {
                 .map(|target| target.repository_id.to_string())
                 .collect(),
             shadowed_by: None,
+            applicability: None,
         }),
         Ok(None) => {
             receipt.warning =

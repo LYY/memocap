@@ -53,6 +53,9 @@ fn retention_caps_reads_and_writes_on_explicit_preparation() {
         status: InjectionStatus::Skipped,
         injected_ids: vec![],
         cache_hit: true,
+        references: vec![],
+        discovery: None,
+        truncated: None,
     });
     activity.record(&next_read).unwrap();
     assert_eq!(

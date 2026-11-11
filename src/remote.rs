@@ -28,7 +28,8 @@ pub struct RememberRequest<'a> {
 
 pub struct RecallRequest<'a> {
     pub repository: &'a RepositoryId,
-    pub placement: Option<&'a PlacementId>,
+    pub discovery: &'a crate::discovery::Discovery,
+    pub match_mode: crate::store::MatchMode,
     pub query: &'a str,
     pub limit: usize,
     pub kind: Option<&'a str>,

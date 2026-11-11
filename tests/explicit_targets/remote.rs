@@ -59,7 +59,15 @@ fn explicit_remote_targets_select_real_server_repository_namespaces() {
     run(&["remember", "remote alpha", "--repo", a]);
     run(&["remember", "remote beta", "--repo", b]);
 
-    let only_a = run(&["recall", "remote", "--repo", a]);
+    let repository_a = memocap::scope::resolve_readonly(&fixture.a).unwrap();
+    let only_a = run(&[
+        "recall",
+        "remote",
+        "--repo",
+        a,
+        "--placement",
+        repository_a.repository().as_str(),
+    ]);
     let merged = run(&["recall", "remote", "--repo", a, "--repo", b]);
     let list_b = run(&["list", "--repo", b]);
     let status = run(&["status", "--repo", b]);

@@ -1,0 +1,12 @@
+{
+  "contract":"synthetic-v1-before-first-holdout",
+  "sha256":{
+    "ACCEPTANCE.md":"c3726da58f5c949c8452ed76ff4b2bca9544aa2767a520d79029e76901bfcb7c",
+    "capture.json":"04a15b9079b8118b01bb9d82a8e28579f64a0f03e084449f23d9aa8ded9f3f5f",
+    "corpus.json":"936448108abe6e56b163e21a2a306ca1f7e2b27f6f87834ea4d27be05e0ac860",
+    "tuning.queries.json":"54cd22db5e0c9dcd7106a1a15c4065f126305ca9a0010d77b4effece50f41f26",
+    "tuning.expected.json":"312756e0560551a788945e27e40be4ccc471f92e6e46389c8338514feb801aa1",
+    "holdout.queries.json":"d91e7eebc3bd4d8a5766b428c55a32cb878d64280782b39b3460db2a01a849ae",
+    "holdout.expected.json":"95a80bec68d4866b4b33ff446b41d41ffa1b9f5357506b27258744d674cb5208"
+  }
+}

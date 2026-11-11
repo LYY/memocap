@@ -1,0 +1,14 @@
+[
+  {"id":"h-path","family":"exact-path","context":"A","prompt":"定位 /synthetic/orbit/ops/entry.yaml"},
+  {"id":"h-version","family":"exact-version","context":"A","prompt":"FixtureSDK 2.7.4 compatibility"},
+  {"id":"h-beta","family":"environment-conflict","context":"A","prompt":"Beacon beta release"},
+  {"id":"h-topic","family":"topic-conflict","context":"A","prompt":"Comet beta rollout"},
+  {"id":"h-close-negative","family":"close-negative","context":"A","prompt":"Beacon gamma release"},
+  {"id":"h-ranking","family":"scope-first-ranking","context":"A","prompt":"Release attestation checksum verification"},
+  {"id":"h-cross-fact","family":"cross-origin-convention","context":"A","prompt":"Zephyr 构建怎么验证"},
+  {"id":"h-origin-filter","family":"explicit-origin-filter","context":"A","selector":["--universal"],"prompt":"Beacon beta release"},
+  {"id":"h-stale","family":"invalidated-route","context":"B","prompt":"Kestrel alpha 入口还能用吗"},
+  {"id":"h-duplicate","family":"duplicate-reference","context":"B","prompt":"Cedar certificate renewal"},
+  {"id":"h-tail","family":"tail-integrity","context":"B","prompt":"TailGuard"},
+  {"id":"h-unicode","family":"unicode-integrity","context":"B","prompt":"UnicodeGuard"}
+]

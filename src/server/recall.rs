@@ -26,11 +26,11 @@ pub(super) fn execute(database: &Path, query: Recall) -> Outgoing {
         caller: operation::Caller::default(),
         command: operation::Command::Recall {
             query: query.query,
-            match_mode: store::MatchMode::All,
+            match_mode: query.match_mode,
             limit: query.limit,
             kind: query.kind,
             max_chars: query.max_chars,
-            placement: query.placement,
+            discovery: query.discovery,
         },
     };
     let receipt = operation::execute(database, &request, ActivityBackend::Remote);
@@ -48,6 +48,6 @@ pub(super) fn execute(database: &Path, query: Recall) -> Outgoing {
         .collect::<Vec<_>>();
     json(
         200,
-        serde_json::json!({"memories": memories, "repository_context":receipt.repository_context, "activity_status": receipt.activity_status, "warning": receipt.warning}),
+        serde_json::json!({"memories": memories, "discovery": receipt.discovery, "searched_placements": receipt.searched_placements, "repository_context":receipt.repository_context, "activity_status": receipt.activity_status, "warning": receipt.warning}),
     )
 }

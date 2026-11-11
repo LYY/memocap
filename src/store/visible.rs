@@ -5,7 +5,9 @@ use crate::scope::{PlacementId, RepositoryId};
 
 use super::{sqlite_limit, Memory};
 
+mod discovery;
 mod query;
+pub use discovery::recall_discovery;
 mod recall;
 mod shadow;
 

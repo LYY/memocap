@@ -3,6 +3,7 @@
 pub mod activity;
 pub mod cli;
 pub mod config;
+pub mod discovery;
 pub mod hosts;
 pub mod inspection;
 pub mod inventory;

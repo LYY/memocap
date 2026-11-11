@@ -68,12 +68,24 @@ pub(crate) enum Command {
         r#type: Option<String>,
         #[arg(long)]
         max_chars: Option<usize>,
-        /// Search only an attached domain.
+        /// Search the entire personal memory library (the default).
+        #[arg(long, conflicts_with_all = ["placement", "domain", "universal"])]
+        library: bool,
+        /// Search only these exact origins; repeat for multiple origins.
+        #[arg(long, conflicts_with_all = ["domain", "universal"])]
+        placement: Vec<scope::PlacementId>,
+        /// Search only this exact domain origin.
         #[arg(long, conflicts_with = "universal")]
         domain: Option<scope::DomainId>,
         /// Search only universal memory.
         #[arg(long)]
         universal: bool,
+    },
+    /// Read one full memory by its exact ID and origin placement.
+    Read {
+        id: i64,
+        #[arg(long)]
+        placement: scope::PlacementId,
     },
     /// Show newest memories.
     List {

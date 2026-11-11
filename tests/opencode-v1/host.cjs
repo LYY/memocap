@@ -50,7 +50,20 @@ async function prepare(root, evidence) {
   } catch (error) { evidence.cleanup.package = await packaged.cleanup(); throw error; }
 }
 
-async function wireProvider() {
+function captureExtraction(body) {
+  const content = body.messages.findLast((message) => message.role === 'user')?.content;
+  const text = typeof content === 'string' ? content : (content || [])
+    .filter((part) => part.type === 'text').map((part) => part.text).join('');
+  try {
+    const packet = JSON.parse(text);
+    return packet !== null && typeof packet === 'object' && Array.isArray(packet.evidence);
+  } catch (error) {
+    if (error instanceof SyntaxError) return false;
+    throw error;
+  }
+}
+
+async function wireProvider(options = {}) {
   const requests = [];
   const responses = [];
   const errors = [];
@@ -64,7 +77,9 @@ async function wireProvider() {
       const body = JSON.parse(raw);
       assert.equal(body.model, 'wire-model');
       requests.push({ method: request.method, url: request.url, body });
-      const step = responses.shift() || { text: 'Local wire fixture completed.' };
+      const step = options.emptyCaptureExtraction && captureExtraction(body)
+        ? { text: JSON.stringify({ candidates: [] }) }
+        : responses.shift() || { text: 'Local wire fixture completed.' };
       const delta = step.tool ? { role: 'assistant', tool_calls: [{ index: 0,
         id: `call_${requests.length}`, type: 'function', function: {
           name: step.tool, arguments: JSON.stringify(step.args),
@@ -90,11 +105,14 @@ async function wireProvider() {
 }
 
 async function startHost(fixture, provider, evidence) {
+  const installed = require('jsonc-parser').parse(fs.readFileSync(fixture.config, 'utf8'));
   const config = {
     model: 'wire/wire-model', small_model: 'wire/wire-model',
     enabled_providers: ['wire'], share: 'disabled', autoupdate: false,
     permission: { '*': 'deny', skill: 'allow', read: 'allow', external_directory: 'allow',
-      memocap_scope: 'allow', memocap_recall: 'allow', memocap_remember: 'allow', memocap_organize: 'allow' },
+      memocap_scope: 'allow', memocap_remember: 'allow', memocap_organize: 'allow',
+      ...(installed.permission?.memocap_recall ? { memocap_recall: installed.permission.memocap_recall } : {}),
+      ...(installed.permission?.memocap_read ? { memocap_read: installed.permission.memocap_read } : {}) },
     provider: { wire: { npm: '@ai-sdk/openai-compatible', name: 'Local deterministic wire fixture',
       options: { baseURL: provider.url, apiKey: 'local-fixture-only', timeout: 10000 },
       models: { 'wire-model': { name: 'Local fixture', tool_call: true,

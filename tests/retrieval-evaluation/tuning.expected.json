@@ -1,0 +1,14 @@
+{
+  "t-issue":{"expectedIDs":["issue-route"],"concepts":["logs-entry","production-query-entry"]},
+  "t-issue-en":{"expectedIDs":["issue-route"],"concepts":["logs-entry","production-query-entry"]},
+  "t-alpha-cross":{"expectedIDs":["alpha-route"],"concepts":["aster-alpha-repository","alpha-entry"]},
+  "t-alpha-local":{"expectedIDs":["alpha-route"],"concepts":["aster-alpha-repository","alpha-entry"]},
+  "t-db-cn":{"expectedIDs":["db-preservation"],"concepts":["preserve-user-data"]},
+  "t-db-control":{"expectedIDs":["db-preservation"],"concepts":["preserve-user-data"]},
+  "t-late":{"expectedIDs":["deployment-anchor"],"concepts":["deployment-validation"]},
+  "t-deployment-control":{"expectedIDs":["deployment-anchor"],"concepts":["deployment-validation"]},
+  "t-error":{"expectedIDs":["error-anchor"],"concepts":["exact-error-recovery"]},
+  "t-unknown-service":{"expectedIDs":[],"concepts":[],"expectedNoAnswer":true},
+  "t-shared":{"expectedIDs":["domain-route"],"concepts":["shared-snapshot-check"]},
+  "t-noanswer":{"expectedIDs":[],"concepts":[],"expectedNoAnswer":true}
+}

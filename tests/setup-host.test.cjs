@@ -7,6 +7,38 @@ const test = require("node:test");
 const { fixture } = require("./setup-fixtures.cjs");
 const { snapshot } = require("./packaged-runtime.cjs");
 
+for (const version of ["1.19.3", "1.19.5"]) for (const origin of ["native", "homebrew"]) test(`readonly prerequisites accept tested ${origin} host ${version}`, async (context) => {
+  const setup = fixture(context);
+  const { prerequisites } = await import("../scripts/setup/packages.mjs");
+  const directory = path.join(setup.root, "host");
+  if (origin === "homebrew") fs.unlinkSync(path.join(directory, "package.json"));
+  const metadata = path.join(directory, origin === "homebrew" ? "INSTALL_RECEIPT.json" : "package.json");
+  fs.writeFileSync(metadata, JSON.stringify(origin === "homebrew"
+    ? { source: { tap: "anomalyco/tap", path: "Formula/opencode.rb", versions: { stable: version } } }
+    : { name: "opencode-ai", version }));
+  const runtime = { ...setup.runtime, run: () => assert.fail("readonly prerequisites must not execute the host") };
+  const before = snapshot([setup.root]);
+
+  const observed = await prerequisites(runtime);
+
+  assert.equal(observed.opencode, version);
+  assert.equal(observed.host.source, fs.realpathSync(metadata));
+  assert.deepEqual(snapshot([setup.root]), before);
+});
+
+for (const version of ["1.19.3", "1.19.5", "1.19.4", "1.19.6", "1.20.0"]) for (const metadata of [true, false]) test(`authorized verification ${metadata ? "metadata" : "execution"} handles exact host ${version}`, async () => {
+  const { verifyHost } = await import("../scripts/setup/host.mjs");
+  const calls = [];
+  const runtime = { run: async (command, args) => { calls.push({ command, args }); return { code: 0, stdout: `${version}\n`, stderr: "" }; } };
+  const host = { executable_path: "/isolated/opencode", version: metadata ? version : null };
+
+  const verification = verifyHost(runtime, host);
+
+  if (["1.19.3", "1.19.5"].includes(version)) assert.equal(await verification, version);
+  else await assert.rejects(verification, { code: "unsupported_host" });
+  assert.deepEqual(calls, metadata ? [] : [{ command: host.executable_path, args: ["--version"] }]);
+});
+
 for (const layout of ["global", "local"]) test(`readonly host metadata follows the official ${layout} npm native target`, async (context) => {
   const setup = fixture(context);
   const { prerequisites } = await import("../scripts/setup/packages.mjs");

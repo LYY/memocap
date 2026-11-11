@@ -94,6 +94,12 @@ function runProcess(request) {
     if (signal?.aborted) { abort(); reject(failure); return; }
     if (expiresAt <= Date.now()) { stop("timeout", "CLI deadline exceeded"); reject(failure); return; }
     try {
+      if (phase === "command") request.beforeSpawn?.();
+    } catch (cause) {
+      reject(new BridgeError(cause?.code ?? "cancelled", "CLI command stopped before spawn", { cause, ...details() }));
+      return;
+    }
+    try {
       child = spawn(executable, [launcher, ...argv], {
         cwd, shell: false, windowsHide: true, detached: process.platform !== "win32",
         env: request.env, stdio: [request.stdin === undefined ? "ignore" : "pipe", "pipe", "pipe"],
@@ -201,7 +207,7 @@ export function createBridge({ launcher = bundledLauncher, executable } = {}) {
   }
   let nodeExecutable;
   return {
-    async run(argv, { cwd, signal, deadlineMs = 3000, stdin, env } = {}) {
+    async run(argv, { cwd, signal, deadlineMs = 3000, stdin, env, beforeSpawn } = {}) {
       validateRequest(argv, { cwd, deadlineMs, signal });
       if (stdin !== undefined && typeof stdin !== "string") {
         throw new BridgeError("invalid_request", "Expected UTF-8 stdin text", { outcome: "not_started" });
@@ -220,7 +226,7 @@ export function createBridge({ launcher = bundledLauncher, executable } = {}) {
       }
       checkVersion(/^memocap\s+(\S+)\s*$/.exec(handshake.stdout)?.[1], "handshake", handshake);
       const commandArgv = argv.includes("--json") ? [...argv] : [...argv, "--json"];
-      const output = await runProcess({ ...request, argv: commandArgv, stdin, phase: "command" });
+      const output = await runProcess({ ...request, argv: commandArgv, stdin, beforeSpawn, phase: "command" });
       return { receipt: commandReceipt(output), stderr: output.stderr, exitCode: output.exitCode };
     },
   };

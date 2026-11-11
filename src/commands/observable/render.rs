@@ -18,7 +18,7 @@ pub(super) fn print(receipt: &Receipt) {
                 );
             }
         }
-        "recall" | "list" => {
+        "recall" | "list" | "read" => {
             print_context(receipt);
             let inventory = receipt
                 .results
@@ -33,13 +33,9 @@ pub(super) fn print(receipt: &Receipt) {
                 })
                 .collect::<Vec<_>>();
             print!("{}", cli::format_memories(&inventory));
-            if receipt.operation == "recall" {
+            if receipt.operation == "read" || receipt.operation == "recall" {
                 for entry in &receipt.results {
-                    println!(
-                        "#{} applies_to: {}",
-                        entry.memory.id,
-                        entry.applicable_repositories.join(", ")
-                    );
+                    println!("#{} applicability: unknown", entry.memory.id);
                 }
             }
         }

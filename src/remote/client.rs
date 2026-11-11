@@ -27,7 +27,8 @@ struct RememberBody<'a> {
 #[derive(Serialize)]
 struct RecallBody<'a> {
     repository: &'a str,
-    placement: Option<String>,
+    discovery: &'a crate::discovery::Discovery,
+    match_mode: crate::store::MatchMode,
     query: &'a str,
     limit: usize,
     #[serde(rename = "type")]
@@ -107,7 +108,8 @@ pub fn recall(
 ) -> Result<Vec<InventoryMemory>> {
     let body = RecallBody {
         repository: request.repository.as_str(),
-        placement: request.placement.map(ToString::to_string),
+        discovery: request.discovery,
+        match_mode: request.match_mode,
         query: request.query,
         limit: request.limit,
         kind: request.kind,

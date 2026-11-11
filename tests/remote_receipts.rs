@@ -2,6 +2,8 @@ use memocap::{server, store};
 use receipt_server::Termination;
 use serde_json::{json, Value};
 const REPO: &str = "repository:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+#[path = "exact_read/remote.rs"]
+mod exact_read;
 #[path = "support/receipt_cli.rs"]
 mod receipt_cli;
 #[path = "support/receipt_server.rs"]
@@ -163,7 +165,7 @@ fn legacy_recall_records_the_actual_server_query() {
         server::dispatch("POST", "/v1/receipt", true, &body, &db).0,
         200
     );
-    let body = json!({"repository":REPO,"query":"legacy","limit":3,"placement":null,"type":null,"max_chars":null}).to_string();
+    let body = json!({"repository":REPO,"query":"legacy","limit":3,"discovery":{"kind":"library"},"match_mode":"all","type":null,"max_chars":null}).to_string();
     let (status, response) = server::dispatch("POST", "/v1/memories/recall", true, &body, &db);
     assert_eq!(status, 200, "{response}");
     let events = memocap::activity::ActivityStore::open_readonly(&db)
