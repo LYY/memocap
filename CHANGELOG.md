@@ -1,5 +1,28 @@
 # Changelog
 
+## @lyy-gh/memocap 0.6.0 (Unreleased)
+
+Implemented outcomes for package target `0.6.0` and Git tag target `v0.6.0`.
+Publication requires the release workflow's successful `registry` job, including
+registry metadata, integrity, and provenance verification.
+
+- Recall searches the authorized personal library by default, with exact-origin
+  filters, relevance ranking before budgets, bounded CJK lexical matching, and
+  long-query anchor selection. Inventory retains visible-stack semantics.
+- Exact full reads carry memory IDs and placements. Plugin references mark full
+  or partial bodies, include source hashes and read routes, and require explicit
+  library grants plus effective host permission for library reads.
+- Bounded automatic capture reviews a normally completed request, saves at most
+  one evidence-backed memory, and independently reads it back. Cancellation,
+  permission denial, duplicate checks, and unknown writes retain strict limits.
+- Schema `2.3` adds `capture_review` to the activity phase CHECK. Only exact `2.2`
+  upgrades transactionally, rebuilding the activity table and required index
+  while preserving existing data. Other prior schemas refuse without reset.
+- Managed v0.5.0 format-2 installations update through the exact v0.6.0 worker.
+  The prior CLI's `ready`/`2.2` is preflight evidence only; completion requires
+  the v0.6.0 CLI and independent `ready`/`2.3` readback with activity ready.
+  OpenCode hosts remain 1.19.3 and 1.19.5, with plugin/SDK pinned to 1.19.3.
+
 ## @lyy-gh/memocap 0.5.0 (2026-10-29)
 
 Implemented outcomes for package target `0.5.0` and Git tag target `v0.5.0`.
