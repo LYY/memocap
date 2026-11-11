@@ -1,0 +1,1290 @@
+{
+  "schema": 1,
+  "measuredAt": "2026-11-11T06:09:39.925Z",
+  "binary": "/Users/liuyuyu/program/github/LYY/memocap-memory-recall-v0.6.0/target/debug/memocap",
+  "binarySha256": "ab8979b6da12cfd9eac58fc9c2238b0b900d52583a6ee8df20e65f6a7958fa34",
+  "packageVersion": "0.5.0",
+  "runtime": "v26.13.0",
+  "platform": "darwin/arm64",
+  "fixtureFreeze": {
+    "contract": "synthetic-v1-before-first-holdout",
+    "sha256": {
+      "ACCEPTANCE.md": "c3726da58f5c949c8452ed76ff4b2bca9544aa2767a520d79029e76901bfcb7c",
+      "capture.json": "04a15b9079b8118b01bb9d82a8e28579f64a0f03e084449f23d9aa8ded9f3f5f",
+      "corpus.json": "936448108abe6e56b163e21a2a306ca1f7e2b27f6f87834ea4d27be05e0ac860",
+      "tuning.queries.json": "54cd22db5e0c9dcd7106a1a15c4065f126305ca9a0010d77b4effece50f41f26",
+      "tuning.expected.json": "312756e0560551a788945e27e40be4ccc471f92e6e46389c8338514feb801aa1",
+      "holdout.queries.json": "d91e7eebc3bd4d8a5766b428c55a32cb878d64280782b39b3460db2a01a849ae",
+      "holdout.expected.json": "95a80bec68d4866b4b33ff446b41d41ffa1b9f5357506b27258744d674cb5208"
+    }
+  },
+  "protocolSha256": "61608abd7fd22c9e18ad430dc659ad19e4969d1426181c26751db0491a77a1f2",
+  "queryMode": "plugin",
+  "recallArgs": [],
+  "scope": "current selected-repository stack; scope-changing experiment options recorded in recallArgs",
+  "budget": {
+    "limit": 3,
+    "cliContentChars": 6000,
+    "pluginReferenceUTF16Chars": 6000
+  },
+  "observability": {
+    "candidateCoverage": "visible pre-budget matched_ids; not raw candidates",
+    "indexOnlyBytes": null,
+    "peakRSS": null,
+    "captureMetrics": "not run: labeled fixtures only"
+  },
+  "databaseBytes": {
+    "afterSeed": 172032,
+    "afterEvaluation": 180224
+  },
+  "total": {
+    "cases": 12,
+    "positives": 11,
+    "negatives": 1,
+    "successes": 5,
+    "hit1": 0.6363636363636364,
+    "hit3": 0.6363636363636364,
+    "MRR": 0.6363636363636364,
+    "candidateCoverage": 0.8181818181818182,
+    "negativeNoise": 1,
+    "negativeReturnedItems": 3,
+    "wrongEnvironmentRate": 0.5,
+    "p50Ms": 25.292707999999948,
+    "p95Ms": 27.05079099999989
+  },
+  "bySplit": {
+    "holdout": {
+      "cases": 12,
+      "positives": 11,
+      "negatives": 1,
+      "successes": 5,
+      "hit1": 0.6363636363636364,
+      "hit3": 0.6363636363636364,
+      "MRR": 0.6363636363636364,
+      "candidateCoverage": 0.8181818181818182,
+      "negativeNoise": 1,
+      "negativeReturnedItems": 3,
+      "wrongEnvironmentRate": 0.5,
+      "p50Ms": 25.292707999999948,
+      "p95Ms": 27.05079099999989
+    }
+  },
+  "byFamily": {
+    "exact-path": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 27.05079099999989,
+      "p95Ms": 27.05079099999989
+    },
+    "exact-version": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 24.893792000000076,
+      "p95Ms": 24.893792000000076
+    },
+    "environment-conflict": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 0,
+      "hit1": 0,
+      "hit3": 0,
+      "MRR": 0,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": 1,
+      "p50Ms": 25.215958,
+      "p95Ms": 25.215958
+    },
+    "topic-conflict": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 0,
+      "hit1": 0,
+      "hit3": 0,
+      "MRR": 0,
+      "candidateCoverage": 0,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.623375000000124,
+      "p95Ms": 25.623375000000124
+    },
+    "close-negative": {
+      "cases": 1,
+      "positives": 0,
+      "negatives": 1,
+      "successes": 0,
+      "hit1": null,
+      "hit3": null,
+      "MRR": null,
+      "candidateCoverage": null,
+      "negativeNoise": 1,
+      "negativeReturnedItems": 3,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.138124999999945,
+      "p95Ms": 25.138124999999945
+    },
+    "scope-first-ranking": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 0,
+      "hit1": 0,
+      "hit3": 0,
+      "MRR": 0,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.275665999999774,
+      "p95Ms": 25.275665999999774
+    },
+    "cross-origin-convention": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 0,
+      "hit1": 0,
+      "hit3": 0,
+      "MRR": 0,
+      "candidateCoverage": 0,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.319833000000017,
+      "p95Ms": 25.319833000000017
+    },
+    "explicit-origin-filter": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": 0,
+      "p50Ms": 26.292249999999967,
+      "p95Ms": 26.292249999999967
+    },
+    "invalidated-route": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.563875000000053,
+      "p95Ms": 25.563875000000053
+    },
+    "duplicate-reference": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.292707999999948,
+      "p95Ms": 25.292707999999948
+    },
+    "tail-integrity": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 0,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.214999999999918,
+      "p95Ms": 25.214999999999918
+    },
+    "unicode-integrity": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 0,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.676958000000013,
+      "p95Ms": 25.676958000000013
+    }
+  },
+  "byExpectedOrigin": {
+    "A": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 27.05079099999989,
+      "p95Ms": 27.05079099999989
+    },
+    "universal": {
+      "cases": 6,
+      "positives": 6,
+      "negatives": 0,
+      "successes": 3,
+      "hit1": 0.5,
+      "hit3": 0.5,
+      "MRR": 0.5,
+      "candidateCoverage": 0.8333333333333334,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": 0.5,
+      "p50Ms": 25.275665999999774,
+      "p95Ms": 26.292249999999967
+    },
+    "no-answer": {
+      "cases": 1,
+      "positives": 0,
+      "negatives": 1,
+      "successes": 0,
+      "hit1": null,
+      "hit3": null,
+      "MRR": null,
+      "candidateCoverage": null,
+      "negativeNoise": 1,
+      "negativeReturnedItems": 3,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.138124999999945,
+      "p95Ms": 25.138124999999945
+    },
+    "B": {
+      "cases": 5,
+      "positives": 5,
+      "negatives": 0,
+      "successes": 2,
+      "hit1": 0.8,
+      "hit3": 0.8,
+      "MRR": 0.8,
+      "candidateCoverage": 0.8,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.319833000000017,
+      "p95Ms": 25.676958000000013
+    }
+  },
+  "cases": [
+    {
+      "id": "h-path",
+      "split": "holdout",
+      "family": "exact-path",
+      "context": "A",
+      "prompt": "定位 /synthetic/orbit/ops/entry.yaml",
+      "expected": {
+        "expectedIDs": [
+          "path-anchor"
+        ],
+        "concepts": [
+          "exact-path-entry"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "定位 synthetic orbit ops entry yaml",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\",\"identity_source\":\"directory\",\"placements\":[\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.685140+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "定位",
+        "synthetic",
+        "orbit",
+        "ops",
+        "entry",
+        "yaml"
+      ],
+      "returned": [
+        "path-anchor",
+        "issue-route",
+        "scope-distractor-2"
+      ],
+      "candidates": [
+        "path-anchor",
+        "issue-route",
+        "scope-distractor-2",
+        "deployment-anchor",
+        "scope-distractor-3",
+        "scope-distractor-1",
+        "error-anchor",
+        "relevant-global",
+        "duplicate-two"
+      ],
+      "complete": [
+        "path-anchor",
+        "issue-route",
+        "scope-distractor-2"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 27.05079099999989,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1820,
+      "injected": [
+        "path-anchor",
+        "issue-route",
+        "scope-distractor-2"
+      ],
+      "partial": [],
+      "truncated": true
+    },
+    {
+      "id": "h-version",
+      "split": "holdout",
+      "family": "exact-version",
+      "context": "A",
+      "prompt": "FixtureSDK 2.7.4 compatibility",
+      "expected": {
+        "expectedIDs": [
+          "version-anchor"
+        ],
+        "concepts": [
+          "version-specific-check"
+        ]
+      },
+      "expectedOrigins": [
+        "universal"
+      ],
+      "argv": [
+        "recall",
+        "FixtureSDK 2 7 4 compatibility",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\",\"identity_source\":\"directory\",\"placements\":[\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.685140+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "FixtureSDK",
+        "2",
+        "7",
+        "4",
+        "compatibility"
+      ],
+      "returned": [
+        "version-anchor"
+      ],
+      "candidates": [
+        "version-anchor"
+      ],
+      "complete": [
+        "version-anchor"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 24.893792000000076,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 986,
+      "injected": [
+        "version-anchor"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "h-beta",
+      "split": "holdout",
+      "family": "environment-conflict",
+      "context": "A",
+      "prompt": "Beacon beta release",
+      "expected": {
+        "expectedIDs": [
+          "beta-conflict"
+        ],
+        "concepts": [
+          "beta-only"
+        ],
+        "forbiddenIDs": [
+          "alpha-conflict"
+        ],
+        "environmentCheck": true
+      },
+      "expectedOrigins": [
+        "universal"
+      ],
+      "argv": [
+        "recall",
+        "Beacon beta release",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\",\"identity_source\":\"directory\",\"placements\":[\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.685140+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Beacon",
+        "beta",
+        "release"
+      ],
+      "returned": [
+        "alpha-conflict",
+        "scope-distractor-2",
+        "scope-distractor-3"
+      ],
+      "candidates": [
+        "alpha-conflict",
+        "scope-distractor-2",
+        "scope-distractor-3",
+        "topic-local",
+        "scope-distractor-1",
+        "beta-conflict",
+        "relevant-global"
+      ],
+      "complete": [
+        "alpha-conflict",
+        "scope-distractor-2",
+        "scope-distractor-3"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 0,
+        "hit3": 0,
+        "reciprocalRank": 0,
+        "idCoverage": 0,
+        "candidateCoverage": 1,
+        "missingConcepts": [
+          "beta-only"
+        ],
+        "forbidden": [
+          "alpha-conflict"
+        ],
+        "negativeNoise": false,
+        "environmentCheck": true,
+        "wrongEnvironment": true,
+        "success": false
+      },
+      "wallMs": 25.215958,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1613,
+      "injected": [
+        "alpha-conflict",
+        "scope-distractor-2",
+        "scope-distractor-3"
+      ],
+      "partial": [],
+      "truncated": true
+    },
+    {
+      "id": "h-topic",
+      "split": "holdout",
+      "family": "topic-conflict",
+      "context": "A",
+      "prompt": "Comet beta rollout",
+      "expected": {
+        "expectedIDs": [
+          "topic-universal"
+        ],
+        "concepts": [
+          "independent-beta-fact"
+        ],
+        "forbiddenIDs": [
+          "topic-local"
+        ]
+      },
+      "expectedOrigins": [
+        "universal"
+      ],
+      "argv": [
+        "recall",
+        "Comet beta rollout",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\",\"identity_source\":\"directory\",\"placements\":[\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.685140+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Comet",
+        "beta",
+        "rollout"
+      ],
+      "returned": [
+        "topic-local",
+        "alpha-conflict",
+        "version-anchor"
+      ],
+      "candidates": [
+        "topic-local",
+        "alpha-conflict",
+        "version-anchor",
+        "beta-conflict"
+      ],
+      "complete": [
+        "topic-local",
+        "alpha-conflict",
+        "version-anchor"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 0,
+        "hit3": 0,
+        "reciprocalRank": 0,
+        "idCoverage": 0,
+        "candidateCoverage": 0,
+        "missingConcepts": [
+          "independent-beta-fact"
+        ],
+        "forbidden": [
+          "topic-local"
+        ],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 25.623375000000124,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1619,
+      "injected": [
+        "topic-local",
+        "alpha-conflict",
+        "version-anchor"
+      ],
+      "partial": [],
+      "truncated": true
+    },
+    {
+      "id": "h-close-negative",
+      "split": "holdout",
+      "family": "close-negative",
+      "context": "A",
+      "prompt": "Beacon gamma release",
+      "expected": {
+        "expectedIDs": [],
+        "concepts": [],
+        "expectedNoAnswer": true
+      },
+      "expectedOrigins": [],
+      "argv": [
+        "recall",
+        "Beacon gamma release",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\",\"identity_source\":\"directory\",\"placements\":[\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.685140+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Beacon",
+        "gamma",
+        "release"
+      ],
+      "returned": [
+        "alpha-conflict",
+        "scope-distractor-2",
+        "scope-distractor-3"
+      ],
+      "candidates": [
+        "alpha-conflict",
+        "scope-distractor-2",
+        "scope-distractor-3",
+        "scope-distractor-1",
+        "beta-conflict",
+        "relevant-global"
+      ],
+      "complete": [
+        "alpha-conflict",
+        "scope-distractor-2",
+        "scope-distractor-3"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": false,
+        "hit1": null,
+        "hit3": null,
+        "reciprocalRank": null,
+        "idCoverage": null,
+        "candidateCoverage": null,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": true,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 25.138124999999945,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1613,
+      "injected": [
+        "alpha-conflict",
+        "scope-distractor-2",
+        "scope-distractor-3"
+      ],
+      "partial": [],
+      "truncated": true
+    },
+    {
+      "id": "h-ranking",
+      "split": "holdout",
+      "family": "scope-first-ranking",
+      "context": "A",
+      "prompt": "Release attestation checksum verification",
+      "expected": {
+        "expectedIDs": [
+          "relevant-global"
+        ],
+        "concepts": [
+          "release-attestation"
+        ]
+      },
+      "expectedOrigins": [
+        "universal"
+      ],
+      "argv": [
+        "recall",
+        "Release attestation checksum verification",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\",\"identity_source\":\"directory\",\"placements\":[\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.685140+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Release",
+        "attestation",
+        "checksum",
+        "verification"
+      ],
+      "returned": [
+        "scope-distractor-2",
+        "scope-distractor-3",
+        "scope-distractor-1"
+      ],
+      "candidates": [
+        "scope-distractor-2",
+        "scope-distractor-3",
+        "scope-distractor-1",
+        "alpha-conflict",
+        "domain-route",
+        "relevant-global",
+        "beta-conflict"
+      ],
+      "complete": [
+        "scope-distractor-2",
+        "scope-distractor-3",
+        "scope-distractor-1"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 0,
+        "hit3": 0,
+        "reciprocalRank": 0,
+        "idCoverage": 0,
+        "candidateCoverage": 1,
+        "missingConcepts": [
+          "release-attestation"
+        ],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 25.275665999999774,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1617,
+      "injected": [
+        "scope-distractor-2",
+        "scope-distractor-3",
+        "scope-distractor-1"
+      ],
+      "partial": [],
+      "truncated": true
+    },
+    {
+      "id": "h-cross-fact",
+      "split": "holdout",
+      "family": "cross-origin-convention",
+      "context": "A",
+      "prompt": "Zephyr 构建怎么验证",
+      "expected": {
+        "expectedIDs": [
+          "origin-B-fact"
+        ],
+        "concepts": [
+          "b-specific-convention"
+        ]
+      },
+      "expectedOrigins": [
+        "B"
+      ],
+      "argv": [
+        "recall",
+        "Zephyr 构建怎么验证",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\",\"identity_source\":\"directory\",\"placements\":[\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.685140+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Zephyr",
+        "构建怎么验证"
+      ],
+      "returned": [],
+      "candidates": [],
+      "complete": [],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 0,
+        "hit3": 0,
+        "reciprocalRank": 0,
+        "idCoverage": 0,
+        "candidateCoverage": 0,
+        "missingConcepts": [
+          "b-specific-convention"
+        ],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 25.319833000000017,
+      "status": "empty",
+      "searchedPlacements": [
+        "repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 699,
+      "injected": [],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "h-origin-filter",
+      "split": "holdout",
+      "family": "explicit-origin-filter",
+      "context": "A",
+      "prompt": "Beacon beta release",
+      "expected": {
+        "expectedIDs": [
+          "beta-conflict"
+        ],
+        "concepts": [
+          "beta-only"
+        ],
+        "forbiddenIDs": [
+          "alpha-conflict"
+        ],
+        "environmentCheck": true
+      },
+      "expectedOrigins": [
+        "universal"
+      ],
+      "argv": [
+        "recall",
+        "Beacon beta release",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\",\"identity_source\":\"directory\",\"placements\":[\"repository:b90c44dd0c7224c612d85ec85e74e2f7d41746610a4cf8a91f4049a65044ec3a\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.685140+00:00\"}]",
+        "--universal",
+        "--json"
+      ],
+      "queryTerms": [
+        "Beacon",
+        "beta",
+        "release"
+      ],
+      "returned": [
+        "beta-conflict",
+        "topic-universal",
+        "relevant-global"
+      ],
+      "candidates": [
+        "beta-conflict",
+        "topic-universal",
+        "relevant-global"
+      ],
+      "complete": [
+        "beta-conflict",
+        "topic-universal",
+        "relevant-global"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": true,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 26.292249999999967,
+      "status": "ok",
+      "searchedPlacements": [
+        "universal"
+      ],
+      "referenceChars": 1506,
+      "injected": [
+        "beta-conflict",
+        "topic-universal",
+        "relevant-global"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "h-stale",
+      "split": "holdout",
+      "family": "invalidated-route",
+      "context": "B",
+      "prompt": "Kestrel alpha 入口还能用吗",
+      "expected": {
+        "expectedIDs": [
+          "stale-route"
+        ],
+        "concepts": [
+          "invalidated-route",
+          "verify-replacement"
+        ]
+      },
+      "expectedOrigins": [
+        "B"
+      ],
+      "argv": [
+        "recall",
+        "Kestrel alpha 入口还能用吗",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/B\",\"repository_id\":\"repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e\",\"identity_source\":\"directory\",\"placements\":[\"repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e\"],\"descriptor\":{\"display_name\":\"B\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.701654+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Kestrel",
+        "alpha",
+        "入口还能用吗"
+      ],
+      "returned": [
+        "stale-route",
+        "alpha-route",
+        "beta-conflict"
+      ],
+      "candidates": [
+        "stale-route",
+        "alpha-route",
+        "beta-conflict"
+      ],
+      "complete": [
+        "stale-route",
+        "alpha-route",
+        "beta-conflict"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 25.563875000000053,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1873,
+      "injected": [
+        "stale-route",
+        "alpha-route",
+        "beta-conflict"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "h-duplicate",
+      "split": "holdout",
+      "family": "duplicate-reference",
+      "context": "B",
+      "prompt": "Cedar certificate renewal",
+      "expected": {
+        "expectedIDs": [
+          "duplicate-one",
+          "duplicate-two"
+        ],
+        "idRule": "any",
+        "concepts": [
+          "certificate-renewal"
+        ]
+      },
+      "expectedOrigins": [
+        "B",
+        "universal"
+      ],
+      "argv": [
+        "recall",
+        "Cedar certificate renewal",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/B\",\"repository_id\":\"repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e\",\"identity_source\":\"directory\",\"placements\":[\"repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e\"],\"descriptor\":{\"display_name\":\"B\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.701654+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Cedar",
+        "certificate",
+        "renewal"
+      ],
+      "returned": [
+        "duplicate-one",
+        "duplicate-two"
+      ],
+      "candidates": [
+        "duplicate-one",
+        "duplicate-two"
+      ],
+      "complete": [
+        "duplicate-one",
+        "duplicate-two"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 25.292707999999948,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1291,
+      "injected": [
+        "duplicate-one",
+        "duplicate-two"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "h-tail",
+      "split": "holdout",
+      "family": "tail-integrity",
+      "context": "B",
+      "prompt": "TailGuard",
+      "expected": {
+        "expectedIDs": [
+          "long-tail"
+        ],
+        "concepts": [
+          "tail-prohibition"
+        ]
+      },
+      "expectedOrigins": [
+        "B"
+      ],
+      "argv": [
+        "recall",
+        "TailGuard",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/B\",\"repository_id\":\"repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e\",\"identity_source\":\"directory\",\"placements\":[\"repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e\"],\"descriptor\":{\"display_name\":\"B\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.701654+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "TailGuard"
+      ],
+      "returned": [
+        "long-tail"
+      ],
+      "candidates": [
+        "long-tail"
+      ],
+      "complete": [],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [
+          "tail-prohibition"
+        ],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 25.214999999999918,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 5999,
+      "injected": [
+        "long-tail"
+      ],
+      "partial": [
+        "long-tail"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "h-unicode",
+      "split": "holdout",
+      "family": "unicode-integrity",
+      "context": "B",
+      "prompt": "UnicodeGuard",
+      "expected": {
+        "expectedIDs": [
+          "unicode-tail"
+        ],
+        "concepts": [
+          "unicode-tail-prohibition"
+        ]
+      },
+      "expectedOrigins": [
+        "B"
+      ],
+      "argv": [
+        "recall",
+        "UnicodeGuard",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/B\",\"repository_id\":\"repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e\",\"identity_source\":\"directory\",\"placements\":[\"repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e\"],\"descriptor\":{\"display_name\":\"B\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:09:38.701654+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "UnicodeGuard"
+      ],
+      "returned": [
+        "unicode-tail"
+      ],
+      "candidates": [
+        "unicode-tail"
+      ],
+      "complete": [],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [
+          "unicode-tail-prohibition"
+        ],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 25.676958000000013,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:c51412339cdd56c5b1716769086b727845ea4acd9d11f84631ecb0a253b74b1e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 5611,
+      "injected": [
+        "unicode-tail"
+      ],
+      "partial": [
+        "unicode-tail"
+      ],
+      "truncated": false
+    }
+  ]
+}

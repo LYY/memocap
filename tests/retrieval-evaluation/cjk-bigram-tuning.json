@@ -1,0 +1,1280 @@
+{
+  "schema": 1,
+  "measuredAt": "2026-11-11T09:04:38.938Z",
+  "binary": "/Users/liuyuyu/program/github/LYY/memocap-memory-recall-v0.6.0/target/debug/memocap",
+  "binarySha256": "75916286a4984dc6dd1b00fad0f5599231667dbdbd839b9235541ba9f59fe119",
+  "packageVersion": "0.5.0",
+  "runtime": "v26.13.0",
+  "platform": "darwin/arm64",
+  "fixtureFreeze": {
+    "contract": "synthetic-v1-before-first-holdout",
+    "sha256": {
+      "ACCEPTANCE.md": "c3726da58f5c949c8452ed76ff4b2bca9544aa2767a520d79029e76901bfcb7c",
+      "capture.json": "04a15b9079b8118b01bb9d82a8e28579f64a0f03e084449f23d9aa8ded9f3f5f",
+      "corpus.json": "936448108abe6e56b163e21a2a306ca1f7e2b27f6f87834ea4d27be05e0ac860",
+      "tuning.queries.json": "54cd22db5e0c9dcd7106a1a15c4065f126305ca9a0010d77b4effece50f41f26",
+      "tuning.expected.json": "312756e0560551a788945e27e40be4ccc471f92e6e46389c8338514feb801aa1",
+      "holdout.queries.json": "d91e7eebc3bd4d8a5766b428c55a32cb878d64280782b39b3460db2a01a849ae",
+      "holdout.expected.json": "95a80bec68d4866b4b33ff446b41d41ffa1b9f5357506b27258744d674cb5208"
+    }
+  },
+  "protocolPath": "/Users/liuyuyu/program/github/LYY/memocap-memory-recall-v0.6.0/plugin/protocol.js",
+  "protocolSha256": "705b31cf1554f52313855cff5eb7a65239505042651c098e1c19cde2101d8767",
+  "queryImplementation": {
+    "path": "/Users/liuyuyu/program/github/LYY/memocap-memory-recall-v0.6.0/plugin/query.js",
+    "sha256": "1954cf8c608c2239021ec02a9bd5bd920442ff2d10fb6251ec82e7da4f4395fe",
+    "functionSha256": "67b441623ab6281de77d9067460c8e3b156107103c7b244f004ee94f0e8f618f"
+  },
+  "queryMode": "plugin",
+  "recallArgs": [],
+  "scope": "per-case receipt discovery; a null discovery denotes the legacy selected-repository stack",
+  "budget": {
+    "limit": 3,
+    "cliContentChars": 6000,
+    "pluginReferenceUTF16Chars": 6000
+  },
+  "observability": {
+    "candidateCoverage": "visible pre-budget matched_ids; not raw candidates",
+    "indexOnlyBytes": null,
+    "peakRSS": null,
+    "captureMetrics": "not run: labeled fixtures only"
+  },
+  "databaseBytes": {
+    "afterSeed": 172032,
+    "afterEvaluation": 184320
+  },
+  "total": {
+    "cases": 12,
+    "positives": 10,
+    "negatives": 2,
+    "successes": 10,
+    "hit1": 0.9,
+    "hit3": 0.9,
+    "MRR": 0.9,
+    "candidateCoverage": 1,
+    "negativeNoise": 0.5,
+    "negativeReturnedItems": 3,
+    "wrongEnvironmentRate": null,
+    "p50Ms": 25.950333999999884,
+    "p95Ms": 30.13495899999998
+  },
+  "bySplit": {
+    "tuning": {
+      "cases": 12,
+      "positives": 10,
+      "negatives": 2,
+      "successes": 10,
+      "hit1": 0.9,
+      "hit3": 0.9,
+      "MRR": 0.9,
+      "candidateCoverage": 1,
+      "negativeNoise": 0.5,
+      "negativeReturnedItems": 3,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.950333999999884,
+      "p95Ms": 30.13495899999998
+    }
+  },
+  "byFamily": {
+    "incident-routing": {
+      "cases": 2,
+      "positives": 2,
+      "negatives": 0,
+      "successes": 2,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.629666999999927,
+      "p95Ms": 30.13495899999998
+    },
+    "verified-service-routing": {
+      "cases": 2,
+      "positives": 2,
+      "negatives": 0,
+      "successes": 2,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.259457999999995,
+      "p95Ms": 29.374500000000126
+    },
+    "chinese-paraphrase": {
+      "cases": 2,
+      "positives": 2,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 0.5,
+      "hit3": 0.5,
+      "MRR": 0.5,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 29.798499999999876,
+      "p95Ms": 29.967583000000104
+    },
+    "late-entity": {
+      "cases": 2,
+      "positives": 2,
+      "negatives": 0,
+      "successes": 2,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.11912499999994,
+      "p95Ms": 25.950333999999884
+    },
+    "exact-error": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.745374999999967,
+      "p95Ms": 25.745374999999967
+    },
+    "unknown-service": {
+      "cases": 1,
+      "positives": 0,
+      "negatives": 1,
+      "successes": 0,
+      "hit1": null,
+      "hit3": null,
+      "MRR": null,
+      "candidateCoverage": null,
+      "negativeNoise": 1,
+      "negativeReturnedItems": 3,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.630709000000024,
+      "p95Ms": 25.630709000000024
+    },
+    "domain-origin": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 26.31162500000005,
+      "p95Ms": 26.31162500000005
+    },
+    "distant-negative": {
+      "cases": 1,
+      "positives": 0,
+      "negatives": 1,
+      "successes": 1,
+      "hit1": null,
+      "hit3": null,
+      "MRR": null,
+      "candidateCoverage": null,
+      "negativeNoise": 0,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 26.972790999999916,
+      "p95Ms": 26.972790999999916
+    }
+  },
+  "byExpectedOrigin": {
+    "A": {
+      "cases": 7,
+      "positives": 7,
+      "negatives": 0,
+      "successes": 6,
+      "hit1": 0.8571428571428571,
+      "hit3": 0.8571428571428571,
+      "MRR": 0.8571428571428571,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.950333999999884,
+      "p95Ms": 30.13495899999998
+    },
+    "B": {
+      "cases": 2,
+      "positives": 2,
+      "negatives": 0,
+      "successes": 2,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.259457999999995,
+      "p95Ms": 29.374500000000126
+    },
+    "no-answer": {
+      "cases": 2,
+      "positives": 0,
+      "negatives": 2,
+      "successes": 1,
+      "hit1": null,
+      "hit3": null,
+      "MRR": null,
+      "candidateCoverage": null,
+      "negativeNoise": 0.5,
+      "negativeReturnedItems": 3,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.630709000000024,
+      "p95Ms": 26.972790999999916
+    },
+    "domain": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 26.31162500000005,
+      "p95Ms": 26.31162500000005
+    }
+  },
+  "cases": [
+    {
+      "id": "t-issue",
+      "split": "tuning",
+      "family": "incident-routing",
+      "context": "A",
+      "prompt": "线上 issue 调查从哪里开始",
+      "expected": {
+        "expectedIDs": [
+          "issue-route"
+        ],
+        "concepts": [
+          "logs-entry",
+          "production-query-entry"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "线上 issue 调查从哪里开始",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "线上",
+        "issue",
+        "调查从哪里开始"
+      ],
+      "returned": [
+        "issue-route"
+      ],
+      "candidates": [
+        "issue-route"
+      ],
+      "complete": [
+        "issue-route"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 30.13495899999998,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 2577,
+      "injected": [
+        "issue-route"
+      ],
+      "partial": [],
+      "truncated": false,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-issue-en",
+      "split": "tuning",
+      "family": "incident-routing",
+      "context": "A",
+      "prompt": "Investigate a production issue",
+      "expected": {
+        "expectedIDs": [
+          "issue-route"
+        ],
+        "concepts": [
+          "logs-entry",
+          "production-query-entry"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "Investigate a production issue",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Investigate",
+        "a",
+        "production",
+        "issue"
+      ],
+      "returned": [
+        "issue-route",
+        "domain-route",
+        "alpha-route"
+      ],
+      "candidates": [
+        "issue-route",
+        "domain-route",
+        "alpha-route",
+        "scope-distractor-1",
+        "beta-conflict",
+        "long-tail"
+      ],
+      "complete": [
+        "issue-route",
+        "domain-route",
+        "alpha-route"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 25.629666999999927,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 4479,
+      "injected": [
+        "issue-route",
+        "domain-route",
+        "alpha-route"
+      ],
+      "partial": [],
+      "truncated": true,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-alpha-cross",
+      "split": "tuning",
+      "family": "verified-service-routing",
+      "context": "A",
+      "prompt": "把 Aster 服务发布到 alpha 环境",
+      "expected": {
+        "expectedIDs": [
+          "alpha-route"
+        ],
+        "concepts": [
+          "aster-alpha-repository",
+          "alpha-entry"
+        ]
+      },
+      "expectedOrigins": [
+        "B"
+      ],
+      "argv": [
+        "recall",
+        "把 Aster 服务发布到 alpha 环境",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "把",
+        "Aster",
+        "服务发布到",
+        "alpha",
+        "环境"
+      ],
+      "returned": [
+        "alpha-route",
+        "alpha-conflict",
+        "topic-local"
+      ],
+      "candidates": [
+        "alpha-route",
+        "alpha-conflict",
+        "topic-local",
+        "beta-conflict",
+        "stale-route",
+        "unicode-tail"
+      ],
+      "complete": [
+        "alpha-route",
+        "alpha-conflict",
+        "topic-local"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 29.374500000000126,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 4435,
+      "injected": [
+        "alpha-route",
+        "alpha-conflict",
+        "topic-local"
+      ],
+      "partial": [],
+      "truncated": true,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-alpha-local",
+      "split": "tuning",
+      "family": "verified-service-routing",
+      "context": "B",
+      "prompt": "Aster alpha deployment",
+      "expected": {
+        "expectedIDs": [
+          "alpha-route"
+        ],
+        "concepts": [
+          "aster-alpha-repository",
+          "alpha-entry"
+        ]
+      },
+      "expectedOrigins": [
+        "B"
+      ],
+      "argv": [
+        "recall",
+        "Aster alpha deployment",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/B\",\"repository_id\":\"repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3\",\"identity_source\":\"directory\",\"placements\":[\"repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3\"],\"descriptor\":{\"display_name\":\"B\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.674120+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Aster",
+        "alpha",
+        "deployment"
+      ],
+      "returned": [
+        "alpha-route",
+        "deployment-anchor",
+        "alpha-conflict"
+      ],
+      "candidates": [
+        "alpha-route",
+        "deployment-anchor",
+        "alpha-conflict",
+        "topic-local",
+        "beta-conflict",
+        "stale-route"
+      ],
+      "complete": [
+        "alpha-route",
+        "deployment-anchor",
+        "alpha-conflict"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 25.259457999999995,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 4423,
+      "injected": [
+        "alpha-route",
+        "deployment-anchor",
+        "alpha-conflict"
+      ],
+      "partial": [],
+      "truncated": true,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-db-cn",
+      "split": "tuning",
+      "family": "chinese-paraphrase",
+      "context": "A",
+      "prompt": "数据库迁移有什么要求",
+      "expected": {
+        "expectedIDs": [
+          "db-preservation"
+        ],
+        "concepts": [
+          "preserve-user-data"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "数据库迁移有什么要求",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "数据库迁移有什么要求"
+      ],
+      "returned": [
+        "db-preservation"
+      ],
+      "candidates": [
+        "db-preservation"
+      ],
+      "complete": [
+        "db-preservation"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 29.967583000000104,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 2304,
+      "injected": [
+        "db-preservation"
+      ],
+      "partial": [],
+      "truncated": false,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-db-control",
+      "split": "tuning",
+      "family": "chinese-paraphrase",
+      "context": "A",
+      "prompt": "数据库变更必须保留用户数据",
+      "expected": {
+        "expectedIDs": [
+          "db-preservation"
+        ],
+        "concepts": [
+          "preserve-user-data"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "数据库变更必须保留用户数据",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "数据库变更必须保留用户数据"
+      ],
+      "returned": [
+        "unicode-tail"
+      ],
+      "candidates": [
+        "unicode-tail",
+        "db-preservation"
+      ],
+      "complete": [],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 0,
+        "hit3": 0,
+        "reciprocalRank": 0,
+        "idCoverage": 0,
+        "candidateCoverage": 1,
+        "missingConcepts": [
+          "preserve-user-data"
+        ],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 29.798499999999876,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 6000,
+      "injected": [
+        "unicode-tail"
+      ],
+      "partial": [
+        "unicode-tail"
+      ],
+      "truncated": true,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-late",
+      "split": "tuning",
+      "family": "late-entity",
+      "context": "A",
+      "prompt": "please help me inspect this particular synthetic workload after checking all available context Deployment",
+      "expected": {
+        "expectedIDs": [
+          "deployment-anchor"
+        ],
+        "concepts": [
+          "deployment-validation"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "please help me inspect this synthetic workload after checking all context Deployment",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "please",
+        "help",
+        "me",
+        "inspect",
+        "this",
+        "synthetic",
+        "workload",
+        "after",
+        "checking",
+        "all",
+        "context",
+        "Deployment"
+      ],
+      "returned": [
+        "deployment-anchor"
+      ],
+      "candidates": [
+        "deployment-anchor",
+        "long-tail",
+        "alpha-route",
+        "error-anchor",
+        "duplicate-two",
+        "duplicate-one",
+        "version-anchor",
+        "scope-distractor-1",
+        "beta-conflict",
+        "alpha-conflict",
+        "scope-distractor-2",
+        "origin-B-fact",
+        "relevant-global",
+        "scope-distractor-3",
+        "path-anchor",
+        "stale-route"
+      ],
+      "complete": [
+        "deployment-anchor"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 25.950333999999884,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 2529,
+      "injected": [
+        "deployment-anchor"
+      ],
+      "partial": [],
+      "truncated": true,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-deployment-control",
+      "split": "tuning",
+      "family": "late-entity",
+      "context": "A",
+      "prompt": "Deployment",
+      "expected": {
+        "expectedIDs": [
+          "deployment-anchor"
+        ],
+        "concepts": [
+          "deployment-validation"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "Deployment",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Deployment"
+      ],
+      "returned": [
+        "deployment-anchor",
+        "alpha-route"
+      ],
+      "candidates": [
+        "deployment-anchor",
+        "alpha-route"
+      ],
+      "complete": [
+        "deployment-anchor",
+        "alpha-route"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 25.11912499999994,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 3496,
+      "injected": [
+        "deployment-anchor",
+        "alpha-route"
+      ],
+      "partial": [],
+      "truncated": false,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-error",
+      "split": "tuning",
+      "family": "exact-error",
+      "context": "A",
+      "prompt": "E_SYNTH_LOCK_73",
+      "expected": {
+        "expectedIDs": [
+          "error-anchor"
+        ],
+        "concepts": [
+          "exact-error-recovery"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "E_SYNTH_LOCK_73",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "E_SYNTH_LOCK_73"
+      ],
+      "returned": [
+        "error-anchor"
+      ],
+      "candidates": [
+        "error-anchor"
+      ],
+      "complete": [
+        "error-anchor"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 25.745374999999967,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 2422,
+      "injected": [
+        "error-anchor"
+      ],
+      "partial": [],
+      "truncated": false,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-unknown-service",
+      "split": "tuning",
+      "family": "unknown-service",
+      "context": "A",
+      "prompt": "Deploy UnknownFinch to alpha",
+      "expected": {
+        "expectedIDs": [],
+        "concepts": [],
+        "expectedNoAnswer": true
+      },
+      "expectedOrigins": [],
+      "argv": [
+        "recall",
+        "Deploy UnknownFinch to alpha",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Deploy",
+        "UnknownFinch",
+        "to",
+        "alpha"
+      ],
+      "returned": [
+        "alpha-route",
+        "issue-route",
+        "alpha-conflict"
+      ],
+      "candidates": [
+        "alpha-route",
+        "issue-route",
+        "alpha-conflict",
+        "topic-local",
+        "beta-conflict",
+        "stale-route"
+      ],
+      "complete": [
+        "alpha-route",
+        "issue-route",
+        "alpha-conflict"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": false,
+        "hit1": null,
+        "hit3": null,
+        "reciprocalRank": null,
+        "idCoverage": null,
+        "candidateCoverage": null,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": true,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 25.630709000000024,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 4603,
+      "injected": [
+        "alpha-route",
+        "issue-route",
+        "alpha-conflict"
+      ],
+      "partial": [],
+      "truncated": true,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-shared",
+      "split": "tuning",
+      "family": "domain-origin",
+      "context": "A",
+      "prompt": "Snapshot rehearsal",
+      "expected": {
+        "expectedIDs": [
+          "domain-route"
+        ],
+        "concepts": [
+          "shared-snapshot-check"
+        ]
+      },
+      "expectedOrigins": [
+        "domain"
+      ],
+      "argv": [
+        "recall",
+        "Snapshot rehearsal",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Snapshot",
+        "rehearsal"
+      ],
+      "returned": [
+        "domain-route"
+      ],
+      "candidates": [
+        "domain-route"
+      ],
+      "complete": [
+        "domain-route"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 26.31162500000005,
+      "status": "ok",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 2277,
+      "injected": [
+        "domain-route"
+      ],
+      "partial": [],
+      "truncated": false,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    },
+    {
+      "id": "t-noanswer",
+      "split": "tuning",
+      "family": "distant-negative",
+      "context": "A",
+      "prompt": "quasar marmalade oceanography",
+      "expected": {
+        "expectedIDs": [],
+        "concepts": [],
+        "expectedNoAnswer": true
+      },
+      "expectedOrigins": [],
+      "argv": [
+        "recall",
+        "quasar marmalade oceanography",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\",\"identity_source\":\"directory\",\"placements\":[\"repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T09:04:37.649718+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "quasar",
+        "marmalade",
+        "oceanography"
+      ],
+      "returned": [],
+      "candidates": [],
+      "complete": [],
+      "selectorLeakage": [],
+      "score": {
+        "positive": false,
+        "hit1": null,
+        "hit3": null,
+        "reciprocalRank": null,
+        "idCoverage": null,
+        "candidateCoverage": null,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 26.972790999999916,
+      "status": "empty",
+      "discovery": {
+        "kind": "library"
+      },
+      "searchedPlacements": [
+        "domain:synthetic-ops",
+        "repository:4a5952be8deeca1d19934471c4a788481e41b53089dccc6dbc6ef21920702dd3",
+        "repository:4f6d7200a2989941ce0a1a13a6e1c2bbdca53ddea44bbf4cc199f375e3f6bd60",
+        "universal"
+      ],
+      "referenceChars": 1518,
+      "injected": [],
+      "partial": [],
+      "truncated": false,
+      "sourceResolution": {
+        "status": "not_run"
+      }
+    }
+  ]
+}

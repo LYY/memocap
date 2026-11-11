@@ -1,0 +1,14 @@
+{
+  "h-path":{"expectedIDs":["path-anchor"],"concepts":["exact-path-entry"]},
+  "h-version":{"expectedIDs":["version-anchor"],"concepts":["version-specific-check"]},
+  "h-beta":{"expectedIDs":["beta-conflict"],"concepts":["beta-only"],"forbiddenIDs":["alpha-conflict"],"environmentCheck":true},
+  "h-topic":{"expectedIDs":["topic-universal"],"concepts":["independent-beta-fact"],"forbiddenIDs":["topic-local"]},
+  "h-close-negative":{"expectedIDs":[],"concepts":[],"expectedNoAnswer":true},
+  "h-ranking":{"expectedIDs":["relevant-global"],"concepts":["release-attestation"]},
+  "h-cross-fact":{"expectedIDs":["origin-B-fact"],"concepts":["b-specific-convention"]},
+  "h-origin-filter":{"expectedIDs":["beta-conflict"],"concepts":["beta-only"],"forbiddenIDs":["alpha-conflict"],"environmentCheck":true},
+  "h-stale":{"expectedIDs":["stale-route"],"concepts":["invalidated-route","verify-replacement"]},
+  "h-duplicate":{"expectedIDs":["duplicate-one","duplicate-two"],"idRule":"any","concepts":["certificate-renewal"]},
+  "h-tail":{"expectedIDs":["long-tail"],"concepts":["tail-prohibition"]},
+  "h-unicode":{"expectedIDs":["unicode-tail"],"concepts":["unicode-tail-prohibition"]}
+}

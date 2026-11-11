@@ -1,0 +1,1171 @@
+{
+  "schema": 1,
+  "measuredAt": "2026-11-11T06:08:46.335Z",
+  "binary": "/Users/liuyuyu/program/github/LYY/memocap-memory-recall-v0.6.0/target/debug/memocap",
+  "binarySha256": "ab8979b6da12cfd9eac58fc9c2238b0b900d52583a6ee8df20e65f6a7958fa34",
+  "packageVersion": "0.5.0",
+  "runtime": "v26.13.0",
+  "platform": "darwin/arm64",
+  "fixtureFreeze": {
+    "contract": "synthetic-v1-before-first-holdout",
+    "sha256": {
+      "ACCEPTANCE.md": "c3726da58f5c949c8452ed76ff4b2bca9544aa2767a520d79029e76901bfcb7c",
+      "capture.json": "04a15b9079b8118b01bb9d82a8e28579f64a0f03e084449f23d9aa8ded9f3f5f",
+      "corpus.json": "936448108abe6e56b163e21a2a306ca1f7e2b27f6f87834ea4d27be05e0ac860",
+      "tuning.queries.json": "54cd22db5e0c9dcd7106a1a15c4065f126305ca9a0010d77b4effece50f41f26",
+      "tuning.expected.json": "312756e0560551a788945e27e40be4ccc471f92e6e46389c8338514feb801aa1",
+      "holdout.queries.json": "d91e7eebc3bd4d8a5766b428c55a32cb878d64280782b39b3460db2a01a849ae",
+      "holdout.expected.json": "95a80bec68d4866b4b33ff446b41d41ffa1b9f5357506b27258744d674cb5208"
+    }
+  },
+  "protocolSha256": "61608abd7fd22c9e18ad430dc659ad19e4969d1426181c26751db0491a77a1f2",
+  "queryMode": "plugin",
+  "recallArgs": [],
+  "scope": "current selected-repository stack; scope-changing experiment options recorded in recallArgs",
+  "budget": {
+    "limit": 3,
+    "cliContentChars": 6000,
+    "pluginReferenceUTF16Chars": 6000
+  },
+  "observability": {
+    "candidateCoverage": "visible pre-budget matched_ids; not raw candidates",
+    "indexOnlyBytes": null,
+    "peakRSS": null,
+    "captureMetrics": "not run: labeled fixtures only"
+  },
+  "databaseBytes": {
+    "afterSeed": 172032,
+    "afterEvaluation": 180224
+  },
+  "total": {
+    "cases": 12,
+    "positives": 10,
+    "negatives": 2,
+    "successes": 9,
+    "hit1": 0.8,
+    "hit3": 0.8,
+    "MRR": 0.8,
+    "candidateCoverage": 0.8,
+    "negativeNoise": 0.5,
+    "negativeReturnedItems": 3,
+    "wrongEnvironmentRate": null,
+    "p50Ms": 25.486417000000074,
+    "p95Ms": 28.333165999999892
+  },
+  "bySplit": {
+    "tuning": {
+      "cases": 12,
+      "positives": 10,
+      "negatives": 2,
+      "successes": 9,
+      "hit1": 0.8,
+      "hit3": 0.8,
+      "MRR": 0.8,
+      "candidateCoverage": 0.8,
+      "negativeNoise": 0.5,
+      "negativeReturnedItems": 3,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.486417000000074,
+      "p95Ms": 28.333165999999892
+    }
+  },
+  "byFamily": {
+    "incident-routing": {
+      "cases": 2,
+      "positives": 2,
+      "negatives": 0,
+      "successes": 2,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 26.541124999999965,
+      "p95Ms": 27.11520799999994
+    },
+    "verified-service-routing": {
+      "cases": 2,
+      "positives": 2,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 0.5,
+      "hit3": 0.5,
+      "MRR": 0.5,
+      "candidateCoverage": 0.5,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 26.09137499999997,
+      "p95Ms": 28.333165999999892
+    },
+    "chinese-paraphrase": {
+      "cases": 2,
+      "positives": 2,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 0.5,
+      "hit3": 0.5,
+      "MRR": 0.5,
+      "candidateCoverage": 0.5,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.085708000000068,
+      "p95Ms": 25.222375000000056
+    },
+    "late-entity": {
+      "cases": 2,
+      "positives": 2,
+      "negatives": 0,
+      "successes": 2,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.124166999999943,
+      "p95Ms": 26.743625000000065
+    },
+    "exact-error": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.486417000000074,
+      "p95Ms": 25.486417000000074
+    },
+    "unknown-service": {
+      "cases": 1,
+      "positives": 0,
+      "negatives": 1,
+      "successes": 0,
+      "hit1": null,
+      "hit3": null,
+      "MRR": null,
+      "candidateCoverage": null,
+      "negativeNoise": 1,
+      "negativeReturnedItems": 3,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.77604199999996,
+      "p95Ms": 25.77604199999996
+    },
+    "domain-origin": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 24.877082999999857,
+      "p95Ms": 24.877082999999857
+    },
+    "distant-negative": {
+      "cases": 1,
+      "positives": 0,
+      "negatives": 1,
+      "successes": 1,
+      "hit1": null,
+      "hit3": null,
+      "MRR": null,
+      "candidateCoverage": null,
+      "negativeNoise": 0,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 24.909042,
+      "p95Ms": 24.909042
+    }
+  },
+  "byExpectedOrigin": {
+    "A": {
+      "cases": 7,
+      "positives": 7,
+      "negatives": 0,
+      "successes": 6,
+      "hit1": 0.8571428571428571,
+      "hit3": 0.8571428571428571,
+      "MRR": 0.8571428571428571,
+      "candidateCoverage": 0.8571428571428571,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 25.486417000000074,
+      "p95Ms": 27.11520799999994
+    },
+    "B": {
+      "cases": 2,
+      "positives": 2,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 0.5,
+      "hit3": 0.5,
+      "MRR": 0.5,
+      "candidateCoverage": 0.5,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 26.09137499999997,
+      "p95Ms": 28.333165999999892
+    },
+    "no-answer": {
+      "cases": 2,
+      "positives": 0,
+      "negatives": 2,
+      "successes": 1,
+      "hit1": null,
+      "hit3": null,
+      "MRR": null,
+      "candidateCoverage": null,
+      "negativeNoise": 0.5,
+      "negativeReturnedItems": 3,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 24.909042,
+      "p95Ms": 25.77604199999996
+    },
+    "domain": {
+      "cases": 1,
+      "positives": 1,
+      "negatives": 0,
+      "successes": 1,
+      "hit1": 1,
+      "hit3": 1,
+      "MRR": 1,
+      "candidateCoverage": 1,
+      "negativeNoise": null,
+      "negativeReturnedItems": 0,
+      "wrongEnvironmentRate": null,
+      "p50Ms": 24.877082999999857,
+      "p95Ms": 24.877082999999857
+    }
+  },
+  "cases": [
+    {
+      "id": "t-issue",
+      "split": "tuning",
+      "family": "incident-routing",
+      "context": "A",
+      "prompt": "线上 issue 调查从哪里开始",
+      "expected": {
+        "expectedIDs": [
+          "issue-route"
+        ],
+        "concepts": [
+          "logs-entry",
+          "production-query-entry"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "线上 issue 调查从哪里开始",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "线上",
+        "issue",
+        "调查从哪里开始"
+      ],
+      "returned": [
+        "issue-route"
+      ],
+      "candidates": [
+        "issue-route"
+      ],
+      "complete": [
+        "issue-route"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 27.11520799999994,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1189,
+      "injected": [
+        "issue-route"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "t-issue-en",
+      "split": "tuning",
+      "family": "incident-routing",
+      "context": "A",
+      "prompt": "Investigate a production issue",
+      "expected": {
+        "expectedIDs": [
+          "issue-route"
+        ],
+        "concepts": [
+          "logs-entry",
+          "production-query-entry"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "Investigate a production issue",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Investigate",
+        "a",
+        "production",
+        "issue"
+      ],
+      "returned": [
+        "issue-route",
+        "scope-distractor-1",
+        "domain-route"
+      ],
+      "candidates": [
+        "issue-route",
+        "scope-distractor-1",
+        "domain-route",
+        "beta-conflict"
+      ],
+      "complete": [
+        "issue-route",
+        "scope-distractor-1",
+        "domain-route"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 26.541124999999965,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1814,
+      "injected": [
+        "issue-route",
+        "scope-distractor-1",
+        "domain-route"
+      ],
+      "partial": [],
+      "truncated": true
+    },
+    {
+      "id": "t-alpha-cross",
+      "split": "tuning",
+      "family": "verified-service-routing",
+      "context": "A",
+      "prompt": "把 Aster 服务发布到 alpha 环境",
+      "expected": {
+        "expectedIDs": [
+          "alpha-route"
+        ],
+        "concepts": [
+          "aster-alpha-repository",
+          "alpha-entry"
+        ]
+      },
+      "expectedOrigins": [
+        "B"
+      ],
+      "argv": [
+        "recall",
+        "把 Aster 服务发布到 alpha 环境",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "把",
+        "Aster",
+        "服务发布到",
+        "alpha",
+        "环境"
+      ],
+      "returned": [
+        "alpha-conflict",
+        "topic-local",
+        "beta-conflict"
+      ],
+      "candidates": [
+        "alpha-conflict",
+        "topic-local",
+        "beta-conflict"
+      ],
+      "complete": [
+        "alpha-conflict",
+        "topic-local",
+        "beta-conflict"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 0,
+        "hit3": 0,
+        "reciprocalRank": 0,
+        "idCoverage": 0,
+        "candidateCoverage": 0,
+        "missingConcepts": [
+          "aster-alpha-repository",
+          "alpha-entry"
+        ],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 28.333165999999892,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1579,
+      "injected": [
+        "alpha-conflict",
+        "topic-local",
+        "beta-conflict"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "t-alpha-local",
+      "split": "tuning",
+      "family": "verified-service-routing",
+      "context": "B",
+      "prompt": "Aster alpha deployment",
+      "expected": {
+        "expectedIDs": [
+          "alpha-route"
+        ],
+        "concepts": [
+          "aster-alpha-repository",
+          "alpha-entry"
+        ]
+      },
+      "expectedOrigins": [
+        "B"
+      ],
+      "argv": [
+        "recall",
+        "Aster alpha deployment",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/B\",\"repository_id\":\"repository:88965434c746bb57dc6d2623b9678ded2c33c8e92d631d0a7a2132f71ad0fcb4\",\"identity_source\":\"directory\",\"placements\":[\"repository:88965434c746bb57dc6d2623b9678ded2c33c8e92d631d0a7a2132f71ad0fcb4\"],\"descriptor\":{\"display_name\":\"B\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.092436+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Aster",
+        "alpha",
+        "deployment"
+      ],
+      "returned": [
+        "alpha-route",
+        "stale-route",
+        "beta-conflict"
+      ],
+      "candidates": [
+        "alpha-route",
+        "stale-route",
+        "beta-conflict"
+      ],
+      "complete": [
+        "alpha-route",
+        "stale-route",
+        "beta-conflict"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 26.09137499999997,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:88965434c746bb57dc6d2623b9678ded2c33c8e92d631d0a7a2132f71ad0fcb4",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1873,
+      "injected": [
+        "alpha-route",
+        "stale-route",
+        "beta-conflict"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "t-db-cn",
+      "split": "tuning",
+      "family": "chinese-paraphrase",
+      "context": "A",
+      "prompt": "数据库迁移有什么要求",
+      "expected": {
+        "expectedIDs": [
+          "db-preservation"
+        ],
+        "concepts": [
+          "preserve-user-data"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "数据库迁移有什么要求",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "数据库迁移有什么要求"
+      ],
+      "returned": [],
+      "candidates": [],
+      "complete": [],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 0,
+        "hit3": 0,
+        "reciprocalRank": 0,
+        "idCoverage": 0,
+        "candidateCoverage": 0,
+        "missingConcepts": [
+          "preserve-user-data"
+        ],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 25.085708000000068,
+      "status": "empty",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 699,
+      "injected": [],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "t-db-control",
+      "split": "tuning",
+      "family": "chinese-paraphrase",
+      "context": "A",
+      "prompt": "数据库变更必须保留用户数据",
+      "expected": {
+        "expectedIDs": [
+          "db-preservation"
+        ],
+        "concepts": [
+          "preserve-user-data"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "数据库变更必须保留用户数据",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "数据库变更必须保留用户数据"
+      ],
+      "returned": [
+        "db-preservation"
+      ],
+      "candidates": [
+        "db-preservation"
+      ],
+      "complete": [
+        "db-preservation"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 25.222375000000056,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 926,
+      "injected": [
+        "db-preservation"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "t-late",
+      "split": "tuning",
+      "family": "late-entity",
+      "context": "A",
+      "prompt": "please help me inspect this particular synthetic workload after checking all available context Deployment",
+      "expected": {
+        "expectedIDs": [
+          "deployment-anchor"
+        ],
+        "concepts": [
+          "deployment-validation"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "please help me inspect this particular synthetic workload after checking all available",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "please",
+        "help",
+        "me",
+        "inspect",
+        "this",
+        "particular",
+        "synthetic",
+        "workload",
+        "after",
+        "checking",
+        "all",
+        "available"
+      ],
+      "returned": [
+        "deployment-anchor",
+        "error-anchor",
+        "scope-distractor-1"
+      ],
+      "candidates": [
+        "deployment-anchor",
+        "error-anchor",
+        "scope-distractor-1",
+        "alpha-conflict",
+        "scope-distractor-2",
+        "scope-distractor-3",
+        "path-anchor",
+        "duplicate-two",
+        "version-anchor",
+        "beta-conflict",
+        "relevant-global"
+      ],
+      "complete": [
+        "deployment-anchor",
+        "error-anchor",
+        "scope-distractor-1"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 26.743625000000065,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1685,
+      "injected": [
+        "deployment-anchor",
+        "error-anchor",
+        "scope-distractor-1"
+      ],
+      "partial": [],
+      "truncated": true
+    },
+    {
+      "id": "t-deployment-control",
+      "split": "tuning",
+      "family": "late-entity",
+      "context": "A",
+      "prompt": "Deployment",
+      "expected": {
+        "expectedIDs": [
+          "deployment-anchor"
+        ],
+        "concepts": [
+          "deployment-validation"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "Deployment",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Deployment"
+      ],
+      "returned": [
+        "deployment-anchor"
+      ],
+      "candidates": [
+        "deployment-anchor"
+      ],
+      "complete": [
+        "deployment-anchor"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 25.124166999999943,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1017,
+      "injected": [
+        "deployment-anchor"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "t-error",
+      "split": "tuning",
+      "family": "exact-error",
+      "context": "A",
+      "prompt": "E_SYNTH_LOCK_73",
+      "expected": {
+        "expectedIDs": [
+          "error-anchor"
+        ],
+        "concepts": [
+          "exact-error-recovery"
+        ]
+      },
+      "expectedOrigins": [
+        "A"
+      ],
+      "argv": [
+        "recall",
+        "E_SYNTH_LOCK_73",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "E_SYNTH_LOCK_73"
+      ],
+      "returned": [
+        "error-anchor"
+      ],
+      "candidates": [
+        "error-anchor"
+      ],
+      "complete": [
+        "error-anchor"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 25.486417000000074,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1039,
+      "injected": [
+        "error-anchor"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "t-unknown-service",
+      "split": "tuning",
+      "family": "unknown-service",
+      "context": "A",
+      "prompt": "Deploy UnknownFinch to alpha",
+      "expected": {
+        "expectedIDs": [],
+        "concepts": [],
+        "expectedNoAnswer": true
+      },
+      "expectedOrigins": [],
+      "argv": [
+        "recall",
+        "Deploy UnknownFinch to alpha",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Deploy",
+        "UnknownFinch",
+        "to",
+        "alpha"
+      ],
+      "returned": [
+        "issue-route",
+        "alpha-conflict",
+        "topic-local"
+      ],
+      "candidates": [
+        "issue-route",
+        "alpha-conflict",
+        "topic-local",
+        "beta-conflict"
+      ],
+      "complete": [
+        "issue-route",
+        "alpha-conflict",
+        "topic-local"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": false,
+        "hit1": null,
+        "hit3": null,
+        "reciprocalRank": null,
+        "idCoverage": null,
+        "candidateCoverage": null,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": true,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": false
+      },
+      "wallMs": 25.77604199999996,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 1822,
+      "injected": [
+        "issue-route",
+        "alpha-conflict",
+        "topic-local"
+      ],
+      "partial": [],
+      "truncated": true
+    },
+    {
+      "id": "t-shared",
+      "split": "tuning",
+      "family": "domain-origin",
+      "context": "A",
+      "prompt": "Snapshot rehearsal",
+      "expected": {
+        "expectedIDs": [
+          "domain-route"
+        ],
+        "concepts": [
+          "shared-snapshot-check"
+        ]
+      },
+      "expectedOrigins": [
+        "domain"
+      ],
+      "argv": [
+        "recall",
+        "Snapshot rehearsal",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "Snapshot",
+        "rehearsal"
+      ],
+      "returned": [
+        "domain-route"
+      ],
+      "candidates": [
+        "domain-route"
+      ],
+      "complete": [
+        "domain-route"
+      ],
+      "selectorLeakage": [],
+      "score": {
+        "positive": true,
+        "hit1": 1,
+        "hit3": 1,
+        "reciprocalRank": 1,
+        "idCoverage": 1,
+        "candidateCoverage": 1,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 24.877082999999857,
+      "status": "ok",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 996,
+      "injected": [
+        "domain-route"
+      ],
+      "partial": [],
+      "truncated": false
+    },
+    {
+      "id": "t-noanswer",
+      "split": "tuning",
+      "family": "distant-negative",
+      "context": "A",
+      "prompt": "quasar marmalade oceanography",
+      "expected": {
+        "expectedIDs": [],
+        "concepts": [],
+        "expectedNoAnswer": true
+      },
+      "expectedOrigins": [],
+      "argv": [
+        "recall",
+        "quasar marmalade oceanography",
+        "--match",
+        "any",
+        "--limit",
+        "3",
+        "--max-chars",
+        "6000",
+        "--targets-json",
+        "[{\"canonical_path\":\"/private<sandbox>/A\",\"repository_id\":\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\",\"identity_source\":\"directory\",\"placements\":[\"repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e\"],\"descriptor\":{\"display_name\":\"A\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:08:45.076769+00:00\"}]",
+        "--json"
+      ],
+      "queryTerms": [
+        "quasar",
+        "marmalade",
+        "oceanography"
+      ],
+      "returned": [],
+      "candidates": [],
+      "complete": [],
+      "selectorLeakage": [],
+      "score": {
+        "positive": false,
+        "hit1": null,
+        "hit3": null,
+        "reciprocalRank": null,
+        "idCoverage": null,
+        "candidateCoverage": null,
+        "missingConcepts": [],
+        "forbidden": [],
+        "negativeNoise": false,
+        "environmentCheck": false,
+        "wrongEnvironment": false,
+        "success": true
+      },
+      "wallMs": 24.909042,
+      "status": "empty",
+      "searchedPlacements": [
+        "repository:d7cdadf0512a464953ae1201ba5136c75a25108d6c0a003af7b32c7c64dda01e",
+        "domain:synthetic-ops",
+        "universal"
+      ],
+      "referenceChars": 699,
+      "injected": [],
+      "partial": [],
+      "truncated": false
+    }
+  ]
+}

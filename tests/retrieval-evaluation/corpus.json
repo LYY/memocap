@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "description": "Invented services, repositories, errors and destinations. Never execute a remembered destination.",
+  "records": [
+    {"id":"issue-route","origin":"A","concepts":["logs-entry","production-query-entry","verify-current-sources"],"content":"For production issue investigation, start with Datadog logs and the Metabase production DB read-only bridge. Confirm incident time and approved query scope; consult mock://guides/incident-entry before use. These are navigation references, never permission to query production."},
+    {"id":"alpha-route","origin":"B","concepts":["aster-alpha-repository","alpha-entry","verify-current-sources"],"content":"Aster service alpha deployment has a verified mapping to /synthetic/aster-control, docs/alpha-entry.md and scripts/publish-alpha.sh. Check the current guide and approved alpha destination; confirm rollout health. Source mock://verified/aster-alpha. This mapping does not apply to beta or production."},
+    {"id":"db-preservation","origin":"A","concepts":["preserve-user-data"],"content":"数据库变更必须保留用户数据"},
+    {"id":"deployment-anchor","origin":"A","concepts":["deployment-validation"],"content":"Deployment validation checks the readiness of synthetic workloads; see mock://guides/workload-readiness."},
+    {"id":"error-anchor","origin":"A","concepts":["exact-error-recovery"],"content":"E_SYNTH_LOCK_73 means the synthetic queue lease is held. Inspect the fixture lease owner before retrying; mock://guides/lease."},
+    {"id":"path-anchor","origin":"A","concepts":["exact-path-entry"],"content":"The verified fixture manifest is /synthetic/orbit/ops/entry.yaml. Read its current target mapping before proceeding."},
+    {"id":"version-anchor","origin":"universal","concepts":["version-specific-check"],"content":"FixtureSDK 2.7.4 requires checking wire-v2 compatibility with mock://guides/sdk-274 before rollout; other versions need their own evidence."},
+    {"id":"alpha-conflict","origin":"A","concepts":["alpha-only"],"content":"Beacon alpha release uses alpha-gate and an alpha-only mock destination. Never use this gate for beta."},
+    {"id":"beta-conflict","origin":"universal","concepts":["beta-only"],"content":"Beacon beta release uses beta-gate and a beta-only mock destination. Never use this gate for alpha."},
+    {"id":"topic-local","origin":"A","topic":"shared-rollout","concepts":["local-rollout-note"],"content":"Comet rollout note concerns the alpha-only audit gate. It is not evidence about the beta gate."},
+    {"id":"topic-universal","origin":"universal","topic":"shared-rollout","concepts":["independent-beta-fact"],"content":"Comet rollout note concerns an independently verified beta check; source mock://guides/comet-beta. Same topic does not establish replacement."},
+    {"id":"domain-route","origin":"domain","concepts":["shared-snapshot-check"],"content":"Snapshot rehearsal requires restore verification against a disposable fixture, never the production database. See mock://guides/snapshot."},
+    {"id":"scope-distractor-1","origin":"A","concepts":["ui-release-note"],"content":"Release navigation for the synthetic button preview is in mock://ui/button; this is a visual review task."},
+    {"id":"scope-distractor-2","origin":"A","concepts":["font-release-note"],"content":"Release typography review for the synthetic font preview is in mock://ui/font."},
+    {"id":"scope-distractor-3","origin":"A","concepts":["icon-release-note"],"content":"Release icon inventory review for the synthetic icon preview is in mock://ui/icon."},
+    {"id":"relevant-global","origin":"universal","concepts":["release-attestation"],"content":"Release attestation checksum verification is mandatory for the synthetic artifact; use mock://guides/attestation."},
+    {"id":"stale-route","origin":"B","concepts":["invalidated-route","verify-replacement"],"content":"Kestrel alpha entry /synthetic/kestrel/old.sh is INVALIDATED by mock://evidence/kestrel-removed. No replacement has been verified. Recheck current documentation; do not execute the old route."},
+    {"id":"duplicate-one","origin":"B","concepts":["certificate-renewal"],"content":"Certificate renewal for synthetic Cedar requires checking the current issuer policy at mock://guides/cedar-cert."},
+    {"id":"duplicate-two","origin":"universal","concepts":["certificate-renewal"],"content":"Certificate renewal for synthetic Cedar requires checking the current issuer policy at mock://guides/cedar-cert."},
+    {"id":"long-tail","origin":"B","concepts":["tail-prohibition"],"content":"TailGuard fixture operational reference. ","repeat":{"text":"Synthetic explanatory context. ","count":230},"suffix":"PROHIBITION: do not execute against beta or production. Read the full reference before action."},
+    {"id":"unicode-tail","origin":"B","concepts":["unicode-tail-prohibition"],"content":"UnicodeGuard 合成参考。","repeat":{"text":"说明：\"候选\"与😀需要保留边界。","count":380},"suffix":"禁止用于生产；必须先读全文核对环境。"},
+    {"id":"origin-B-fact","origin":"B","concepts":["b-specific-convention"],"content":"Zephyr build verification uses the synthetic manifest digest, recorded in mock://guides/zephyr-build."}
+  ]
+}

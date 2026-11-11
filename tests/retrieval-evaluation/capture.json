@@ -1,0 +1,20 @@
+{
+  "schema":1,
+  "status":"admission labels only; no implemented capture measurement",
+  "sources":[
+    {"id":"incident-guide","kind":"synthetic-authoritative-doc","uri":"mock://guides/incident-entry","evidence":"Incident investigation starts with Datadog logs and the read-only Metabase production DB bridge; each needs current scope approval."},
+    {"id":"alpha-guide","kind":"synthetic-doc-and-successful-verification","uri":"mock://verified/aster-alpha","evidence":"Aster alpha maps to /synthetic/aster-control docs/alpha-entry.md; disposable alpha rehearsal verified entry and health checks. No beta mapping verified."},
+    {"id":"terminal-output","kind":"synthetic-transient-output","evidence":"One completed run returned synthetic task 42 and health green at a single instant."},
+    {"id":"assistant-guess","kind":"unsupported-assistant-statement","evidence":"Assistant guessed that Aster beta probably shares the alpha entry; no source or verification."}
+  ],
+  "cases":[
+    {"id":"capture-route-docs","split":"tuning","label":"admit","category":"supported-routing-existing-docs","sources":["incident-guide"],"candidate":"Keep task-to-tool entry, approval prerequisite and current guide pointer.","expectedConcepts":["logs-entry","production-query-entry","verify-current-sources"]},
+    {"id":"capture-alpha-verified","split":"holdout","label":"admit","category":"supported-service-routing","sources":["alpha-guide"],"candidate":"Keep Aster alpha repository entry, verification check and source pointer; limit applicability to alpha.","expectedConcepts":["aster-alpha-repository","alpha-entry"]},
+    {"id":"capture-runbook","split":"tuning","label":"skip","category":"full-runbook-copy","sources":["incident-guide"],"candidate":"Copy the entire maintained guide including all commands and examples.","reason":"Navigation is valuable; duplicating the full authoritative runbook is not."},
+    {"id":"capture-transient","split":"holdout","label":"skip","category":"transient","sources":["terminal-output"],"candidate":"Task 42 is green now.","reason":"One-time state does not establish a durable route or future invariant."},
+    {"id":"capture-secret","split":"tuning","label":"skip","category":"secret","sources":[],"candidate":"Store credential <SYNTHETIC_SECRET_PLACEHOLDER> for the mock bridge.","reason":"Credential-shaped candidate is excluded even in an otherwise supported workflow."},
+    {"id":"capture-unsupported","split":"holdout","label":"skip","category":"assistant-unsupported","sources":["assistant-guess"],"candidate":"Aster beta uses the alpha repository entry.","reason":"Evidence does not support beta applicability."},
+    {"id":"capture-duplicate","split":"tuning","label":"skip","category":"duplicate","sources":["incident-guide"],"existingEquivalentID":"issue-route","candidate":"Keep the same task-to-tool entry already represented by issue-route.","reason":"No new navigation or applicability value."},
+    {"id":"capture-incomplete","split":"holdout","label":"skip","category":"insufficient-business-evidence","sources":["terminal-output"],"candidate":"The production incident is resolved because a command exited successfully.","reason":"Tool exit and transient output do not establish incident resolution."}
+  ]
+}

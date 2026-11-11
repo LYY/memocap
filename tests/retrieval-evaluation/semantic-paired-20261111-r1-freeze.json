@@ -1,0 +1,252 @@
+{
+  "schema": 1,
+  "frozenAt": "2026-11-11T10:06:22.902Z",
+  "holdoutOpened": false,
+  "config": {
+    "id": "k10-w0.5-t0.60",
+    "k": 10,
+    "semanticWeight": 0.5,
+    "threshold": 0.6
+  },
+  "selection": "All twelve tie on quality and noise; predeclared conservative tie-break selects threshold .60, weight .5, k10. Tuning has zero newly fixed positives; no adoption claim.",
+  "tuningSha256": "ceff2b261fd0e6ec937badc505f234cd589f6205727f8bbc807dfe667c2ecbf0",
+  "declarationSha256": "5e3e65edd55390358323eea8f12234585ca97c8436e8a2ff28f1d3fc4eb1df6a",
+  "fixtureFreeze": {
+    "contract": "synthetic-v1-before-first-holdout",
+    "sha256": {
+      "ACCEPTANCE.md": "c3726da58f5c949c8452ed76ff4b2bca9544aa2767a520d79029e76901bfcb7c",
+      "capture.json": "04a15b9079b8118b01bb9d82a8e28579f64a0f03e084449f23d9aa8ded9f3f5f",
+      "corpus.json": "936448108abe6e56b163e21a2a306ca1f7e2b27f6f87834ea4d27be05e0ac860",
+      "tuning.queries.json": "54cd22db5e0c9dcd7106a1a15c4065f126305ca9a0010d77b4effece50f41f26",
+      "tuning.expected.json": "312756e0560551a788945e27e40be4ccc471f92e6e46389c8338514feb801aa1",
+      "holdout.queries.json": "d91e7eebc3bd4d8a5766b428c55a32cb878d64280782b39b3460db2a01a849ae",
+      "holdout.expected.json": "95a80bec68d4866b4b33ff446b41d41ffa1b9f5357506b27258744d674cb5208"
+    }
+  },
+  "implementation": {
+    "driverSha256": "5bee53fafac839289533e7638d8a9502b7eb053392ae3e9f9223be1f8b37d4c3",
+    "fixtureDriverSha256": "c35e48e9c6360d9592bba508a161c337e8b2a86d0072c4120992c4947af62211",
+    "serverSha256": "c412aea8957008e671af7028f3b2c435fcad8d1f6e84342d7790ea2ee01a6bc9",
+    "protocolSha256": "705b31cf1554f52313855cff5eb7a65239505042651c098e1c19cde2101d8767",
+    "referencesSha256": "f33959fb29c117dd287af060c8923381a714c3e9fca6273312b4f68bcce7e8c1",
+    "querySha256": "1954cf8c608c2239021ec02a9bd5bd920442ff2d10fb6251ec82e7da4f4395fe",
+    "scoringSha256": "ccd7c2bc0a2de47e2daf60feed83d6d0f52b590edc565047ba52b82fef7efedc"
+  },
+  "binarySha256": "485c241c1e05278bbfb3cd6e13b53e6d47849cd7a91665211828c0b193f7ba54",
+  "model": {
+    "revision": "2c4055b12046f11709e9df2c122e59ffbdc2f900",
+    "sha256": "66fc00f5f29afcaff34092e1bdd20008ca3918265a82fb9695a551e510cc4ebc",
+    "vectorsSha256": "10bf29b0f8f7ff3444fbff868d398e7e53bcc0c58d5b3f35470f1b8bdbf7121a",
+    "canonicalFullBodiesVerified": 22
+  },
+  "budget": {
+    "limit": 3,
+    "nativeCompleteBodyScalarChars": 6000,
+    "pluginUTF16Chars": 6000
+  },
+  "qualityContract": {
+    "minimumFixedPositives": 1,
+    "maximumBrokenPreviouslySuccessfulPositives": 0,
+    "maximumExtraNegativeNoise": 0,
+    "forbiddenEnvironment": 0,
+    "forbiddenIDs": 0,
+    "selectorLeakage": 0,
+    "partialAsFull": 0,
+    "exactAnchorPreservation": true,
+    "score": "unaltered v1 scoring.mjs; full-read results never count as fully injected concepts"
+  },
+  "measuredTuning": {
+    "correctedLexicalP95Ms": 37.39133300000003,
+    "hybridWarmP95Ms": 49.086874999999964,
+    "hybridWarmMaximumMs": 49.086874999999964,
+    "coldFirstQueryE2EMs": 1849.236125,
+    "platform": "darwin",
+    "arch": "arm64",
+    "startupWallMs": 1800.14925,
+    "encoderReady": {
+      "ready": true,
+      "startupMs": 751.1790837161243,
+      "peakRssBytes": 902856704
+    },
+    "pythonPeakRssBytes": 904183808,
+    "nodePeakRssBytes": 175161344,
+    "nativePeakRssBytes": 15613952,
+    "assetBytes": 135392208,
+    "onnxRuntimeInstalledBytes": 65278097,
+    "totalRuntimeInstalledBytes": 147070538,
+    "databaseBytes": {
+      "afterSeed": 172032,
+      "afterEvaluation": 184320
+    }
+  },
+  "ceilings": {
+    "queryE2EMaxMs": 3000,
+    "warmQueryP95Ms": 74.78266600000006,
+    "pythonPeakRssBytes": 939524096,
+    "nodePeakRssBytes": 201326592,
+    "nativePeakRssBytes": 16777216,
+    "fixedAssetsBytes": 135392208,
+    "installedOnnxRuntimeBytes": 65278097,
+    "installedAllRuntimeDistributionsBytes": 147070538,
+    "fixedAssetsPlusAllDistributionsBytes": 282462746,
+    "rationale": "3000ms is existing plugin request deadline, applies to cold startup plus first query too. Warm p95 <=2x measured corrected lexical p95 keeps relative cost explicit. RSS caps round measured component peaks to next128/32/16MiB on this 32GiB M2Pro device; local experiment envelopes, not universal product memory budgets. Disk caps are exact already pinned bytes, excluding Python interpreter, pyc, experiment scripts and corpus vector JSON separately inventoried."
+  },
+  "machine": {
+    "memoryBytes": 34359738368,
+    "logicalCPU": 12,
+    "chip": "Apple M2 Pro",
+    "platform": "darwin/arm64"
+  },
+  "files": [
+    {
+      "name": "README.md",
+      "bytes": 1151,
+      "sha256": "1faca2377fb36a7c5ee603ffdd170cf93126be37e7b3b422d319b8ed34081e73"
+    },
+    {
+      "name": "config.json",
+      "bytes": 673,
+      "sha256": "05b570bff786faa5c4604152aa16f19f77ed6dfc31e47dd0f3dd987078693ac7"
+    },
+    {
+      "name": "freeze_selection.mjs",
+      "bytes": 4195,
+      "sha256": "3bca5fff44a2168894a6446382259f857ec3f14e5215b79413f2f2f7c443c640"
+    },
+    {
+      "name": "manifest.json",
+      "bytes": 729256,
+      "sha256": "5906543a8af6f1bf45d8728f410d665cb9590fd79f98dd071a5714b94c2c8a95"
+    },
+    {
+      "name": "model_quantized.onnx",
+      "bytes": 118308126,
+      "sha256": "66fc00f5f29afcaff34092e1bdd20008ca3918265a82fb9695a551e510cc4ebc"
+    },
+    {
+      "name": "native_fixture.mjs",
+      "bytes": 8407,
+      "sha256": "c35e48e9c6360d9592bba508a161c337e8b2a86d0072c4120992c4947af62211"
+    },
+    {
+      "name": "paired-native",
+      "bytes": 24028472,
+      "sha256": "485c241c1e05278bbfb3cd6e13b53e6d47849cd7a91665211828c0b193f7ba54"
+    },
+    {
+      "name": "paired.mjs",
+      "bytes": 7458,
+      "sha256": "5bee53fafac839289533e7638d8a9502b7eb053392ae3e9f9223be1f8b37d4c3"
+    },
+    {
+      "name": "pyrightconfig.json",
+      "bytes": 145,
+      "sha256": "f915e8914745745e3233e5f9f9da705e9909ad4d4111b5b10075b98d606823bd"
+    },
+    {
+      "name": "query_server.py",
+      "bytes": 2567,
+      "sha256": "c412aea8957008e671af7028f3b2c435fcad8d1f6e84342d7790ea2ee01a6bc9"
+    },
+    {
+      "name": "runner.py",
+      "bytes": 8640,
+      "sha256": "52af467bd8c8134a1e80f8763c7eccbab932b37bce08d62b588f07f495ac1f64"
+    },
+    {
+      "name": "runner.py.lock",
+      "bytes": 46312,
+      "sha256": "fde20b7de10171fc9bfb54227566486e975901bbdbf18f306e918166c099716c"
+    },
+    {
+      "name": "tokenizer.json",
+      "bytes": 17082913,
+      "sha256": "b60b6b43406a48bf3638526314f3d232d97058bc93472ff2de930d43686fa441"
+    },
+    {
+      "name": "tokenizer_config.json",
+      "bytes": 496,
+      "sha256": "3f5961b9ac86288cccdb97f32fb848d6187c78e1603958c53f3ea1f296b7d8a2"
+    },
+    {
+      "name": "upstream-README.md",
+      "bytes": 3888,
+      "sha256": "1e98ea05b0de579fcaad3d625b62ea55647142ed674d5f5ebf1440e4bbbb6f23"
+    },
+    {
+      "name": "upstream-pooling.json",
+      "bytes": 190,
+      "sha256": "4be450dde3b0273bb9787637cfbd28fe04a7ba6ab9d36ac48e92b11e350ffc23"
+    },
+    {
+      "name": "vectors.json",
+      "bytes": 242838,
+      "sha256": "10bf29b0f8f7ff3444fbff868d398e7e53bcc0c58d5b3f35470f1b8bdbf7121a"
+    },
+    {
+      "name": "verification.json",
+      "bytes": 978,
+      "sha256": "70cce80ea18bee8e143c70d610bac1f4662a033aab0f91b061dc44858b64fd30"
+    },
+    {
+      "name": "xenova-metadata.json",
+      "bytes": 4695,
+      "sha256": "fa98fa707e30eab43d356846cd3e223a586a4a177284dce821551c5cf01fc39e"
+    }
+  ],
+  "priorReports": [
+    {
+      "name": "capture.json",
+      "sha256": "04a15b9079b8118b01bb9d82a8e28579f64a0f03e084449f23d9aa8ded9f3f5f"
+    },
+    {
+      "name": "cjk-before-tuning.json",
+      "sha256": "1039102442715a770ccdc4ecf7dc1eddb778a627cb2bf3d0051a18a0d48ab228"
+    },
+    {
+      "name": "cjk-bigram-tuning.json",
+      "sha256": "3f8afb9e9b2931dd9bb9ed2e1f85a1954aadb2cebfaeba25c28770735c4e9ee5"
+    },
+    {
+      "name": "cjk-corrected-lexical-tuning.json",
+      "sha256": "c8647135d4726cdf75875e2bda30ee7e497e898b0bc2b579aab4e95c9d1304c5"
+    },
+    {
+      "name": "cjk-trigram-tuning.json",
+      "sha256": "73bff69c31da32bc28aa5e0bdc9ef8831715c7eac44ca259656ac382f1f795cd"
+    },
+    {
+      "name": "corpus.json",
+      "sha256": "936448108abe6e56b163e21a2a306ca1f7e2b27f6f87834ea4d27be05e0ac860"
+    },
+    {
+      "name": "current-0.5.0-holdout.json",
+      "sha256": "261423bf59692cd18276faf5aced219fb429c52fb6b0dc0fb5794d198ac43a47"
+    },
+    {
+      "name": "current-0.5.0-tuning.json",
+      "sha256": "89cb465f4f111da56117b0126907ff33e1f0670817d44e210e76e2e022b51d3b"
+    },
+    {
+      "name": "freeze.json",
+      "sha256": "a11bcb3cf90e87d96b061adf81402bf8137ae8e295029fe5ec79803ce022694d"
+    },
+    {
+      "name": "holdout.expected.json",
+      "sha256": "95a80bec68d4866b4b33ff446b41d41ffa1b9f5357506b27258744d674cb5208"
+    },
+    {
+      "name": "holdout.queries.json",
+      "sha256": "d91e7eebc3bd4d8a5766b428c55a32cb878d64280782b39b3460db2a01a849ae"
+    },
+    {
+      "name": "tuning.expected.json",
+      "sha256": "312756e0560551a788945e27e40be4ccc471f92e6e46389c8338514feb801aa1"
+    },
+    {
+      "name": "tuning.queries.json",
+      "sha256": "54cd22db5e0c9dcd7106a1a15c4065f126305ca9a0010d77b4effece50f41f26"
+    }
+  ],
+  "sequence": "This exclusive freeze file must exist and its SHA must be read before paired.mjs holdout. Only one lexical and one frozen hybrid outcome per holdout query. No parameter or implementation changes thereafter."
+}
