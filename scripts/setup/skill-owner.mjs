@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { packageName, SetupError } from "./arguments.mjs";
 import { inspectConfig, managedConfigText, managedEntry } from "./config.mjs";
 import { digest, readText } from "./files.mjs";
+import { plannedPermissions } from "./permissions.mjs";
 import { assertSkillOwnership, discoverSkill, targetPolicy } from "./skills.mjs";
 
 export function inspectOwner(scope, context) {
@@ -9,7 +10,7 @@ export function inspectOwner(scope, context) {
   const pending = record?.intent;
   const actual = inspectConfig(scope, null, context.runtime);
   const committed = pending && digest(scope.text) === pending.after_digest;
-  const effectiveRecord = committed ? { ...record, plugin: pending.entry ? { entry: pending.entry } : null, skill: pending.skill || record.skill }
+  const effectiveRecord = committed ? { ...record, plugin: pending.entry ? { entry: pending.entry } : null, skill: pending.skill || record.skill, permissions: pending.permissions?.owned || record.permissions }
     : pending?.operation === "install" ? { ...record, plugin: record.plugin || (pending.previous_entry ? { entry: pending.previous_entry } : null), skill: pending.previous_skill } : record;
   const plugin = inspectConfig(scope, effectiveRecord, context.runtime);
   const skill = discoverSkill(scope, context.runtime, effectiveRecord);
@@ -35,12 +36,14 @@ export function resolveOwners(context, inspections) {
     inspection.owner = ownerInspection;
     inspection.plugin.conflicts = inspection.plugin.conflicts.filter((conflict) => conflict.code !== "plugin_layer_conflict" || conflict.path !== owner.config);
     inspection.plugin.entries = [inherited.entry];
+    inspection.plugin.permissions.grants = ownerInspection.plugin.permissions.grants;
     inspection.skill = discoverSkill(inspection.scope, context.runtime, ownerInspection.effectiveRecord);
   }
 }
 
 export function preflightOwner(inspection, context) {
   const { plugin, record, scope } = inspection;
+  if (context.options.command !== "uninstall" && plugin.permissions.conflicts.length) throw new SetupError("library_permission_conflict", "Existing configuration limits library reads", plugin.permissions.conflicts);
   if (plugin.conflicts.length) {
     const conflict = plugin.conflicts[0];
     throw new SetupError(conflict.code, `Configuration conflict at ${conflict.path}`, plugin.conflicts);
@@ -48,11 +51,13 @@ export function preflightOwner(inspection, context) {
   if (plugin.registrations.length > 1) throw new SetupError("duplicate_plugin", "Plugin arrays append across config layers", plugin.registrations);
   if (inspection.owner_reused) {
     preflightOwner(inspection.owner, context);
+    if (context.options.command !== "uninstall" && inspection.owner.plugin.permissions.grants.some(({ status }) => status !== "explicit_allow")) throw new SetupError("owner_permissions_missing", `Update the global owner to grant library reads: ${inspection.owner.scope.config}`, inspection.owner.plugin.permissions.grants);
     context.activeScope = scope;
     assertSkillOwnership(inspection.skill, inspection.owner.effectiveRecord, context);
     return;
   }
   if (record?.intent && (record.intent.target !== context.target || record.intent.operation !== (context.options.command === "uninstall" ? "uninstall" : "install"))) throw new SetupError("pending_operation", "Resume the persisted operation with the same target first", record.intent.target);
+  if (record?.intent && ![record.intent.before_digest, record.intent.after_digest].includes(digest(scope.text))) throw new SetupError("concurrent_change", `Config changed after the persisted intent: ${scope.config}`);
   context.activeScope = scope;
   assertSkillOwnership(inspection.skill, inspection.effectiveRecord, context);
   const existing = plugin.entries[0];
@@ -81,7 +86,7 @@ export function installIntent(inspection, context) {
   desired.owned_paths = existingPaths.includes(desired.path) ? record?.skill?.owned_paths?.filter((directory) => directory === desired.path) || [] : [desired.path];
   const entry = managedEntry(plugin.entries[0], context.target, desired.path);
   const removePaths = record?.skill?.kind === "managed" ? record.skill.owned_paths : [];
-  const after = managedConfigText(scope, entry, removePaths);
-  return { operation: "install", target: context.target, entry, previous_entry: plugin.entries[0] || null, skill: desired, remove_paths: removePaths,
-    before_digest: digest(scope.text), after_digest: digest(after) };
+  const permissions = plannedPermissions(scope, record?.permissions, "install");
+  const intent = { operation: "install", target: context.target, entry, previous_entry: plugin.entries[0] || null, skill: desired, remove_paths: removePaths, permissions };
+  return { ...intent, before_digest: digest(scope.text), after_digest: digest(managedConfigText(scope, intent)) };
 }

@@ -25,7 +25,7 @@ for (const tuple of [false, true]) for (const directory of ["/owned path/memocap
       if (commas[index]) commas[index] = "";
       else if (index > 0) commas[index - 1] = "";
       const expected = render("");
-      const changed = managedConfigText({ config: "/fixture.jsonc", text }, null, [directory]);
+      const changed = managedConfigText({ config: "/fixture.jsonc", text }, { entry: null, remove_paths: [directory] });
       assert.equal(changed, expected);
     });
   }
