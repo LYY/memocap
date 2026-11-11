@@ -1,12 +1,26 @@
 # ADR-0001：单数据库与兼容演进
 
-**状态：** Accepted；当前兼容范围于 2026-10-29 更新，原始决策保留为历史记录
+**状态：** Accepted；当前兼容范围于 2026-11-11 更新，历次决策保留为历史记录
 **原始日期：** 2026-10-24
-**最近更新：** 2026-10-29
+**最近更新：** 2026-11-11
 **决策者：** 用户
-**当前目标：** package 0.5.0 / schema 2.2；发布状态见 release workflow
+**当前目标：** package 0.6.0 / schema 2.3；发布状态见 release workflow
 
-## 当前决策（2026-10-29）
+## 当前决策（2026-11-11）
+
+作出本决策时的已安装版本为 package `0.5.0` / schema `2.2`。目标为 package
+`0.6.0` / schema `2.3`。本节取代此前兼容范围，不保留通用 minor 兼容、旧二进制互操作或串接历史迁移的承诺。
+
+- 新数据库直接使用 schema `2.3`。唯一支持的升级为精确 schema `2.2` 到 `2.3`；schema `2.1`、`2.0`、`1.0`、预版本、未来和不兼容结构均拒绝，不 reset、不重新播种数据、不串接旧迁移。
+- `activity_events.phase` 的现有封闭 CHECK 不接受 `capture_review`。在 `BEGIN IMMEDIATE` 锁内复检版本与必需结构后，仅以新表、显式复制全部列、删除旧表、重命名新表和重建 `activity_retention` 的方式扩展该 CHECK，再更新 metadata、最终校验并原子提交。任何步骤失败都 rollback。迁移本身不 prune；重复或并发打开复检已提交版本，不重复迁移。
+- 复制须原样保留所有 activity 的 sequence、operation/phase 唯一性、`event_json` 字节和 recorded/started 时间，不反序列化或改写旧事件。全部 memory 内容、ID、placement、kind、tags、topic、时间、organized 状态、domain/attachment、repository identity/location/metadata、provenance、ledger、FTS、扩展字段、扩展行与无关 schema 对象保持不变。
+- 实际 `2.2` DDL 是显式校验与 fixture。若 activity 表有未知列、额外索引或 trigger，其他对象引用该表，存在迁移临时名称冲突，或 schema metadata 上有可能执行未知写入的 trigger，则在 DDL 前拒绝，不能通过丢弃未知结构来完成升级。不引入通用 migration framework 或未来兼容路径。
+- 只读检查对精确 `2.2` 报告 `upgrade_needed`，对 `2.3` 报告 `ready`；不初始化、DDL、prune、补全语义或写 activity。organization 与 activity 的只读接口不代为升级。显式 activity preparation 完成 schema 事务后仍可按既有规则执行 retention。
+- `capture_review` 是 `read` 类保留元数据，采用既有 30 天 / 10,000 条上限。typed metadata 仅含 `status`、有界 ASCII `reason`、正数且不重复的 `memory_ids`（最多 100）、`model_calls`（0..3）、`tool_calls`（非负 u64）和 `write_attempts`（0..1）。`saved` 必须一次 write attempt 且有 ID；`skipped` 必须无 ID；其余结果可携带已知已提交 ID。拒绝 body、secret、source 和其他未知字段。记录失败明确报告，不重放 memory 写入。
+- 不承诺旧二进制打开 `2.3`；旧客户端 shim、capability negotiation 和旧请求 fallback 不在本次范围内。package、schema、setup manifest 和 receipt 格式仍是独立标识。安装 preflight 和最终版本就绪证据由安装契约定义，不能把旧 `0.5.0` 的 `ready`/`2.2` 当作新目标就绪。
+- `0.5.0` 中已确立的 repository identity、location、scope、权限、organization 本地边界与独立确认的语义补全规则继续有效；本次不改变这些数据或语义。以下 2026-10-29 与原始 ADR 内容仅保留决策历史。
+
+## 前次决策（2026-10-29，历史）
 
 用户当前只需管理自己的单一 SQLite 数据库。此前关于通用同主版本 minor 兼容、schema `1.0` 桥接和旧 baseline 二进制互操作的承诺已被本节取代。
 
