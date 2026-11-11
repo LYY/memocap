@@ -7,13 +7,7 @@ const crypto = require('node:crypto');
 const { repo, prepare, wireProvider, startHost, portClosed } = require('./opencode-v1/host.cjs');
 const { observe, retain, recordCleanupFailure } = require('./opencode-v1/phases.cjs');
 const { assertDirectoryTargets } = require('./opencode-v1/paths.cjs');
-
-function reference(message) {
-  const parts = typeof message.content === 'string' ? [message.content] :
-    (message.content || []).filter((part) => part.type === 'text').map((part) => part.text);
-  const text = parts.findLast((part) => part.startsWith('memocap reference data'));
-  return text ? JSON.parse(text.slice(text.indexOf('\n') + 1)) : undefined;
-}
+const { reference, assertLibraryReference, sessionIsolation } = require('./opencode-v1/discovery.cjs');
 
 test('official OpenCode 1.19.3 loads memocap and sends recalled references to a local wire provider',
   { skip: process.env.MEMOCAP_OPENCODE_INTEGRATION !== '1', timeout: 600000 }, async () => {
@@ -23,7 +17,8 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
         official_host_model_input: false, model_adoption: false, paid_provider_requests: 0,
         postrelease_matching_tag: 'not_run', cross_platform: 'not_run',
         packaged_installation: false,
-        old_cli_core_compatibility: 'actual 0.2.1 installer/native migration; full unrelated old-client matrix is not claimed',
+        installation_lifecycle: 'current tarball fresh install, recovery, uninstall and custom owner; no old binary exercised',
+        actual_v050_upgrade: 'not_run',
       } };
     let provider;
     let host;
@@ -42,13 +37,17 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
         evidence.effective_skills = config.skills;
         return config;
       });
+      assert.equal(effectiveConfig.permission['*'], 'deny');
+      for (const name of ['memocap_recall', 'memocap_read']) {
+        assert.deepEqual(effectiveConfig.permission[name], { library: 'allow' });
+      }
       await observe(evidence, 'first_command', async () => {
         evidence.loaded_commands = (await host.api('/command')).map(({ name, description, source }) =>
           ({ name, description, source }));
         assert.ok(evidence.loaded_commands.some((command) => command.name === 'memory'));
       });
       evidence.loaded_tool_ids = await host.api('/experimental/tool/ids');
-      for (const tool of ['memocap_scope', 'memocap_recall', 'memocap_remember']) {
+      for (const tool of ['memocap_scope', 'memocap_recall', 'memocap_read', 'memocap_remember']) {
         assert.ok(evidence.loaded_tool_ids.includes(tool), `${tool} registered by actual host`);
       }
       const session = await host.api('/session', { title: 'memocap official wire integration' });
@@ -122,6 +121,7 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       const seeded = fixture.cli(['remember', '--repo', fixture.directories.A, '--', seededContent]);
       const seedID = seeded.returned_ids[0];
       evidence.seed = { content: seededContent, id: seedID };
+      const seed = { ...evidence.seed, placement: seeded.searched_placements[0] };
       evidence.scope_command_result = await command(`scope "${fixture.directories.A}" "${fixture.directories.B}"`);
       assertDirectoryTargets(evidence.scope_command_result.targets.map((target) => target.canonical_path),
         [fixture.directories.A, fixture.directories.B]);
@@ -134,8 +134,7 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       assert.ok(request, 'real provider input contains unique native memory');
       const userMessage = request.body.messages.findLast((message) => message.role === 'user');
       const recalled = reference(userMessage);
-      assert.ok(recalled.references.some((entry) => entry.id === seedID && entry.content === seededContent &&
-        entry.placement.startsWith('repository:') && entry.applicable_repositories.length > 0));
+      assertLibraryReference(recalled, seed);
       assert.ok(request.body.tools.some((tool) => tool.function.name === 'memocap_remember'));
       evidence.claims.official_host_model_input = true;
       evidence.scope = fixture.directories;
@@ -159,6 +158,8 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       const savedReceipt = JSON.parse(savedTool.state.output);
       assert.equal(savedReceipt.status, 'inserted');
       assert.equal(savedReceipt.readback.status, 'ok');
+      assert.deepEqual(savedReceipt.searched_placements, [seed.placement]);
+      assert.equal(savedReceipt.readback.results[0].memory.content, 'wirewriteamber: explicit A-only saved memory.');
       evidence.write = savedReceipt;
       assert.deepEqual(fixture.cli(['list', '--repo', fixture.directories.B]).returned_ids, beforeB.returned_ids);
       evidence.B_unchanged = true;
@@ -169,20 +170,7 @@ test('official OpenCode 1.19.3 loads memocap and sends recalled references to a 
       const recent = await command('recent');
       assert.ok(recent.events.some((event) => event.operation_id === savedReceipt.operation_id),
         'recent includes the actual host write');
-      evidence.session_isolation = [];
-      for (const parentID of [undefined, session.id]) {
-        const isolatedSession = await host.api('/session', { title: 'isolated recall',
-          ...(parentID ? { parentID } : {}) });
-        const isolatedReply = await host.api(`/session/${isolatedSession.id}/message`, {
-          model: { providerID: 'wire', modelID: 'wire-model' },
-          parts: [{ type: 'text', text: 'wireseedquartz' }],
-        });
-        assert.equal(isolatedReply.info.error, undefined);
-        const isolatedRequest = provider.requests.at(-1);
-        const isolatedReceipt = reference(isolatedRequest.body.messages.findLast((message) => message.role === 'user'));
-        evidence.session_isolation.push({ session_id: isolatedSession.id, receipt: isolatedReceipt });
-        assert.equal(isolatedReceipt.status, 'empty', 'new and child sessions use their own directory');
-      }
+      evidence.session_isolation = await sessionIsolation(host, provider, { session, seed });
       for (const request of provider.requests) {
         for (const message of request.body.messages.filter((entry) => entry.role === 'user')) {
           if (!Array.isArray(message.content)) continue;

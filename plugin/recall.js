@@ -1,8 +1,10 @@
 import path from "node:path";
 import { recordActivity } from "./activity.js";
 import { run } from "./bridge.js";
-import { budgetChars, failure, queryTerms, referenceBlock, repoArgs, textPart,
+import { discoveryArgs } from "./discovery.js";
+import { failure, queryTerms, referenceBlock, repoArgs, textPart,
   validateMemories, validateReceipt } from "./protocol.js";
+import { createReadPermission } from "./read-permission.js";
 import { freezeTargets, invalidRequest } from "./targets.js";
 
 function realText(parts) {
@@ -23,6 +25,7 @@ function quietCommand(parts) {
 export function createRecallRuntime(input, options = {}, invoke = run) {
   const sessions = new Map();
   const warnings = [];
+  const readPermission = createReadPermission(input);
   let ready = false;
   let disposed = false;
   const configuredCwd = process.cwd();
@@ -57,6 +60,11 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
     state.last = undefined;
   }
 
+  function invalidateCache(state) {
+    state.cache = undefined;
+    state.last = undefined;
+  }
+
   async function context(sessionID) {
     const state = stateFor(sessionID);
     if (!state.directory) {
@@ -68,6 +76,7 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
   }
 
   async function request(state, argv, requestOptions = {}) {
+    if ((requestOptions.signal ?? state.controller.signal).aborted) invalidRequest();
     const separator = argv.indexOf("--");
     const caller = requestOptions.caller ?? { sessionID: state.sessionID, messageID: state.messageID };
     const globals = ["--caller-json", JSON.stringify({ actor: "plugin", session_id: caller.sessionID ?? null,
@@ -76,6 +85,7 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
     const response = await invoke(jsonArgs, {
       cwd: executionCwd, env, signal: requestOptions.signal ?? state.controller.signal,
       deadlineMs: requestOptions.deadlineMs ?? 3000,
+      beforeSpawn: requestOptions.beforeSpawn,
     });
     if ((requestOptions.signal ?? state.controller.signal).aborted) invalidRequest();
     return validateReceipt(response.receipt);
@@ -107,14 +117,17 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
   async function recall(state, terms, targets = state.targets, requestOptions = {}) {
     if (terms.length === 0) return undefined;
     targets ??= await selected(state, requestOptions);
+    const discovery = requestOptions.discovery ?? state.discovery ?? { kind: "library" };
     const receipt = await request(state, ["recall", terms.join(" "), "--match", "any", "--limit", "3",
-      "--max-chars", String(budgetChars), ...repoArgs(targets)], requestOptions);
-    return validateMemories(receipt);
+      ...discoveryArgs(discovery), ...repoArgs(targets)], requestOptions);
+    return validateMemories(receipt, discovery);
   }
 
   async function automatic(state) {
+    const permissionKey = await readPermission.check(state);
+    if (state.permissionKey !== permissionKey) { invalidateCache(state); state.permissionKey = permissionKey; }
     await selected(state);
-    const key = JSON.stringify([state.messageID, state.targets, state.terms, "any-v1"]);
+    const key = JSON.stringify([state.messageID, state.targets, state.terms, state.discovery, permissionKey, "any-v1"]);
     const cacheHit = state.cache?.key === key;
     if (!cacheHit) {
       const expiresAt = Date.now() + 3000;
@@ -135,10 +148,12 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
       error: recalled.failure?.error, warnings: [...(receipt?.warning ? [receipt.warning] : []), ...state.warnings, ...warnings] };
     const block = referenceBlock(receipt, metadata);
     Object.assign(metadata, { injected_ids: block.injected_ids, injected_chars: block.text.length,
+      references: block.references, discovery: receipt?.discovery, truncated: block.truncated,
       injection_status: receipt ? (block.injected_ids.length ? "prepared" : "empty") : metadata.status });
     const warning = await recordActivity({ state, receipt, metadata, request,
       expiresAt: recalled.cacheHit ? Date.now() + 3000 : recalled.expiresAt });
     if (warning) metadata.warnings.push(warning);
+    await readPermission.check(state);
     if (disposed || generation !== state.generation || sessions.get(state.sessionID) !== state) return;
     state.last = metadata;
     const part = textPart(state, block.text, metadata);
@@ -159,6 +174,7 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
     const state = stateFor(output.message.sessionID ?? hookInput.sessionID);
     if (state.messageID !== output.message.id) invalidate(state);
     state.messageID = output.message.id;
+    state.agent = hookInput.agent ?? output.message.agent;
     state.terms = queryTerms(text);
   }
 
@@ -181,6 +197,7 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
       if (state.messageID !== message.info.id) await capture({ sessionID: message.info.sessionID },
         { message: message.info, parts: message.parts });
       if (options.automatic === false && !state.cache) return;
+      state.agent = message.info.agent ?? state.agent;
       generation = state.generation;
       const recalled = await automatic(state);
       if (disposed || generation !== state.generation || !sessions.has(state.sessionID)) return;
@@ -189,7 +206,9 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
       if (disposed || (state && (generation !== state.generation || sessions.get(state.sessionID) !== state))) return;
       state ??= stateFor(message.info.sessionID);
       state.messageID = message.info.id;
-      const metadata = { owner: "memocap", trust: "untrusted_reference", ...failure(error), injection_status: "failed" };
+      invalidateCache(state);
+      const outcome = failure(error);
+      const metadata = { owner: "memocap", trust: "untrusted_reference", ...outcome, injection_status: outcome.status };
       state.last = metadata;
       const part = textPart(state, JSON.stringify(metadata), metadata);
       message.parts = message.parts.filter((existing) => !ownReference(existing));
@@ -200,18 +219,19 @@ export function createRecallRuntime(input, options = {}, invoke = run) {
 
   function seed(state, terms, receipt) {
     state.terms = terms;
-    const key = JSON.stringify([state.messageID, state.targets, terms, "any-v1"]);
+    const key = JSON.stringify([state.messageID, state.targets, terms, state.discovery, state.permissionKey, "any-v1"]);
     state.cache = { key, pending: Promise.resolve({ receipt, expiresAt: Date.now() + 3000 }) };
   }
 
-  return { context, request, recall, resolve, selected, invalidate, stateFor, capture, transform, seed, warnings, configuredCwd,
+  return { context, request, recall, resolve, selected, invalidate, invalidateCache, stateFor, capture, transform, seed, warnings, configuredCwd,
+    readPermission, config: readPermission.config,
     report: async (status) => notify({ warnings }, status),
     get size() { return sessions.size; },
     async compact({ sessionID }) { clear(sessionID); },
     async event({ event }) {
-      if (event.type === "session.deleted") clear(event.properties.info.id);
+      if (event.type === "session.deleted") { clear(event.properties.info.id); readPermission.forget(event.properties.info.id); }
       if (event.type === "session.error" && event.properties.sessionID) clear(event.properties.sessionID);
     },
-    async dispose() { disposed = true; for (const sessionID of sessions.keys()) clear(sessionID); },
+    async dispose() { disposed = true; for (const sessionID of sessions.keys()) clear(sessionID); readPermission.dispose(); },
   };
 }

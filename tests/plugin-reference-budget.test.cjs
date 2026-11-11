@@ -26,10 +26,11 @@ for (const escaped of [false, true]) {
     assert.ok(block.text.length <= 6000);
     const payload = JSON.parse(block.text.slice(block.text.indexOf('\n') + 1));
     assert.deepEqual(block.injected_ids, [1, 2, 3]);
-    assert.deepEqual(payload.references, results.slice(0, 3).map((entry) => ({
+    assert.deepEqual(payload.references.map(({ id, placement, applicable_repositories, content }) => ({ id, placement, applicable_repositories, content })), results.slice(0, 3).map((entry) => ({
       id: entry.memory.id, placement: entry.memory.placement,
       applicable_repositories: entry.applicable_repositories, content: entry.memory.content,
     })));
+    assert.ok(payload.references.every((entry) => entry.completeness === 'full' && entry.content_hash.length === 64));
     for (const id of ids) {
       assert.deepEqual(payload.repository_context[id].identity, repository_context[id].identity);
       assert.ok(payload.repository_context[id].locations.every((location) =>

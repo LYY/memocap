@@ -1,0 +1,1522 @@
+{
+  "commands": [
+    {
+      "executable": "memocap-native",
+      "args": [
+        "--version"
+      ],
+      "code": 0,
+      "elapsed_ms": 11,
+      "stdout_bytes": 14,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "memocap 0.5.0\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "pack",
+        "--json",
+        "--ignore-scripts",
+        "--pack-destination",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI"
+      ],
+      "code": 0,
+      "elapsed_ms": 439,
+      "stdout_bytes": 5664,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "s\",\n        \"size\": 1427,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/commands.js\",\n        \"size\": 3246,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/index.js\",\n        \"size\": 88,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/memory-help.js\",\n        \"size\": 1662,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/operations.js\",\n        \"size\": 7457,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/organization-backend.js\",\n        \"size\": 2531,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/organization-contract.js\",\n        \"size\": 8078,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/organization.js\",\n        \"size\": 6168,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/policy.js\",\n        \"size\": 2095,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/protocol.js\",\n        \"size\": 5713,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/query.js\",\n        \"size\": 2172,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/recall.js\",\n        \"size\": 9894,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/targets.js\",\n        \"size\": 2319,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/tools.js\",\n        \"size\": 3413,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/install.ps1\",\n        \"size\": 102,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/install.sh\",\n        \"size\": 115,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup.mjs\",\n        \"size\": 1247,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/arguments.mjs\",\n        \"size\": 3793,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/backend.mjs\",\n        \"size\": 8759,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/backups.mjs\",\n        \"size\": 1163,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/cache.mjs\",\n        \"size\": 835,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/config.mjs\",\n        \"size\": 10919,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/core.mjs\",\n        \"size\": 9585,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/files.mjs\",\n        \"size\": 2993,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/host.mjs\",\n        \"size\": 1877,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/lifecycle.mjs\",\n        \"size\": 9404,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/manifest.mjs\",\n        \"size\": 4281,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/packages.mjs\",\n        \"size\": 7390,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/plan.mjs\",\n        \"size\": 2992,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/pnpm.mjs\",\n        \"size\": 3665,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/policy.mjs\",\n        \"size\": 2963,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/process.mjs\",\n        \"size\": 7260,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/skill-discovery.mjs\",\n        \"size\": 4312,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/skill-owner.mjs\",\n        \"size\": 6123,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/skills.mjs\",\n        \"size\": 6282,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/update.mjs\",\n        \"size\": 2331,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/memocap/references/memory-organization.md\",\n        \"size\": 11726,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/memocap/references/memory-policy.md\",\n        \"size\": 6548,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/memocap/SKILL.md\",\n        \"size\": 3591,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 52,\n    \"bundled\": []\n  }\n]\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "tar",
+      "args": [
+        "-xzf",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/lyy-gh-memocap-0.5.0.tgz",
+        "-C",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/unpacked"
+      ],
+      "code": 0,
+      "elapsed_ms": 14,
+      "stdout_bytes": 0,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "install",
+        "--global",
+        "--prefix",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/tools",
+        "opencode-ai@1.19.3",
+        "--registry",
+        "https://registry.npmjs.org"
+      ],
+      "code": 0,
+      "elapsed_ms": 7508,
+      "stdout_bytes": 24,
+      "stderr_bytes": 401,
+      "signal": null,
+      "stdout_tail": "\nadded 2 packages in 7s\n",
+      "stderr_tail": "npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:\nnpm warn install-scripts   opencode-ai@1.19.3 (postinstall: node ./postinstall.mjs)\nnpm warn install-scripts\nnpm warn install-scripts Run `npm install -g --allow-scripts=opencode-ai` to allow these scripts once, or `npm config set allow-scripts=opencode-ai --location=user` to allow them for all global installs.\n"
+    },
+    {
+      "executable": "opencode",
+      "args": [
+        "--version"
+      ],
+      "code": 0,
+      "elapsed_ms": 314,
+      "stdout_bytes": 7,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "1.19.3\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "install",
+        "--prefix",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/runner",
+        "--ignore-scripts",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/lyy-gh-memocap-0.5.0.tgz"
+      ],
+      "code": 0,
+      "elapsed_ms": 4358,
+      "stdout_bytes": 25,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "\nadded 29 packages in 4s\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/runner/node_modules/@lyy-gh/memocap/scripts/setup.mjs",
+        "install",
+        "--global",
+        "--yes",
+        "--json"
+      ],
+      "code": 0,
+      "elapsed_ms": 3848,
+      "stdout_bytes": 26008,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "0000gn/T/memocap packaged acceptance WXEoJI/project with spaces/.agents/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces/.claude/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/.agents/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/.claude/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/.agents/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/.claude/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/.agents/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/.claude/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/x_/.agents/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/x_/.claude/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/.agents/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/folders/.claude/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/.agents/skills\",\"kind\":\"external\"},{\"path\":\"/private/var/.claude/skills\",\"kind\":\"external\"},{\"path\":\"/private/.agents/skills\",\"kind\":\"external\"},{\"path\":\"/private/.claude/skills\",\"kind\":\"external\"},{\"path\":\"/.agents/skills\",\"kind\":\"external\"},{\"path\":\"/.claude/skills\",\"kind\":\"external\"},{\"path\":\"/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/home/config/opencode/skills\",\"kind\":\"native\"},{\"path\":\"/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/home/config/opencode/skill\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces/.opencode/skills\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces/.opencode/skill\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/.opencode/skills\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/.opencode/skill\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/.opencode/skills\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/.opencode/skill\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/.opencode/skills\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/.opencode/skill\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/x_/.opencode/skills\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/x_/.opencode/skill\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/.opencode/skills\",\"kind\":\"native\"},{\"path\":\"/private/var/folders/.opencode/skill\",\"kind\":\"native\"},{\"path\":\"/private/var/.opencode/skills\",\"kind\":\"native\"},{\"path\":\"/private/var/.opencode/skill\",\"kind\":\"native\"},{\"path\":\"/private/.opencode/skills\",\"kind\":\"native\"},{\"path\":\"/private/.opencode/skill\",\"kind\":\"native\"},{\"path\":\"/.opencode/skills\",\"kind\":\"native\"},{\"path\":\"/.opencode/skill\",\"kind\":\"native\"},{\"path\":\"/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/home/.opencode/skills\",\"kind\":\"native\"},{\"path\":\"/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/home/.opencode/skill\",\"kind\":\"native\"}]},\"automatic_recall\":{\"enabled\":true,\"effects\":[\"read_core_memory\",\"write_main_activity\",\"prune_main_activity\",\"configured_remote_requests\"]}}],\"database_action\":\"prepare_main_schema_2_compatible\",\"main_preparation\":\"prepare_missing_or_upgrade_after_prerequisites\",\"runtime_verification\":\"not_run\",\"unknown_shared_consumers\":\"not_enumerated\",\"uninspected_projects\":\"other_and_future_cwd_not_inspected\"}}\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "opencode",
+      "args": [
+        "--version"
+      ],
+      "code": 0,
+      "elapsed_ms": 309,
+      "stdout_bytes": 7,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "1.19.3\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/prefix/lib/node_modules/@lyy-gh/memocap/bin/cli.cjs",
+        "list",
+        "--repo",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces",
+        "--json"
+      ],
+      "code": 0,
+      "elapsed_ms": 303,
+      "stdout_bytes": 2143,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "{\"format_version\":1,\"package_version\":\"0.5.0\",\"operation_id\":\"a4c157da-724f-42ac-9315-a3e8f1a41e80\",\"operation\":\"list\",\"status\":\"ok\",\"backend\":\"local\",\"origin\":\"cli\",\"caller\":{\"actor\":\"cli\",\"session_id\":null,\"message_id\":null},\"started_at\":\"2026-11-11T06:47:47.246023+00:00\",\"elapsed_ms\":14,\"targets\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces\",\"repository_id\":\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\",\"identity_source\":\"directory\",\"placements\":[\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\",\"universal\"],\"descriptor\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:47:47.245949+00:00\"}],\"repository_context\":{\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\":{\"identity\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null,\"recorded_at\":\"2026-11-11T06:47:45.909692+00:00\"},\"locations\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces\",\"observed_at\":\"2026-11-11T06:47:45.741564+00:00\",\"source\":\"local\"}]}},\"searched_placements\":[\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\",\"universal\"],\"query_terms\":[],\"matched_ids\":[],\"returned_ids\":[1],\"results\":[{\"memory\":{\"id\":1,\"content\":\"capture-spike-allow: synthetic local route with independent readback.\",\"kind\":\"context\",\"tags\":\"\",\"created_at\":\"2026-11-11T06:47:45.909546+00:00\",\"updated_at\":\"2026-11-11T06:47:45.909546+00:00\",\"scope\":\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\",\"topic_key\":\"\",\"placement\":\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\"],\"shadowed_by\":null}],\"truncated\":false,\"error\":null,\"activity_status\":\"not_requested\"}\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/prefix/lib/node_modules/@lyy-gh/memocap/bin/cli.cjs",
+        "list",
+        "--repo",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces",
+        "--json"
+      ],
+      "code": 0,
+      "elapsed_ms": 118,
+      "stdout_bytes": 2143,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "{\"format_version\":1,\"package_version\":\"0.5.0\",\"operation_id\":\"7a26afc1-3984-e6fa-02f8-e34c22e43df3\",\"operation\":\"list\",\"status\":\"ok\",\"backend\":\"local\",\"origin\":\"cli\",\"caller\":{\"actor\":\"cli\",\"session_id\":null,\"message_id\":null},\"started_at\":\"2026-11-11T06:47:48.977078+00:00\",\"elapsed_ms\":12,\"targets\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces\",\"repository_id\":\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\",\"identity_source\":\"directory\",\"placements\":[\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\",\"universal\"],\"descriptor\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T06:47:48.977011+00:00\"}],\"repository_context\":{\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\":{\"identity\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null,\"recorded_at\":\"2026-11-11T06:47:45.909692+00:00\"},\"locations\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces\",\"observed_at\":\"2026-11-11T06:47:45.741564+00:00\",\"source\":\"local\"}]}},\"searched_placements\":[\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\",\"universal\"],\"query_terms\":[],\"matched_ids\":[],\"returned_ids\":[1],\"results\":[{\"memory\":{\"id\":1,\"content\":\"capture-spike-allow: synthetic local route with independent readback.\",\"kind\":\"context\",\"tags\":\"\",\"created_at\":\"2026-11-11T06:47:45.909546+00:00\",\"updated_at\":\"2026-11-11T06:47:45.909546+00:00\",\"scope\":\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\",\"topic_key\":\"\",\"placement\":\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\"],\"shadowed_by\":null}],\"truncated\":false,\"error\":null,\"activity_status\":\"not_requested\"}\n",
+      "stderr_tail": ""
+    }
+  ],
+  "assertions": [],
+  "cleanup": {
+    "host_port_closed": true,
+    "provider_port_closed": true,
+    "package": {
+      "sandbox_removed": true,
+      "registry_closed": true,
+      "active_children": 0,
+      "personal_config_or_memory_used": false
+    }
+  },
+  "paid_provider_requests": 0,
+  "native": {
+    "version": "memocap 0.5.0",
+    "sha256": "ab8979b6da12cfd9eac58fc9c2238b0b900d52583a6ee8df20e65f6a7958fa34",
+    "origin": "actual_current_platform_local_build_not_published_release_asset"
+  },
+  "pack": {
+    "version": "0.5.0",
+    "sha256": "be58e75244a083176b5b6682e5ab1437bb2207dd553f5897a77b858ea6e5e299",
+    "bytes": 83241,
+    "source": "actual_npm_pack_ignore_scripts",
+    "integrity": "sha512-CI97DZKglBNv8+TlfHiiju5EYsOf8+hgaNUpPUioVs1/qFntttdg+2JNHnr52iaR+5pFWMjkLQDdbaCZqk9Vpw==",
+    "files": [
+      {
+        "path": "README-CN.md",
+        "bytes": 15181,
+        "sha256": "c5eaff75e79f6edb8874bda2bb496e6d558e06c3bfa2ada50f9e26525cc7dae4"
+      },
+      {
+        "path": "README.md",
+        "bytes": 16561,
+        "sha256": "c0bf37aeea46349d0fa4ebfd4b28d8c36a254a6ffb1f393d137321ec04ca382d"
+      },
+      {
+        "path": "bin/cache-lock.cjs",
+        "bytes": 4219,
+        "sha256": "e1e40466b54027faff2aabb2654e8025e39938c9542f4b47b304abe4ab8d7735"
+      },
+      {
+        "path": "bin/cli.cjs",
+        "bytes": 6588,
+        "sha256": "86dd3d2e8de4aa0c25a94464eaff7438098e849b71b412d9a43287f0ed127b0b"
+      },
+      {
+        "path": "docs/DEPLOYMENT.md",
+        "bytes": 14278,
+        "sha256": "19da05b1b6b334bc4aef94c354a045b702cab32fcb74c39520a9e3f650c56943"
+      },
+      {
+        "path": "docs/INSTALL-AGENT.md",
+        "bytes": 8452,
+        "sha256": "451d131bb9e3418c6e463d34bb6bc14cd65c8e2721ede337cc8b280c26a379ed"
+      },
+      {
+        "path": "docs/INSTALL.md",
+        "bytes": 11116,
+        "sha256": "76fc2c6f21a5b92dd5a68d0b96a3a4db156f4f93b50f258d9c222890648bfd85"
+      },
+      {
+        "path": "docs/SCHEMA-VERSIONING.md",
+        "bytes": 9946,
+        "sha256": "1dd575027c284623ca195132b85d47d1710dd3f74fde085f872cb2109a424991"
+      },
+      {
+        "path": "lib/policy.mjs",
+        "bytes": 3038,
+        "sha256": "4a22377c66d501119a20831c21992b308047008ee0ec2078079801aa9114256c"
+      },
+      {
+        "path": "lib/windows-policy-metadata.mjs",
+        "bytes": 5688,
+        "sha256": "4d795f18719393454e427f40d780f8672532263d5c7d467ef3370ec717202649"
+      },
+      {
+        "path": "package.json",
+        "bytes": 814,
+        "sha256": "f5896bd1dae24494d47aa0263216d0856427123cc6cfc690b92c62203e62cdef"
+      },
+      {
+        "path": "plugin/activity.js",
+        "bytes": 1949,
+        "sha256": "b8ea098727b449b221c80c001a441359be7e80171fe0bb958ccd532e53e6233c"
+      },
+      {
+        "path": "plugin/bridge.js",
+        "bytes": 10515,
+        "sha256": "ce237fbef8b0dcaf3ff215a17bb4d7070babe7e551d2631561033229a152808a"
+      },
+      {
+        "path": "plugin/cli.js",
+        "bytes": 1427,
+        "sha256": "75d105143f9e4017a1aab87fd554bece9c9c6f94b65ceb5e94160709f97a6c9a"
+      },
+      {
+        "path": "plugin/commands.js",
+        "bytes": 3246,
+        "sha256": "6ae7045a01b046e5cc090b31ff3371b23717cee9bab30a58792c695c6f13285f"
+      },
+      {
+        "path": "plugin/index.js",
+        "bytes": 88,
+        "sha256": "67702c3c67705dba942bdfe3e1ada7a74a33b5d933b03bb935ce4a070198083e"
+      },
+      {
+        "path": "plugin/memory-help.js",
+        "bytes": 1662,
+        "sha256": "a60d6cda8b4912445e007a7b537c843940852c616e26e08bb1796ac5c946a62c"
+      },
+      {
+        "path": "plugin/operations.js",
+        "bytes": 7457,
+        "sha256": "268cd9fec407cbdcbf62395c6cfd0e7b790b3292cfffe99cd6597025719229b7"
+      },
+      {
+        "path": "plugin/organization-backend.js",
+        "bytes": 2531,
+        "sha256": "3a6c7d064882ced6a62f679c0dab47ae9c11c2ec338273b48b9d4a97389c624d"
+      },
+      {
+        "path": "plugin/organization-contract.js",
+        "bytes": 8078,
+        "sha256": "6edbf6d87a154acab971df3b76041040c743c8c4fda6beabe8291a64bd9b65c5"
+      },
+      {
+        "path": "plugin/organization.js",
+        "bytes": 6168,
+        "sha256": "e81afb231e83fcfe475fd97423b6ed7d53bca902242fa0b628e4d74ed7818927"
+      },
+      {
+        "path": "plugin/policy.js",
+        "bytes": 2095,
+        "sha256": "788463740f0eecb840fdbd3c92f923af83deabd7af1f802204ad4151bf793cb9"
+      },
+      {
+        "path": "plugin/protocol.js",
+        "bytes": 5713,
+        "sha256": "2cf4dad48bcf26edcad4bc4d615c3922692975ea803fea777c324a285e27d90e"
+      },
+      {
+        "path": "plugin/query.js",
+        "bytes": 2172,
+        "sha256": "947bbb8d20446d3de672949485c3ce5a076efc21309c4c26b0e998dbdd7505ce"
+      },
+      {
+        "path": "plugin/recall.js",
+        "bytes": 9894,
+        "sha256": "6d6e13e97372452a45275df4609b80510f2abea9670b8481c364c92fcde0aced"
+      },
+      {
+        "path": "plugin/targets.js",
+        "bytes": 2319,
+        "sha256": "b667b9227c32ed1c0d94e072b11c698cbf828de2773ac79b23ebd4ac68c4761c"
+      },
+      {
+        "path": "plugin/tools.js",
+        "bytes": 3413,
+        "sha256": "6338bf5fd70f1379e86d9172c33ead20027b3b2613d7d227d320890fd6671f79"
+      },
+      {
+        "path": "scripts/install.ps1",
+        "bytes": 102,
+        "sha256": "3b097eb631e8fa115cea981dea789bb24ea208d1d28102ad64227027c73bbc4f"
+      },
+      {
+        "path": "scripts/install.sh",
+        "bytes": 115,
+        "sha256": "1ca4800ae6d5d935a958195065b136761a3749d38b73ef3d350d7ee9ea0070b6"
+      },
+      {
+        "path": "scripts/setup.mjs",
+        "bytes": 1247,
+        "sha256": "9a9aab9470f8ba77e0108ef4f3c587cfdd1b4d0a82691d63a0c87c0a2bc12771"
+      },
+      {
+        "path": "scripts/setup/arguments.mjs",
+        "bytes": 3793,
+        "sha256": "5206cb8e0e2d925d3363ccff91871aeee3af76ad0ba6cd11e92cf32d5a06a077"
+      },
+      {
+        "path": "scripts/setup/backend.mjs",
+        "bytes": 8759,
+        "sha256": "0ab34f1ed2f8ddf9b4911ee569ecdae895493f3c9bbb5b786ae9601bf9f8096a"
+      },
+      {
+        "path": "scripts/setup/backups.mjs",
+        "bytes": 1163,
+        "sha256": "4af67e8413a7bcb46c900b1a825c2b833b904f26b9ed397007daad0e713fd169"
+      },
+      {
+        "path": "scripts/setup/cache.mjs",
+        "bytes": 835,
+        "sha256": "a9ed9a472a3c21578f22f3866069ed9419360ee64f477360a43fb770ee3d3a01"
+      },
+      {
+        "path": "scripts/setup/config.mjs",
+        "bytes": 10919,
+        "sha256": "a91ac17e285c7988b8b41ce89ff8efae45534fbaea41686df1e99bb60eca2957"
+      },
+      {
+        "path": "scripts/setup/core.mjs",
+        "bytes": 9585,
+        "sha256": "f1d11d4c1e98f78dbd1464ad35ef0a4bc97b16435bf200db3067a918e338d19f"
+      },
+      {
+        "path": "scripts/setup/files.mjs",
+        "bytes": 2993,
+        "sha256": "f9df91cd2e7d1d63e20b2a4b8f6b5e1334131034876d0ab80c634419bff3e2ed"
+      },
+      {
+        "path": "scripts/setup/host.mjs",
+        "bytes": 1877,
+        "sha256": "74f16258bf0788e7a45e195075a5d5bca0217a426d129338eb64563812ad47a3"
+      },
+      {
+        "path": "scripts/setup/lifecycle.mjs",
+        "bytes": 9404,
+        "sha256": "45bae294d6e2abd38f5bedb0833b39fcc3e50a150904cff2fd2d86900fcbb6f2"
+      },
+      {
+        "path": "scripts/setup/manifest.mjs",
+        "bytes": 4281,
+        "sha256": "8686b452775869e5d6d4c97448440a25c4c97a1bb2b7e0d55929476ebe769aee"
+      },
+      {
+        "path": "scripts/setup/packages.mjs",
+        "bytes": 7390,
+        "sha256": "658b622cae867c4ec6a100512c25b2efc42b6001ddc783533c452e30745871bf"
+      },
+      {
+        "path": "scripts/setup/plan.mjs",
+        "bytes": 2992,
+        "sha256": "e39ece1f1ece079cd227a626c5ff1b083a0ac88602135fd490f63c8f4fba5ddc"
+      },
+      {
+        "path": "scripts/setup/pnpm.mjs",
+        "bytes": 3665,
+        "sha256": "f42620423d142a95714239a6b298a9359a1a3ceee5629fbb6e6f6bb05edf0713"
+      },
+      {
+        "path": "scripts/setup/policy.mjs",
+        "bytes": 2963,
+        "sha256": "377c4220d4fa86d260b50345dc129d691c11d55d6c36f14d58ac8262e4c721db"
+      },
+      {
+        "path": "scripts/setup/process.mjs",
+        "bytes": 7260,
+        "sha256": "afeea25e1b1ec246be7557ad76d14a18e7350eafaf1afdc160f743fe0d00db5f"
+      },
+      {
+        "path": "scripts/setup/skill-discovery.mjs",
+        "bytes": 4312,
+        "sha256": "37491381a68db3d1cc24acb8604e60c675dd56da83f3586a29e6aa3e56bd81c4"
+      },
+      {
+        "path": "scripts/setup/skill-owner.mjs",
+        "bytes": 6123,
+        "sha256": "1db30da5db90144c61c69b307965e1db7f73bbb657004a83ef2281acb0741aa4"
+      },
+      {
+        "path": "scripts/setup/skills.mjs",
+        "bytes": 6282,
+        "sha256": "475f26489911b699b35ec6174ec6245f9160697e150e2285e67dcdfbe2914902"
+      },
+      {
+        "path": "scripts/setup/update.mjs",
+        "bytes": 2331,
+        "sha256": "a2681ccaaf6eb68324b35933d9f93665232e348138070a50fd70fcb5ca3204a2"
+      },
+      {
+        "path": "skills/memocap/SKILL.md",
+        "bytes": 3591,
+        "sha256": "7c0519a972ef94bc995d85dc50f718e228a5e182eecd1eae567f56c377a1bea4"
+      },
+      {
+        "path": "skills/memocap/references/memory-organization.md",
+        "bytes": 11726,
+        "sha256": "debc17925ab24b0101f7fe2798b15f4fba9a21016bee568d491d99b77f8675a8"
+      },
+      {
+        "path": "skills/memocap/references/memory-policy.md",
+        "bytes": 6548,
+        "sha256": "ba621f900385cab6c56257e81aad220a55ad4bcf12ed719f0b9bd8349b1ddbc0"
+      }
+    ]
+  },
+  "source": {
+    "package_json_sha256": "f5896bd1dae24494d47aa0263216d0856427123cc6cfc690b92c62203e62cdef",
+    "cargo_toml_sha256": "b0798973836c73ee6869619e0f01fd7c9eb74f0ed130e2f423890ff4a3601674",
+    "commit": null,
+    "freeze": "candidate_not_confirmed"
+  },
+  "registry_requests": [
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fplugin"
+    },
+    {
+      "method": "GET",
+      "url": "/jsonc-parser"
+    },
+    {
+      "method": "GET",
+      "url": "/zod"
+    },
+    {
+      "method": "GET",
+      "url": "/effect"
+    },
+    {
+      "method": "GET",
+      "url": "/@ai-sdk%2fprovider"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fsdk"
+    },
+    {
+      "method": "GET",
+      "url": "/json-schema"
+    },
+    {
+      "method": "GET",
+      "url": "/cross-spawn"
+    },
+    {
+      "method": "GET",
+      "url": "/ini"
+    },
+    {
+      "method": "GET",
+      "url": "/toml"
+    },
+    {
+      "method": "GET",
+      "url": "/uuid"
+    },
+    {
+      "method": "GET",
+      "url": "/yaml"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr"
+    },
+    {
+      "method": "GET",
+      "url": "/fast-check"
+    },
+    {
+      "method": "GET",
+      "url": "/multipasta"
+    },
+    {
+      "method": "GET",
+      "url": "/find-my-way-ts"
+    },
+    {
+      "method": "GET",
+      "url": "/kubernetes-types"
+    },
+    {
+      "method": "GET",
+      "url": "/@standard-schema%2fspec"
+    },
+    {
+      "method": "GET",
+      "url": "/which"
+    },
+    {
+      "method": "GET",
+      "url": "/path-key"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-command"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-regex"
+    },
+    {
+      "method": "GET",
+      "url": "/isexe"
+    },
+    {
+      "method": "GET",
+      "url": "/pure-rand"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr-extract"
+    },
+    {
+      "method": "GET",
+      "url": "/node-gyp-build-optional-packages"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-win32-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/detect-libc"
+    },
+    {
+      "method": "GET",
+      "url": "/isexe/-/isexe-2.0.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-regex/-/shebang-regex-3.0.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/detect-libc/-/detect-libc-2.1.2.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr-extract/-/msgpackr-extract-3.0.7.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/pure-rand/-/pure-rand-8.4.2.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract/msgpackr-extract-darwin-arm64/-/msgpackr-extract-darwin-arm64-3.0.7.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/node-gyp-build-optional-packages/-/node-gyp-build-optional-packages-5.2.2.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/yaml/-/yaml-2.9.1.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/uuid/-/uuid-14.0.3.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/toml/-/toml-4.3.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/multipasta/-/multipasta-0.2.9.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/which/-/which-2.0.2.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/path-key/-/path-key-3.1.1.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/cross-spawn/-/cross-spawn-7.0.6.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/json-schema/-/json-schema-0.4.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/effect/-/effect-4.0.0-beta.83.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/fast-check/-/fast-check-4.10.2.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/zod/-/zod-4.1.8.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@ai-sdk/provider/-/provider-3.0.8.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai/sdk/-/sdk-1.19.3.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-command/-/shebang-command-2.0.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/jsonc-parser/-/jsonc-parser-3.3.1.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai/plugin/-/plugin-1.19.3.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@standard-schema/spec/-/spec-1.1.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/kubernetes-types/-/kubernetes-types-1.30.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr/-/msgpackr-2.1.4.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/find-my-way-ts/-/find-my-way-ts-0.1.6.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/ini/-/ini-7.0.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@lyy-gh%2fmemocap"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fplugin"
+    },
+    {
+      "method": "GET",
+      "url": "/jsonc-parser"
+    },
+    {
+      "method": "GET",
+      "url": "/zod"
+    },
+    {
+      "method": "GET",
+      "url": "/effect"
+    },
+    {
+      "method": "GET",
+      "url": "/@ai-sdk%2fprovider"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fsdk"
+    },
+    {
+      "method": "GET",
+      "url": "/json-schema"
+    },
+    {
+      "method": "GET",
+      "url": "/cross-spawn"
+    },
+    {
+      "method": "GET",
+      "url": "/ini"
+    },
+    {
+      "method": "GET",
+      "url": "/toml"
+    },
+    {
+      "method": "GET",
+      "url": "/uuid"
+    },
+    {
+      "method": "GET",
+      "url": "/yaml"
+    },
+    {
+      "method": "GET",
+      "url": "/fast-check"
+    },
+    {
+      "method": "GET",
+      "url": "/multipasta"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr"
+    },
+    {
+      "method": "GET",
+      "url": "/find-my-way-ts"
+    },
+    {
+      "method": "GET",
+      "url": "/kubernetes-types"
+    },
+    {
+      "method": "GET",
+      "url": "/@standard-schema%2fspec"
+    },
+    {
+      "method": "GET",
+      "url": "/which"
+    },
+    {
+      "method": "GET",
+      "url": "/path-key"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-command"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-regex"
+    },
+    {
+      "method": "GET",
+      "url": "/isexe"
+    },
+    {
+      "method": "GET",
+      "url": "/pure-rand"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr-extract"
+    },
+    {
+      "method": "GET",
+      "url": "/node-gyp-build-optional-packages"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-win32-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/detect-libc"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fplugin"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2fcore"
+    },
+    {
+      "method": "GET",
+      "url": "/web-tree-sitter"
+    },
+    {
+      "method": "GET",
+      "url": "/@types%2femscripten"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2fkeymap"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2freact"
+    },
+    {
+      "method": "GET",
+      "url": "/react"
+    },
+    {
+      "method": "GET",
+      "url": "/react-devtools-core"
+    },
+    {
+      "method": "GET",
+      "url": "/ws"
+    },
+    {
+      "method": "GET",
+      "url": "/bufferutil"
+    },
+    {
+      "method": "GET",
+      "url": "/utf-8-validate"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2fsolid"
+    },
+    {
+      "method": "GET",
+      "url": "/solid-js"
+    },
+    {
+      "method": "GET",
+      "url": "/zod"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fsdk"
+    },
+    {
+      "method": "GET",
+      "url": "/effect"
+    },
+    {
+      "method": "GET",
+      "url": "/@ai-sdk%2fprovider"
+    },
+    {
+      "method": "GET",
+      "url": "/json-schema"
+    },
+    {
+      "method": "GET",
+      "url": "/cross-spawn"
+    },
+    {
+      "method": "GET",
+      "url": "/ini"
+    },
+    {
+      "method": "GET",
+      "url": "/toml"
+    },
+    {
+      "method": "GET",
+      "url": "/uuid"
+    },
+    {
+      "method": "GET",
+      "url": "/yaml"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr"
+    },
+    {
+      "method": "GET",
+      "url": "/fast-check"
+    },
+    {
+      "method": "GET",
+      "url": "/multipasta"
+    },
+    {
+      "method": "GET",
+      "url": "/find-my-way-ts"
+    },
+    {
+      "method": "GET",
+      "url": "/kubernetes-types"
+    },
+    {
+      "method": "GET",
+      "url": "/@standard-schema%2fspec"
+    },
+    {
+      "method": "GET",
+      "url": "/which"
+    },
+    {
+      "method": "GET",
+      "url": "/path-key"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-command"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-regex"
+    },
+    {
+      "method": "GET",
+      "url": "/isexe"
+    },
+    {
+      "method": "GET",
+      "url": "/pure-rand"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr-extract"
+    },
+    {
+      "method": "GET",
+      "url": "/node-gyp-build-optional-packages"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-win32-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/detect-libc"
+    },
+    {
+      "method": "GET",
+      "url": "/@lyy-gh%2fmemocap"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fplugin"
+    },
+    {
+      "method": "GET",
+      "url": "/jsonc-parser"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2fcore"
+    },
+    {
+      "method": "GET",
+      "url": "/web-tree-sitter"
+    },
+    {
+      "method": "GET",
+      "url": "/@types%2femscripten"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2fkeymap"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2freact"
+    },
+    {
+      "method": "GET",
+      "url": "/react"
+    },
+    {
+      "method": "GET",
+      "url": "/react-devtools-core"
+    },
+    {
+      "method": "GET",
+      "url": "/ws"
+    },
+    {
+      "method": "GET",
+      "url": "/bufferutil"
+    },
+    {
+      "method": "GET",
+      "url": "/utf-8-validate"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2fsolid"
+    },
+    {
+      "method": "GET",
+      "url": "/solid-js"
+    },
+    {
+      "method": "GET",
+      "url": "/zod"
+    },
+    {
+      "method": "GET",
+      "url": "/effect"
+    },
+    {
+      "method": "GET",
+      "url": "/@ai-sdk%2fprovider"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fsdk"
+    },
+    {
+      "method": "GET",
+      "url": "/json-schema"
+    },
+    {
+      "method": "GET",
+      "url": "/toml"
+    },
+    {
+      "method": "GET",
+      "url": "/cross-spawn"
+    },
+    {
+      "method": "GET",
+      "url": "/ini"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr"
+    },
+    {
+      "method": "GET",
+      "url": "/fast-check"
+    },
+    {
+      "method": "GET",
+      "url": "/multipasta"
+    },
+    {
+      "method": "GET",
+      "url": "/uuid"
+    },
+    {
+      "method": "GET",
+      "url": "/kubernetes-types"
+    },
+    {
+      "method": "GET",
+      "url": "/find-my-way-ts"
+    },
+    {
+      "method": "GET",
+      "url": "/yaml"
+    },
+    {
+      "method": "GET",
+      "url": "/@standard-schema%2fspec"
+    },
+    {
+      "method": "GET",
+      "url": "/which"
+    },
+    {
+      "method": "GET",
+      "url": "/path-key"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-command"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-regex"
+    },
+    {
+      "method": "GET",
+      "url": "/isexe"
+    },
+    {
+      "method": "GET",
+      "url": "/pure-rand"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr-extract"
+    },
+    {
+      "method": "GET",
+      "url": "/node-gyp-build-optional-packages"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-win32-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/detect-libc"
+    }
+  ],
+  "host": {
+    "version": "1.19.3",
+    "sha256": "6d3e6458fce4b649edf974c19959d5dbfe1e7f255a503dcfc01215b24ad3ea5b",
+    "origin": "official_opencode_ai_npm_platform_dependency",
+    "pid": 68648,
+    "url": "http://127.0.0.1:58768",
+    "exit": {
+      "code": null,
+      "signal": "SIGTERM"
+    },
+    "log_tail": "af194b888c55a\\\",\\\"action\\\":\\\"deny\\\"}]\" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1794379667266 time.updated=1794379667266\ntimestamp=2026-11-11T06:47:47.273Z level=INFO run=d0feea95 message=loop session.id=ses_e36a328bdffe4iIx8v0crL1cax step=0\ntimestamp=2026-11-11T06:47:48.242Z level=INFO run=d0feea95 message=process session.id=ses_e36a328bdffe4iIx8v0crL1cax messageID=msg_1c95cd74a001OD3mDN2TQA4RVw\ntimestamp=2026-11-11T06:47:48.243Z level=INFO run=d0feea95 message=stream providerID=wire modelID=wire-model session.id=ses_e36a328bdffe4iIx8v0crL1cax small=false agent=build mode=primary\ntimestamp=2026-11-11T06:47:48.243Z level=INFO run=d0feea95 message=\"llm runtime selected\" llm.runtime=ai-sdk llm.provider=wire llm.model=wire-model\ntimestamp=2026-11-11T06:47:48.444Z level=INFO run=d0feea95 message=evaluated permission=memocap_remember pattern=repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a action.permission=memocap_remember action.pattern=repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a action.action=deny\ntimestamp=2026-11-11T06:47:48.449Z level=INFO run=d0feea95 message=loop session.id=ses_e36a328bdffe4iIx8v0crL1cax step=1\ntimestamp=2026-11-11T06:47:48.860Z level=INFO run=d0feea95 message=process session.id=ses_e36a328bdffe4iIx8v0crL1cax messageID=msg_1c95cdbe2001eIt1N9mStA2rGX\ntimestamp=2026-11-11T06:47:48.860Z level=INFO run=d0feea95 message=stream providerID=wire modelID=wire-model session.id=ses_e36a328bdffe4iIx8v0crL1cax small=false agent=build mode=primary\ntimestamp=2026-11-11T06:47:48.860Z level=INFO run=d0feea95 message=\"llm runtime selected\" llm.runtime=ai-sdk llm.provider=wire llm.model=wire-model\ntimestamp=2026-11-11T06:47:48.868Z level=INFO run=d0feea95 message=loop session.id=ses_e36a328bdffe4iIx8v0crL1cax step=2\ntimestamp=2026-11-11T06:47:48.868Z level=INFO run=d0feea95 message=\"exiting loop\" session.id=ses_e36a328bdffe4iIx8v0crL1cax\n",
+    "stdout_tail": "Warning: OPENCODE_SERVER_PASSWORD is not set; server is unsecured.\nopencode server listening on http://127.0.0.1:58768\n",
+    "stderr_tail": "=msg_1c95cc81e001NCmO2HJ1CD5rX1\ntimestamp=2026-11-11T06:47:44.565Z level=INFO run=d0feea95 message=stream providerID=wire modelID=wire-model session.id=ses_e36a337ebffewzA535MkxEwFmR small=false agent=build mode=primary\ntimestamp=2026-11-11T06:47:44.565Z level=INFO run=d0feea95 message=\"llm runtime selected\" llm.runtime=ai-sdk llm.provider=wire llm.model=wire-model\ntimestamp=2026-11-11T06:47:44.573Z level=INFO run=d0feea95 message=loop session.id=ses_e36a337ebffewzA535MkxEwFmR step=1\ntimestamp=2026-11-11T06:47:44.574Z level=INFO run=d0feea95 message=\"exiting loop\" session.id=ses_e36a337ebffewzA535MkxEwFmR\ntimestamp=2026-11-11T06:47:44.582Z level=INFO run=d0feea95 message=created id=ses_e36a33339ffeRL21yH0OmWG6gb slug=jolly-panda version=1.19.3 projectID=global directory=\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces\" path=\"private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces\" workspaceID=undefined parentID=ses_e36a33f86ffeAHhVYqCuZEf4ho title=\"Capture write allow\" agent=undefined model=undefined metadata=undefined permission=\"[{\\\"permission\\\":\\\"*\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"memocap_remember\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"allow\\\"}]\" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1794379664582 time.updated=1794379664582\ntimestamp=2026-11-11T06:47:44.594Z level=INFO run=d0feea95 message=loop session.id=ses_e36a33339ffeRL21yH0OmWG6gb step=0\ntimestamp=2026-11-11T06:47:45.553Z level=INFO run=d0feea95 message=process session.id=ses_e36a33339ffeRL21yH0OmWG6gb messageID=msg_1c95cccd2001klUHcwRGF7NOAs\ntimestamp=2026-11-11T06:47:45.553Z level=INFO run=d0feea95 message=stream providerID=wire modelID=wire-model session.id=ses_e36a33339ffeRL21yH0OmWG6gb small=false agent=build mode=primary\ntimestamp=2026-11-11T06:47:45.554Z level=INFO run=d0feea95 message=\"llm runtime selected\" llm.runtime=ai-sdk llm.provider=wire llm.model=wire-model\ntimestamp=2026-11-11T06:47:45.745Z level=INFO run=d0feea95 message=evaluated permission=memocap_remember pattern=repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a action.permission=memocap_remember action.pattern=* action.action=allow\ntimestamp=2026-11-11T06:47:46.295Z level=INFO run=d0feea95 message=loop session.id=ses_e36a33339ffeRL21yH0OmWG6gb step=1\ntimestamp=2026-11-11T06:47:46.945Z level=INFO run=d0feea95 message=process session.id=ses_e36a33339ffeRL21yH0OmWG6gb messageID=msg_1c95cd37a001ktn9w4vjymrt7d\ntimestamp=2026-11-11T06:47:46.946Z level=INFO run=d0feea95 message=stream providerID=wire modelID=wire-model session.id=ses_e36a33339ffeRL21yH0OmWG6gb small=false agent=build mode=primary\ntimestamp=2026-11-11T06:47:46.946Z level=INFO run=d0feea95 message=\"llm runtime selected\" llm.runtime=ai-sdk llm.provider=wire llm.model=wire-model\ntimestamp=2026-11-11T06:47:46.954Z level=INFO run=d0feea95 message=loop session.id=ses_e36a33339ffeRL21yH0OmWG6gb step=2\ntimestamp=2026-11-11T06:47:46.955Z level=INFO run=d0feea95 message=\"exiting loop\" session.id=ses_e36a33339ffeRL21yH0OmWG6gb\ntimestamp=2026-11-11T06:47:47.266Z level=INFO run=d0feea95 message=created id=ses_e36a328bdffe4iIx8v0crL1cax slug=brave-knight version=1.19.3 projectID=global directory=\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces\" path=\"private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces\" workspaceID=undefined parentID=ses_e36a33f86ffeAHhVYqCuZEf4ho title=\"Capture write deny\" agent=undefined model=undefined metadata=undefined permission=\"[{\\\"permission\\\":\\\"*\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"memocap_remember\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"allow\\\"},{\\\"permission\\\":\\\"memocap_remember\\\",\\\"pattern\\\":\\\"repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a\\\",\\\"action\\\":\\\"deny\\\"}]\" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1794379667266 time.updated=1794379667266\ntimestamp=2026-11-11T06:47:47.273Z level=INFO run=d0feea95 message=loop session.id=ses_e36a328bdffe4iIx8v0crL1cax step=0\ntimestamp=2026-11-11T06:47:48.242Z level=INFO run=d0feea95 message=process session.id=ses_e36a328bdffe4iIx8v0crL1cax messageID=msg_1c95cd74a001OD3mDN2TQA4RVw\ntimestamp=2026-11-11T06:47:48.243Z level=INFO run=d0feea95 message=stream providerID=wire modelID=wire-model session.id=ses_e36a328bdffe4iIx8v0crL1cax small=false agent=build mode=primary\ntimestamp=2026-11-11T06:47:48.243Z level=INFO run=d0feea95 message=\"llm runtime selected\" llm.runtime=ai-sdk llm.provider=wire llm.model=wire-model\ntimestamp=2026-11-11T06:47:48.444Z level=INFO run=d0feea95 message=evaluated permission=memocap_remember pattern=repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a action.permission=memocap_remember action.pattern=repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a action.action=deny\ntimestamp=2026-11-11T06:47:48.449Z level=INFO run=d0feea95 message=loop session.id=ses_e36a328bdffe4iIx8v0crL1cax step=1\ntimestamp=2026-11-11T06:47:48.860Z level=INFO run=d0feea95 message=process session.id=ses_e36a328bdffe4iIx8v0crL1cax messageID=msg_1c95cdbe2001eIt1N9mStA2rGX\ntimestamp=2026-11-11T06:47:48.860Z level=INFO run=d0feea95 message=stream providerID=wire modelID=wire-model session.id=ses_e36a328bdffe4iIx8v0crL1cax small=false agent=build mode=primary\ntimestamp=2026-11-11T06:47:48.860Z level=INFO run=d0feea95 message=\"llm runtime selected\" llm.runtime=ai-sdk llm.provider=wire llm.model=wire-model\ntimestamp=2026-11-11T06:47:48.868Z level=INFO run=d0feea95 message=loop session.id=ses_e36a328bdffe4iIx8v0crL1cax step=2\ntimestamp=2026-11-11T06:47:48.868Z level=INFO run=d0feea95 message=\"exiting loop\" session.id=ses_e36a328bdffe4iIx8v0crL1cax\n"
+  },
+  "actual_version": "1.19.3",
+  "phases": {
+    "listener_ready": {
+      "started_at": "2026-11-11T06:47:36.805Z",
+      "started_monotonic_ms": 16958.903292,
+      "finished_at": "2026-11-11T06:47:37.407Z",
+      "finished_monotonic_ms": 17560.723208,
+      "elapsed_ms": 601.8199160000004,
+      "status": "completed"
+    },
+    "host_cleanup": {
+      "started_at": "2026-11-11T06:47:48.993Z",
+      "started_monotonic_ms": 29146.939625,
+      "finished_at": "2026-11-11T06:47:49.016Z",
+      "finished_monotonic_ms": 29170.054875,
+      "elapsed_ms": 23.11525000000256,
+      "status": "completed"
+    }
+  },
+  "sdk": "1.19.3",
+  "api_requests": [
+    {
+      "route": "/experimental/tool/ids",
+      "method": "GET",
+      "budget_ms": 25000,
+      "started_at": "2026-11-11T06:47:37.427Z",
+      "started_monotonic_ms": 17580.594458,
+      "stage": "response",
+      "http_status": 200,
+      "finished_at": "2026-11-11T06:47:41.423Z",
+      "finished_monotonic_ms": 21576.814792,
+      "elapsed_ms": 3996.2203340000015,
+      "status": "completed"
+    },
+    {
+      "route": "/instance/dispose",
+      "method": "POST",
+      "budget_ms": 25000,
+      "started_at": "2026-11-11T06:47:48.993Z",
+      "started_monotonic_ms": 29146.992,
+      "stage": "response",
+      "http_status": 200,
+      "finished_at": "2026-11-11T06:47:48.996Z",
+      "finished_monotonic_ms": 29149.277125,
+      "elapsed_ms": 2.2851250000021537,
+      "status": "completed"
+    }
+  ],
+  "allow": {
+    "receipt": {
+      "format_version": 1,
+      "package_version": "0.5.0",
+      "operation_id": "9a41b19d-1924-1d8b-24f7-b313d164822b",
+      "operation": "remember",
+      "status": "inserted",
+      "backend": "local",
+      "origin": "cli",
+      "caller": {
+        "actor": "plugin",
+        "session_id": "ses_e36a33339ffeRL21yH0OmWG6gb",
+        "message_id": "msg_1c95cccd2001klUHcwRGF7NOAs"
+      },
+      "started_at": "2026-11-11T06:47:45.901509+00:00",
+      "elapsed_ms": 20,
+      "targets": [
+        {
+          "canonical_path": "/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces",
+          "repository_id": "repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a",
+          "identity_source": "directory",
+          "placements": [
+            "repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a"
+          ],
+          "descriptor": {
+            "display_name": "project with spaces",
+            "name_source": "directory",
+            "origin": "local",
+            "normalized_remote": null
+          },
+          "observed_at": "2026-11-11T06:47:45.741564+00:00"
+        }
+      ],
+      "repository_context": {
+        "repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a": {
+          "identity": {
+            "display_name": "project with spaces",
+            "name_source": "directory",
+            "origin": "local",
+            "normalized_remote": null,
+            "recorded_at": "2026-11-11T06:47:45.909692+00:00"
+          },
+          "locations": [
+            {
+              "canonical_path": "/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces",
+              "observed_at": "2026-11-11T06:47:45.741564+00:00",
+              "source": "local"
+            }
+          ]
+        }
+      },
+      "searched_placements": [
+        "repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a"
+      ],
+      "query_terms": [],
+      "matched_ids": [],
+      "returned_ids": [
+        1
+      ],
+      "results": [
+        {
+          "memory": {
+            "id": 1,
+            "content": "capture-spike-allow: synthetic local route with independent readback.",
+            "kind": "context",
+            "tags": "",
+            "created_at": "2026-11-11T06:47:45.909546+00:00",
+            "updated_at": "2026-11-11T06:47:45.909546+00:00",
+            "scope": "repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a",
+            "topic_key": "",
+            "placement": "repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a"
+          },
+          "source_order": 0,
+          "visibility": "visible",
+          "applicable_repositories": [
+            "repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a"
+          ],
+          "shadowed_by": null
+        }
+      ],
+      "truncated": false,
+      "error": null,
+      "activity_status": "recorded",
+      "readback": {
+        "status": "ok",
+        "operation_id": "39f38ae0-d89c-0a5b-52bd-59b31605aed2",
+        "returned_ids": [
+          1
+        ]
+      },
+      "warnings": []
+    },
+    "model_requests": 2,
+    "independent_readback": true
+  },
+  "deny": {
+    "receipt": {
+      "status": "denied",
+      "operation": "remember",
+      "targets": [
+        {
+          "canonical_path": "/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance WXEoJI/project with spaces",
+          "repository_id": "repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a",
+          "identity_source": "directory",
+          "placements": [
+            "repository:18556fe559332a2849cf98ee51c8eb75ac6f109ad5a5ae61d63af194b888c55a"
+          ],
+          "descriptor": {
+            "display_name": "project with spaces",
+            "name_source": "directory",
+            "origin": "local",
+            "normalized_remote": null
+          },
+          "observed_at": "2026-11-11T06:47:48.440738+00:00"
+        }
+      ]
+    },
+    "model_requests": 2,
+    "independent_readback": false
+  },
+  "events": [
+    {
+      "phase": "worker.created",
+      "sessionID": "ses_e36a337ebffewzA535MkxEwFmR",
+      "parentID": "ses_e36a33f86ffeAHhVYqCuZEf4ho",
+      "userID": "msg_1c95cc08b0016q5F6ntrMHelhZ",
+      "assistantID": "msg_1c95cc1a9001jkUl9M4ZUfqhZs",
+      "permission": [
+        {
+          "permission": "invalid",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "question",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "bash",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "read",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "glob",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "grep",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "edit",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "write",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "task",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "webfetch",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "todowrite",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "websearch",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "skill",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "apply_patch",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "memocap_organize",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "memocap_scope",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "memocap_recall",
+          "pattern": "*",
+          "action": "deny"
+        },
+        {
+          "permission": "memocap_remember",
+          "pattern": "*",
+          "action": "deny"
+        }
+      ]
+    },
+    {
+      "phase": "duplicate.excluded",
+      "sessionID": "ses_e36a33f86ffeAHhVYqCuZEf4ho",
+      "userID": "msg_1c95cc08b0016q5F6ntrMHelhZ"
+    },
+    {
+      "phase": "worker.excluded",
+      "sessionID": "ses_e36a337ebffewzA535MkxEwFmR"
+    },
+    {
+      "phase": "worker.excluded",
+      "sessionID": "ses_e36a337ebffewzA535MkxEwFmR"
+    },
+    {
+      "phase": "worker.completed",
+      "sessionID": "ses_e36a337ebffewzA535MkxEwFmR",
+      "userID": "msg_1c95cc08b0016q5F6ntrMHelhZ",
+      "finish": "stop",
+      "text": "{\"content\":\"Synthetic capture route: use local fixture and verify output.\"}"
+    },
+    {
+      "phase": "child.excluded",
+      "sessionID": "ses_e36a33339ffeRL21yH0OmWG6gb"
+    },
+    {
+      "phase": "child.excluded",
+      "sessionID": "ses_e36a33339ffeRL21yH0OmWG6gb"
+    },
+    {
+      "phase": "child.excluded",
+      "sessionID": "ses_e36a328bdffe4iIx8v0crL1cax"
+    },
+    {
+      "phase": "child.excluded",
+      "sessionID": "ses_e36a328bdffe4iIx8v0crL1cax"
+    }
+  ],
+  "tools_off": [],
+  "status": "passed",
+  "request_count": 6
+}

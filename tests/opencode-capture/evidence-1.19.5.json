@@ -1,0 +1,1402 @@
+{
+  "commands": [
+    {
+      "executable": "memocap",
+      "args": [
+        "--version"
+      ],
+      "code": 0,
+      "elapsed_ms": 43,
+      "stdout_bytes": 14,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "memocap 0.5.0\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "pack",
+        "--json",
+        "--ignore-scripts",
+        "--pack-destination",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco"
+      ],
+      "code": 0,
+      "elapsed_ms": 548,
+      "stdout_bytes": 7444,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "   \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/organization-backend.js\",\n        \"size\": 2531,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/organization-contract.js\",\n        \"size\": 8078,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/organization.js\",\n        \"size\": 6168,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/permission-wildcard.js\",\n        \"size\": 396,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/policy.js\",\n        \"size\": 2095,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/protocol.js\",\n        \"size\": 5491,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/query.js\",\n        \"size\": 2172,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/read-permission.js\",\n        \"size\": 4030,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/recall.js\",\n        \"size\": 11074,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/references.js\",\n        \"size\": 3749,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/targets.js\",\n        \"size\": 2319,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"plugin/tools.js\",\n        \"size\": 4604,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/install.ps1\",\n        \"size\": 102,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/install.sh\",\n        \"size\": 115,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup.mjs\",\n        \"size\": 1863,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/arguments.mjs\",\n        \"size\": 3793,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/backend.mjs\",\n        \"size\": 8868,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/backups.mjs\",\n        \"size\": 1163,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/cache.mjs\",\n        \"size\": 835,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/config.mjs\",\n        \"size\": 11951,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/core.mjs\",\n        \"size\": 9685,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/files.mjs\",\n        \"size\": 2993,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/host.mjs\",\n        \"size\": 2006,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/lifecycle.mjs\",\n        \"size\": 9941,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/manifest.mjs\",\n        \"size\": 4348,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/packages.mjs\",\n        \"size\": 7425,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/permissions.mjs\",\n        \"size\": 7044,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/plan.mjs\",\n        \"size\": 3661,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/pnpm.mjs\",\n        \"size\": 3665,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/policy.mjs\",\n        \"size\": 2963,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/process.mjs\",\n        \"size\": 7260,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/skill-discovery.mjs\",\n        \"size\": 4312,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/skill-owner.mjs\",\n        \"size\": 7173,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/skills.mjs\",\n        \"size\": 6282,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"scripts/setup/update.mjs\",\n        \"size\": 2331,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/memocap/references/memory-organization.md\",\n        \"size\": 11726,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/memocap/references/memory-policy.md\",\n        \"size\": 8123,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"skills/memocap/SKILL.md\",\n        \"size\": 5091,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 69,\n    \"bundled\": []\n  }\n]\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "tar",
+      "args": [
+        "-xzf",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/lyy-gh-memocap-0.5.0.tgz",
+        "-C",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/unpacked"
+      ],
+      "code": 0,
+      "elapsed_ms": 15,
+      "stdout_bytes": 0,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "install",
+        "--global",
+        "--prefix",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/tools",
+        "opencode-ai@1.19.3",
+        "--registry",
+        "https://registry.npmjs.org"
+      ],
+      "code": 0,
+      "elapsed_ms": 7120,
+      "stdout_bytes": 24,
+      "stderr_bytes": 401,
+      "signal": null,
+      "stdout_tail": "\nadded 2 packages in 7s\n",
+      "stderr_tail": "npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:\nnpm warn install-scripts   opencode-ai@1.19.3 (postinstall: node ./postinstall.mjs)\nnpm warn install-scripts\nnpm warn install-scripts Run `npm install -g --allow-scripts=opencode-ai` to allow these scripts once, or `npm config set allow-scripts=opencode-ai --location=user` to allow them for all global installs.\n"
+    },
+    {
+      "executable": "opencode",
+      "args": [
+        "--version"
+      ],
+      "code": 0,
+      "elapsed_ms": 324,
+      "stdout_bytes": 7,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "1.19.3\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "install",
+        "--prefix",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/runner",
+        "--ignore-scripts",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/lyy-gh-memocap-0.5.0.tgz"
+      ],
+      "code": 0,
+      "elapsed_ms": 4215,
+      "stdout_bytes": 25,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "\nadded 29 packages in 4s\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "opencode",
+      "args": [
+        "--version"
+      ],
+      "code": 0,
+      "elapsed_ms": 260,
+      "stdout_bytes": 7,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "1.19.5\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/runner/node_modules/@lyy-gh/memocap/bin/cli.cjs",
+        "--json",
+        "scope",
+        "resolve",
+        "--repo",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces"
+      ],
+      "code": 0,
+      "elapsed_ms": 904,
+      "stdout_bytes": 1010,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "{\"format_version\":1,\"package_version\":\"0.5.0\",\"operation_id\":\"437fcf22-a931-d2b6-dee5-55736d07183b\",\"operation\":\"scope_resolve\",\"status\":\"ok\",\"backend\":\"local\",\"origin\":\"cli\",\"caller\":{\"actor\":\"cli\",\"session_id\":null,\"message_id\":null},\"started_at\":\"2026-11-11T11:35:29.116065+00:00\",\"elapsed_ms\":0,\"targets\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"repository_id\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"identity_source\":\"directory\",\"placements\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"descriptor\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T11:35:29.115735+00:00\"}],\"repository_context\":{},\"searched_placements\":[],\"query_terms\":[],\"matched_ids\":[],\"returned_ids\":[],\"results\":[],\"truncated\":false,\"error\":null,\"activity_status\":\"not_requested\"}\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/runner/node_modules/@lyy-gh/memocap/bin/cli.cjs",
+        "--json",
+        "list",
+        "--repo",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces"
+      ],
+      "code": 0,
+      "elapsed_ms": 174,
+      "stdout_bytes": 2346,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "{\"format_version\":1,\"package_version\":\"0.5.0\",\"operation_id\":\"ad033f6e-809d-13a1-9ad6-f64a408d74ad\",\"operation\":\"list\",\"status\":\"ok\",\"backend\":\"local\",\"origin\":\"cli\",\"caller\":{\"actor\":\"cli\",\"session_id\":null,\"message_id\":null},\"started_at\":\"2026-11-11T11:35:35.508252+00:00\",\"elapsed_ms\":12,\"targets\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"repository_id\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"identity_source\":\"directory\",\"placements\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"universal\"],\"descriptor\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T11:35:35.508176+00:00\"}],\"repository_context\":{\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\":{\"identity\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null,\"recorded_at\":\"2026-11-11T11:35:34.686212+00:00\"},\"locations\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"observed_at\":\"2026-11-11T11:35:32.629676+00:00\",\"source\":\"local\"}]}},\"searched_placements\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"universal\"],\"query_terms\":[],\"matched_ids\":[],\"returned_ids\":[1],\"results\":[{\"memory\":{\"id\":1,\"content\":\"For future responses, use Chinese. Keep code identifiers in English.\\n\\nCapture sources: [{\\\"length\\\":68,\\\"pointer\\\":\\\"message:msg_1ca644790001OR6Jw0LzSxHnN8/prt_1ca644793001YjUWMk4z56WeCe\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-0bc5866af1cdfdd51fe0c54585c4d07752c54ef15176504e6002a40e58e7864d\",\"created_at\":\"2026-11-11T11:35:34.686028+00:00\",\"updated_at\":\"2026-11-11T11:35:34.686028+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null}],\"truncated\":false,\"error\":null,\"activity_status\":\"not_requested\"}\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/runner/node_modules/@lyy-gh/memocap/bin/cli.cjs",
+        "--json",
+        "activity",
+        "show",
+        "97b0c1ad-3dc8-4de8-b3f0-eaf7fbfcda8d"
+      ],
+      "code": 0,
+      "elapsed_ms": 164,
+      "stdout_bytes": 2238,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "{\"format_version\":1,\"package_version\":\"0.5.0\",\"operation_id\":\"f740c0b6-d670-e207-b5be-8df50b068f1d\",\"operation\":\"activity_show\",\"status\":\"ok\",\"backend\":\"local\",\"origin\":\"cli\",\"caller\":{\"actor\":\"cli\",\"session_id\":null,\"message_id\":null},\"started_at\":\"2026-11-11T11:35:35.676668+00:00\",\"elapsed_ms\":8,\"targets\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"repository_id\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"identity_source\":\"directory\",\"placements\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"descriptor\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T11:35:35.676604+00:00\"}],\"repository_context\":{\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\":{\"identity\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null,\"recorded_at\":\"2026-11-11T11:35:34.686212+00:00\"},\"locations\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"observed_at\":\"2026-11-11T11:35:32.629676+00:00\",\"source\":\"local\"}]}},\"searched_placements\":[],\"query_terms\":[],\"matched_ids\":[],\"returned_ids\":[],\"results\":[],\"truncated\":false,\"error\":null,\"activity_status\":\"not_requested\",\"events\":[{\"event_id\":6,\"recorded_at\":\"2026-11-11T11:35:35.320626+00:00\",\"operation_id\":\"97b0c1ad-3dc8-4de8-b3f0-eaf7fbfcda8d\",\"related_operation_id\":\"6107cf2f-991a-440b-0850-87d77fe07c83\",\"started_at\":\"2026-11-11T11:35:35.027Z\",\"elapsed_ms\":0,\"context\":{\"repository_ids\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"session_id\":\"ses_e359bb87cffeMxNW85J8m7RYdU\",\"message_id\":\"msg_1ca644790001OR6Jw0LzSxHnN8\",\"actor\":\"plugin\",\"backend\":\"local\",\"origin\":\"plugin\"},\"detail\":{\"phase\":\"capture_review\",\"metadata\":{\"status\":\"saved\",\"reason\":\"saved_verified\",\"memory_ids\":[1],\"model_calls\":3,\"tool_calls\":1,\"write_attempts\":1}},\"receipt\":{\"truncated\":false,\"result_limit\":1,\"max_chars\":1200,\"error_code\":null}}],\"history_status\":\"retained\"}\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/runner/node_modules/@lyy-gh/memocap/bin/cli.cjs",
+        "--json",
+        "list",
+        "--repo",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces"
+      ],
+      "code": 0,
+      "elapsed_ms": 199,
+      "stdout_bytes": 2346,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "{\"format_version\":1,\"package_version\":\"0.5.0\",\"operation_id\":\"ee2eaeb1-5bad-b09b-0ccb-73606a474086\",\"operation\":\"list\",\"status\":\"ok\",\"backend\":\"local\",\"origin\":\"cli\",\"caller\":{\"actor\":\"cli\",\"session_id\":null,\"message_id\":null},\"started_at\":\"2026-11-11T11:35:42.477769+00:00\",\"elapsed_ms\":13,\"targets\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"repository_id\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"identity_source\":\"directory\",\"placements\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"universal\"],\"descriptor\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T11:35:42.477687+00:00\"}],\"repository_context\":{\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\":{\"identity\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null,\"recorded_at\":\"2026-11-11T11:35:34.686212+00:00\"},\"locations\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"observed_at\":\"2026-11-11T11:35:32.629676+00:00\",\"source\":\"local\"}]}},\"searched_placements\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"universal\"],\"query_terms\":[],\"matched_ids\":[],\"returned_ids\":[1],\"results\":[{\"memory\":{\"id\":1,\"content\":\"For future responses, use Chinese. Keep code identifiers in English.\\n\\nCapture sources: [{\\\"length\\\":68,\\\"pointer\\\":\\\"message:msg_1ca644790001OR6Jw0LzSxHnN8/prt_1ca644793001YjUWMk4z56WeCe\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-0bc5866af1cdfdd51fe0c54585c4d07752c54ef15176504e6002a40e58e7864d\",\"created_at\":\"2026-11-11T11:35:34.686028+00:00\",\"updated_at\":\"2026-11-11T11:35:34.686028+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null}],\"truncated\":false,\"error\":null,\"activity_status\":\"not_requested\"}\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/runner/node_modules/@lyy-gh/memocap/bin/cli.cjs",
+        "--json",
+        "list",
+        "--repo",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces"
+      ],
+      "code": 0,
+      "elapsed_ms": 174,
+      "stdout_bytes": 3177,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "{\"format_version\":1,\"package_version\":\"0.5.0\",\"operation_id\":\"fac56060-fa57-291b-17fb-3480adddea29\",\"operation\":\"list\",\"status\":\"ok\",\"backend\":\"local\",\"origin\":\"cli\",\"caller\":{\"actor\":\"cli\",\"session_id\":null,\"message_id\":null},\"started_at\":\"2026-11-11T11:35:56.644744+00:00\",\"elapsed_ms\":12,\"targets\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"repository_id\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"identity_source\":\"directory\",\"placements\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"universal\"],\"descriptor\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T11:35:56.644661+00:00\"}],\"repository_context\":{\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\":{\"identity\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null,\"recorded_at\":\"2026-11-11T11:35:34.686212+00:00\"},\"locations\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"observed_at\":\"2026-11-11T11:35:52.481975+00:00\",\"source\":\"local\"}]}},\"searched_placements\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"universal\"],\"query_terms\":[],\"matched_ids\":[],\"returned_ids\":[2,1],\"results\":[{\"memory\":{\"id\":2,\"content\":\"Report finished.\\n\\nI prefer Chinese for the exact canonical duplicate fixture.\\nSource: user-authored reference\\n\\nCapture sources: [{\\\"length\\\":109,\\\"pointer\\\":\\\"message:msg_1ca6496760010shx0x4wx3A614/prt_1ca649677001o6bnqF2zkfwVq5\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-c4ce43059cfec275033e782068f15a1c859bcd5d85c6b533a9065ac6bf954cd7\",\"created_at\":\"2026-11-11T11:35:53.977432+00:00\",\"updated_at\":\"2026-11-11T11:35:53.977432+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null},{\"memory\":{\"id\":1,\"content\":\"For future responses, use Chinese. Keep code identifiers in English.\\n\\nCapture sources: [{\\\"length\\\":68,\\\"pointer\\\":\\\"message:msg_1ca644790001OR6Jw0LzSxHnN8/prt_1ca644793001YjUWMk4z56WeCe\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-0bc5866af1cdfdd51fe0c54585c4d07752c54ef15176504e6002a40e58e7864d\",\"created_at\":\"2026-11-11T11:35:34.686028+00:00\",\"updated_at\":\"2026-11-11T11:35:34.686028+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null}],\"truncated\":false,\"error\":null,\"activity_status\":\"not_requested\"}\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/runner/node_modules/@lyy-gh/memocap/bin/cli.cjs",
+        "--json",
+        "list",
+        "--repo",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces"
+      ],
+      "code": 0,
+      "elapsed_ms": 160,
+      "stdout_bytes": 3983,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "{\"format_version\":1,\"package_version\":\"0.5.0\",\"operation_id\":\"7229c8e4-c0c2-5f0e-0df3-27cf312b2335\",\"operation\":\"list\",\"status\":\"ok\",\"backend\":\"local\",\"origin\":\"cli\",\"caller\":{\"actor\":\"cli\",\"session_id\":null,\"message_id\":null},\"started_at\":\"2026-11-11T11:35:59.801123+00:00\",\"elapsed_ms\":12,\"targets\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"repository_id\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"identity_source\":\"directory\",\"placements\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"universal\"],\"descriptor\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null},\"observed_at\":\"2026-11-11T11:35:59.801054+00:00\"}],\"repository_context\":{\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\":{\"identity\":{\"display_name\":\"project with spaces\",\"name_source\":\"directory\",\"origin\":\"local\",\"normalized_remote\":null,\"recorded_at\":\"2026-11-11T11:35:34.686212+00:00\"},\"locations\":[{\"canonical_path\":\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\",\"observed_at\":\"2026-11-11T11:35:56.947824+00:00\",\"source\":\"local\"}]}},\"searched_placements\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"universal\"],\"query_terms\":[],\"matched_ids\":[],\"returned_ids\":[3,2,1],\"results\":[{\"memory\":{\"id\":3,\"content\":\"# Project\\n\\n## Alpha environment\\n\\nStart at docs/alpha.md. Approval required.\\n\\nNever use this entry for beta.\\n\\nCapture sources: [{\\\"length\\\":107,\\\"pointer\\\":\\\"tool:msg_1ca64a7fd001vYRit5Yg6kuPxC/call_28\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-091ccd02cc82494f0de8b704e89a96cd7a7866b7617183aae0d62a1f95677c17\",\"created_at\":\"2026-11-11T11:35:59.029501+00:00\",\"updated_at\":\"2026-11-11T11:35:59.029501+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null},{\"memory\":{\"id\":2,\"content\":\"Report finished.\\n\\nI prefer Chinese for the exact canonical duplicate fixture.\\nSource: user-authored reference\\n\\nCapture sources: [{\\\"length\\\":109,\\\"pointer\\\":\\\"message:msg_1ca6496760010shx0x4wx3A614/prt_1ca649677001o6bnqF2zkfwVq5\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-c4ce43059cfec275033e782068f15a1c859bcd5d85c6b533a9065ac6bf954cd7\",\"created_at\":\"2026-11-11T11:35:53.977432+00:00\",\"updated_at\":\"2026-11-11T11:35:53.977432+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null},{\"memory\":{\"id\":1,\"content\":\"For future responses, use Chinese. Keep code identifiers in English.\\n\\nCapture sources: [{\\\"length\\\":68,\\\"pointer\\\":\\\"message:msg_1ca644790001OR6Jw0LzSxHnN8/prt_1ca644793001YjUWMk4z56WeCe\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-0bc5866af1cdfdd51fe0c54585c4d07752c54ef15176504e6002a40e58e7864d\",\"created_at\":\"2026-11-11T11:35:34.686028+00:00\",\"updated_at\":\"2026-11-11T11:35:34.686028+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null}],\"truncated\":false,\"error\":null,\"activity_status\":\"not_requested\"}\n",
+      "stderr_tail": ""
+    },
+    {
+      "executable": "node",
+      "args": [
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/runner/node_modules/@lyy-gh/memocap/bin/cli.cjs",
+        "--json",
+        "list",
+        "--repo",
+        "/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces"
+      ],
+      "code": 0,
+      "elapsed_ms": 201,
+      "stdout_bytes": 8679,
+      "stderr_bytes": 0,
+      "signal": null,
+      "stdout_tail": "t\":\"I prefer explicit units for the tag readback fixture.\\n\\nCapture sources: [{\\\"length\\\":53,\\\"pointer\\\":\\\"message:msg_1ca64c506001AMWrjLb6y66BEJ/prt_1ca64c507001G7kfwm2R5ZMhDT\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-9d832a4e3b640ed1abc5c464d730bc7f22f5edda2c752971e7823a43a085a79c\",\"created_at\":\"2026-11-11T11:36:05.952885+00:00\",\"updated_at\":\"2026-11-11T11:36:05.952885+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null},{\"memory\":{\"id\":4,\"content\":\"I prefer concise responses for the read failure fixture.\\n\\nCapture sources: [{\\\"length\\\":56,\\\"pointer\\\":\\\"message:msg_1ca64b44d001Fryz5YkFucWeGS/prt_1ca64b44e0013l1SGWi42BCawR\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-484138fe20035274cbf70992d4721f123bc000ec0f27c995415992abd4c0aa9d\",\"created_at\":\"2026-11-11T11:36:01.576641+00:00\",\"updated_at\":\"2026-11-11T11:36:01.576641+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null},{\"memory\":{\"id\":3,\"content\":\"# Project\\n\\n## Alpha environment\\n\\nStart at docs/alpha.md. Approval required.\\n\\nNever use this entry for beta.\\n\\nCapture sources: [{\\\"length\\\":107,\\\"pointer\\\":\\\"tool:msg_1ca64a7fd001vYRit5Yg6kuPxC/call_28\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-091ccd02cc82494f0de8b704e89a96cd7a7866b7617183aae0d62a1f95677c17\",\"created_at\":\"2026-11-11T11:35:59.029501+00:00\",\"updated_at\":\"2026-11-11T11:35:59.029501+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null},{\"memory\":{\"id\":2,\"content\":\"Report finished.\\n\\nI prefer Chinese for the exact canonical duplicate fixture.\\nSource: user-authored reference\\n\\nCapture sources: [{\\\"length\\\":109,\\\"pointer\\\":\\\"message:msg_1ca6496760010shx0x4wx3A614/prt_1ca649677001o6bnqF2zkfwVq5\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-c4ce43059cfec275033e782068f15a1c859bcd5d85c6b533a9065ac6bf954cd7\",\"created_at\":\"2026-11-11T11:35:53.977432+00:00\",\"updated_at\":\"2026-11-11T11:35:53.977432+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null},{\"memory\":{\"id\":1,\"content\":\"For future responses, use Chinese. Keep code identifiers in English.\\n\\nCapture sources: [{\\\"length\\\":68,\\\"pointer\\\":\\\"message:msg_1ca644790001OR6Jw0LzSxHnN8/prt_1ca644793001YjUWMk4z56WeCe\\\"}]\",\"kind\":\"context\",\"tags\":\"memocap-capture-0bc5866af1cdfdd51fe0c54585c4d07752c54ef15176504e6002a40e58e7864d\",\"created_at\":\"2026-11-11T11:35:34.686028+00:00\",\"updated_at\":\"2026-11-11T11:35:34.686028+00:00\",\"scope\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\",\"topic_key\":\"\",\"placement\":\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"},\"source_order\":0,\"visibility\":\"visible\",\"applicable_repositories\":[\"repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5\"],\"shadowed_by\":null}],\"truncated\":false,\"error\":null,\"activity_status\":\"not_requested\"}\n",
+      "stderr_tail": ""
+    }
+  ],
+  "cleanup": {
+    "host_port_closed": true,
+    "provider_port_closed": true,
+    "package": {
+      "sandbox_removed": true,
+      "registry_closed": true,
+      "active_children": 0,
+      "personal_config_or_memory_used": false
+    }
+  },
+  "paid_provider_requests": 0,
+  "cases": [
+    {
+      "name": "normal_and_deprecated_idle",
+      "review": {
+        "status": "saved",
+        "reason": "saved_verified",
+        "memory_ids": [
+          1
+        ],
+        "model_calls": 3,
+        "tool_calls": 1,
+        "write_attempts": 1
+      },
+      "persisted": true
+    },
+    {
+      "name": "memory_status_capture_observability",
+      "capture": {
+        "status": "saved",
+        "reason": "saved_verified",
+        "memory_ids": [
+          1
+        ],
+        "model_calls": 3,
+        "tool_calls": 1,
+        "write_attempts": 1,
+        "operation_id": "97b0c1ad-3dc8-4de8-b3f0-eaf7fbfcda8d",
+        "user_id": "msg_1ca644790001OR6Jw0LzSxHnN8",
+        "child_ids": [
+          "ses_e359bb057ffe1L2d43VBGUso1O",
+          "ses_e359baf17ffe3t8qTwyAjFTwAx"
+        ],
+        "write_operation_id": "6107cf2f-991a-440b-0850-87d77fe07c83"
+      }
+    },
+    {
+      "name": "memory_why_capture_observability",
+      "capture": {
+        "status": "saved",
+        "reason": "saved_verified",
+        "memory_ids": [
+          1
+        ],
+        "model_calls": 3,
+        "tool_calls": 1,
+        "write_attempts": 1,
+        "operation_id": "97b0c1ad-3dc8-4de8-b3f0-eaf7fbfcda8d",
+        "user_id": "msg_1ca644790001OR6Jw0LzSxHnN8",
+        "child_ids": [
+          "ses_e359bb057ffe1L2d43VBGUso1O",
+          "ses_e359baf17ffe3t8qTwyAjFTwAx"
+        ],
+        "write_operation_id": "6107cf2f-991a-440b-0850-87d77fe07c83"
+      }
+    },
+    {
+      "name": "denied",
+      "review": {
+        "status": "denied",
+        "reason": "permission_deny",
+        "memory_ids": [],
+        "model_calls": 1,
+        "tool_calls": 0,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "actual_idle_parent_abort_during_native_version",
+      "review": {
+        "status": "skipped",
+        "reason": "ambiguous_idle",
+        "memory_ids": [],
+        "model_calls": 2,
+        "tool_calls": 1,
+        "write_attempts": 0
+      },
+      "zero_write_spawn": true,
+      "no_row": true,
+      "no_retry": true
+    },
+    {
+      "name": "controlled_same_type_idle_replay_fail_closed",
+      "review": {
+        "status": "skipped",
+        "reason": "ambiguous_idle",
+        "memory_ids": [],
+        "model_calls": 0,
+        "tool_calls": 0,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "no_durable_model_policy",
+      "review": {
+        "status": "skipped",
+        "reason": "no_candidate",
+        "memory_ids": [],
+        "model_calls": 1,
+        "tool_calls": 0,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "quoted_assistant_model_policy",
+      "review": {
+        "status": "skipped",
+        "reason": "no_candidate",
+        "memory_ids": [],
+        "model_calls": 1,
+        "tool_calls": 0,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "secret",
+      "review": {
+        "status": "skipped",
+        "reason": "secret",
+        "memory_ids": [],
+        "model_calls": 0,
+        "tool_calls": 0,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "unsupported_source",
+      "review": {
+        "status": "skipped",
+        "reason": "missing_evidence",
+        "memory_ids": [],
+        "model_calls": 1,
+        "tool_calls": 0,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "no_candidate",
+      "review": {
+        "status": "skipped",
+        "reason": "no_candidate",
+        "memory_ids": [],
+        "model_calls": 1,
+        "tool_calls": 0,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "same_knowledge_two_distinct_turns_one_native_save",
+      "review": {
+        "status": "skipped",
+        "reason": "duplicate_body",
+        "memory_ids": [],
+        "model_calls": 1,
+        "tool_calls": 0,
+        "write_attempts": 0
+      },
+      "original_source_line_retained": true
+    },
+    {
+      "name": "actual_read_long_document_short_complete_route",
+      "review": {
+        "status": "saved",
+        "reason": "saved_verified",
+        "memory_ids": [
+          3
+        ],
+        "model_calls": 3,
+        "tool_calls": 1,
+        "write_attempts": 1
+      }
+    },
+    {
+      "name": "controlled_duplicate_full_read_failure_zero_writes",
+      "review": {
+        "status": "failed",
+        "reason": "capture_failed",
+        "memory_ids": [],
+        "model_calls": 1,
+        "tool_calls": 0,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "controlled_native_tag_mismatch_never_saved_or_retried",
+      "review": {
+        "status": "unknown",
+        "reason": "readback_failed",
+        "memory_ids": [
+          5
+        ],
+        "model_calls": 3,
+        "tool_calls": 1,
+        "write_attempts": 1
+      }
+    },
+    {
+      "name": "new_real_input_before_spawn",
+      "review": {
+        "status": "skipped",
+        "reason": "new_input",
+        "memory_ids": [],
+        "model_calls": 2,
+        "tool_calls": 1,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "true_tool_context_native_ask_reject",
+      "review": {
+        "status": "denied",
+        "reason": "native_permission_denied",
+        "memory_ids": [],
+        "model_calls": 3,
+        "tool_calls": 1,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "mismatched_candidate",
+      "review": {
+        "status": "skipped",
+        "reason": "candidate_mismatch",
+        "memory_ids": [],
+        "model_calls": 3,
+        "tool_calls": 1,
+        "write_attempts": 0
+      }
+    },
+    {
+      "name": "second_tool_and_three_dispatch_budget",
+      "review": {
+        "status": "saved",
+        "reason": "saved_verified",
+        "memory_ids": [
+          6
+        ],
+        "model_calls": 3,
+        "tool_calls": 2,
+        "write_attempts": 1
+      }
+    },
+    {
+      "name": "cancel_after_actual_commit_independent_readback",
+      "review": {
+        "status": "saved",
+        "reason": "saved_verified",
+        "memory_ids": [
+          7
+        ],
+        "model_calls": 3,
+        "tool_calls": 1,
+        "write_attempts": 1
+      }
+    },
+    {
+      "name": "actual_child_abort_after_commit_readback",
+      "review": {
+        "status": "saved",
+        "reason": "saved_verified",
+        "memory_ids": [
+          8
+        ],
+        "model_calls": 2,
+        "tool_calls": 1,
+        "write_attempts": 1
+      }
+    },
+    {
+      "name": "unknown_no_id_is_never_replayed",
+      "review": {
+        "status": "unknown",
+        "reason": "commit_failed",
+        "memory_ids": [],
+        "model_calls": 3,
+        "tool_calls": 1,
+        "write_attempts": 1
+      },
+      "actual_row_exists": true
+    },
+    {
+      "name": "actual_parent_model_error_has_no_capture_children_or_write",
+      "provider_requests": 0,
+      "writes": 0
+    }
+  ],
+  "native": {
+    "version": "memocap 0.5.0",
+    "sha256": "ce4abdc6b11de0babeb23402977c5d82d6faf0f9971d4dc6870243b1f3e6b1c9",
+    "origin": "actual_current_platform_local_build_not_published_release_asset"
+  },
+  "pack": {
+    "version": "0.5.0",
+    "sha256": "13964e0897ccc6ea7bd9d7251395b96644e26cbee6289c1724cf9feda6552b74",
+    "bytes": 108023,
+    "source": "actual_npm_pack_ignore_scripts",
+    "integrity": "sha512-NmGbQZMGfeqsAxPLmcIi/Z3Pu/3GnrGbxPLEbGe6Kodx+A3M86JBfgQHN+59gb1gGpIFpVmowNocRvcNon/6eQ==",
+    "files": [
+      {
+        "path": "README-CN.md",
+        "bytes": 20599,
+        "sha256": "8c6b3f3eacd8f8d4daca524a86f1b971f962dfd0150cda66df1bcde0eb697a30"
+      },
+      {
+        "path": "README.md",
+        "bytes": 22694,
+        "sha256": "8f4795c507d667009feb78c132c592a0d021ecefd1ccd71f03e7f5d09cf8fc68"
+      },
+      {
+        "path": "bin/cache-lock.cjs",
+        "bytes": 4219,
+        "sha256": "e1e40466b54027faff2aabb2654e8025e39938c9542f4b47b304abe4ab8d7735"
+      },
+      {
+        "path": "bin/cli.cjs",
+        "bytes": 6588,
+        "sha256": "86dd3d2e8de4aa0c25a94464eaff7438098e849b71b412d9a43287f0ed127b0b"
+      },
+      {
+        "path": "docs/DEPLOYMENT.md",
+        "bytes": 15179,
+        "sha256": "939d22a422b5ba4d5c12ff6775bab4404fc7f4f37de97357a7782c8a6c95677f"
+      },
+      {
+        "path": "docs/INSTALL-AGENT.md",
+        "bytes": 8951,
+        "sha256": "79a69a64b4aa91d162e24a8cf2e44d23c2fc7c4ecbba25a609aa14b302dc04ca"
+      },
+      {
+        "path": "docs/INSTALL.md",
+        "bytes": 11706,
+        "sha256": "fa71e99279f5c1e96ec0ca2ba13643229d1a8f6d6fcbcf68937d1e59b22c298e"
+      },
+      {
+        "path": "docs/SCHEMA-VERSIONING.md",
+        "bytes": 12301,
+        "sha256": "6956eb8b8a6a3a07a6a56aa7e5622f831a16a69ffc6d0a41c07cd8c08d7257ba"
+      },
+      {
+        "path": "lib/policy.mjs",
+        "bytes": 3038,
+        "sha256": "4a22377c66d501119a20831c21992b308047008ee0ec2078079801aa9114256c"
+      },
+      {
+        "path": "lib/windows-policy-metadata.mjs",
+        "bytes": 5688,
+        "sha256": "4d795f18719393454e427f40d780f8672532263d5c7d467ef3370ec717202649"
+      },
+      {
+        "path": "package.json",
+        "bytes": 814,
+        "sha256": "f5896bd1dae24494d47aa0263216d0856427123cc6cfc690b92c62203e62cdef"
+      },
+      {
+        "path": "plugin/activity.js",
+        "bytes": 2041,
+        "sha256": "06524b3839661e615dda1117327370e227bc0536d837e0d6162da14fc5c61384"
+      },
+      {
+        "path": "plugin/bridge.js",
+        "bytes": 10769,
+        "sha256": "2c0fb1631085f0907b71939af2d859f6e80b8aac6bb0a6b68cb9bec41138c086"
+      },
+      {
+        "path": "plugin/capture/admission.js",
+        "bytes": 7444,
+        "sha256": "87da891dac7f049e446019e57f39b698bde485e43ffe4c17ed1ab20178889b43"
+      },
+      {
+        "path": "plugin/capture/binding.js",
+        "bytes": 5392,
+        "sha256": "b0c0e13b46f7933889a09ab16b68dd70eb56e43074689480796b05147a1419cb"
+      },
+      {
+        "path": "plugin/capture/contract.js",
+        "bytes": 1024,
+        "sha256": "e787c68cf7e58f5fb0224c307a3e3fe8ff1902e87182c39a1e0692993434b1f3"
+      },
+      {
+        "path": "plugin/capture/duplicates.js",
+        "bytes": 1326,
+        "sha256": "f1e88600b228aade2a1d6d3e34b7bf1578f98ad71e80fda4a299677ad83c0601"
+      },
+      {
+        "path": "plugin/capture/evidence.js",
+        "bytes": 3497,
+        "sha256": "3df93a11ff6cc409e0fff73b59072c1738c66fbbb34cf377d561b92342fa0372"
+      },
+      {
+        "path": "plugin/capture/identity.js",
+        "bytes": 1855,
+        "sha256": "ba8cde72e784430585bf203c3d7d41d1626f5bb61f5eb093afe7b344a938d692"
+      },
+      {
+        "path": "plugin/capture/index.js",
+        "bytes": 2597,
+        "sha256": "d41f1bab710d6061548597efa34eb7163bb8c09378d06d6278e45e89b98fa154"
+      },
+      {
+        "path": "plugin/capture/lifecycle.js",
+        "bytes": 3342,
+        "sha256": "891bd3aac25ed83d76e915ace7e677c944d9bfdf34e9fb4aaded3317fd83a2bd"
+      },
+      {
+        "path": "plugin/capture/permission.js",
+        "bytes": 1197,
+        "sha256": "b10810dd4b39501556b237e8164127da77918c1eb06a41d250ee80b1897ef50f"
+      },
+      {
+        "path": "plugin/capture/read-source.js",
+        "bytes": 631,
+        "sha256": "c4f44357352857b1b18515b7918458fa715f1c6ebc21a6469de2ab9a8c53a426"
+      },
+      {
+        "path": "plugin/capture/review.js",
+        "bytes": 1518,
+        "sha256": "319adb2b92706fbe58a0b9c460795b486310672e17df27609448d491b2ca0cca"
+      },
+      {
+        "path": "plugin/capture/worker.js",
+        "bytes": 6117,
+        "sha256": "705a5b4eac5531f2b8423101511b3ea43f063ae7f5d83e8c5c324bb2efac6fcd"
+      },
+      {
+        "path": "plugin/cli.js",
+        "bytes": 2199,
+        "sha256": "2d321c9e11418991e4396fc2a8fa03eb27b0980691df9109d0565b1156a5ecc7"
+      },
+      {
+        "path": "plugin/commands.js",
+        "bytes": 3246,
+        "sha256": "6ae7045a01b046e5cc090b31ff3371b23717cee9bab30a58792c695c6f13285f"
+      },
+      {
+        "path": "plugin/discovery.js",
+        "bytes": 1571,
+        "sha256": "d1390caa8ea250a98e67d72578018f609a1bd76e158ad639c1d98f3d78c95d47"
+      },
+      {
+        "path": "plugin/index.js",
+        "bytes": 88,
+        "sha256": "67702c3c67705dba942bdfe3e1ada7a74a33b5d933b03bb935ce4a070198083e"
+      },
+      {
+        "path": "plugin/memory-help.js",
+        "bytes": 1662,
+        "sha256": "a60d6cda8b4912445e007a7b537c843940852c616e26e08bb1796ac5c946a62c"
+      },
+      {
+        "path": "plugin/operations.js",
+        "bytes": 11658,
+        "sha256": "2a08c8dc9cfba655e4789e740ecd41b817e2a6aa009df271aac501f9f3c9f305"
+      },
+      {
+        "path": "plugin/organization-backend.js",
+        "bytes": 2531,
+        "sha256": "3a6c7d064882ced6a62f679c0dab47ae9c11c2ec338273b48b9d4a97389c624d"
+      },
+      {
+        "path": "plugin/organization-contract.js",
+        "bytes": 8078,
+        "sha256": "6edbf6d87a154acab971df3b76041040c743c8c4fda6beabe8291a64bd9b65c5"
+      },
+      {
+        "path": "plugin/organization.js",
+        "bytes": 6168,
+        "sha256": "e81afb231e83fcfe475fd97423b6ed7d53bca902242fa0b628e4d74ed7818927"
+      },
+      {
+        "path": "plugin/permission-wildcard.js",
+        "bytes": 396,
+        "sha256": "8dc7a87be1296b3d2d80baff5b1efa346ee1059493cafcdfb17ee67e6ec85246"
+      },
+      {
+        "path": "plugin/policy.js",
+        "bytes": 2095,
+        "sha256": "788463740f0eecb840fdbd3c92f923af83deabd7af1f802204ad4151bf793cb9"
+      },
+      {
+        "path": "plugin/protocol.js",
+        "bytes": 5491,
+        "sha256": "705b31cf1554f52313855cff5eb7a65239505042651c098e1c19cde2101d8767"
+      },
+      {
+        "path": "plugin/query.js",
+        "bytes": 2172,
+        "sha256": "1954cf8c608c2239021ec02a9bd5bd920442ff2d10fb6251ec82e7da4f4395fe"
+      },
+      {
+        "path": "plugin/read-permission.js",
+        "bytes": 4030,
+        "sha256": "85865ebd32a432c7bba0ec0ed34e907b8360dd042dc46d67685c794d0b158dcf"
+      },
+      {
+        "path": "plugin/recall.js",
+        "bytes": 11074,
+        "sha256": "dc12c3bca7bf23b9729f5f07bf4204e3f533e157c74a9de340bc248015a90a93"
+      },
+      {
+        "path": "plugin/references.js",
+        "bytes": 3749,
+        "sha256": "f33959fb29c117dd287af060c8923381a714c3e9fca6273312b4f68bcce7e8c1"
+      },
+      {
+        "path": "plugin/targets.js",
+        "bytes": 2319,
+        "sha256": "b667b9227c32ed1c0d94e072b11c698cbf828de2773ac79b23ebd4ac68c4761c"
+      },
+      {
+        "path": "plugin/tools.js",
+        "bytes": 4604,
+        "sha256": "76fce152d9154a8a49f346db0bb887aeb2c7381b54f030c0d118a52a46a5245e"
+      },
+      {
+        "path": "scripts/install.ps1",
+        "bytes": 102,
+        "sha256": "3b097eb631e8fa115cea981dea789bb24ea208d1d28102ad64227027c73bbc4f"
+      },
+      {
+        "path": "scripts/install.sh",
+        "bytes": 115,
+        "sha256": "1ca4800ae6d5d935a958195065b136761a3749d38b73ef3d350d7ee9ea0070b6"
+      },
+      {
+        "path": "scripts/setup.mjs",
+        "bytes": 1863,
+        "sha256": "17b682d843ec3c7b58fbf923300b5fd75e0cab1b3e28131b8755ce19a46fa9ea"
+      },
+      {
+        "path": "scripts/setup/arguments.mjs",
+        "bytes": 3793,
+        "sha256": "5206cb8e0e2d925d3363ccff91871aeee3af76ad0ba6cd11e92cf32d5a06a077"
+      },
+      {
+        "path": "scripts/setup/backend.mjs",
+        "bytes": 8868,
+        "sha256": "02289570bdffa11648214deceea4bc4d83f6d78205aa90e128e15739afd50133"
+      },
+      {
+        "path": "scripts/setup/backups.mjs",
+        "bytes": 1163,
+        "sha256": "4af67e8413a7bcb46c900b1a825c2b833b904f26b9ed397007daad0e713fd169"
+      },
+      {
+        "path": "scripts/setup/cache.mjs",
+        "bytes": 835,
+        "sha256": "a9ed9a472a3c21578f22f3866069ed9419360ee64f477360a43fb770ee3d3a01"
+      },
+      {
+        "path": "scripts/setup/config.mjs",
+        "bytes": 11951,
+        "sha256": "ebdcd37d4ba18f85d0d0959087178bbdb61e77768a570ef80675e51129d89e7e"
+      },
+      {
+        "path": "scripts/setup/core.mjs",
+        "bytes": 9685,
+        "sha256": "2ea44dc111e93bc7c1c3a4260780464fe8545b8517e6f19a955c723fe8f64bd8"
+      },
+      {
+        "path": "scripts/setup/files.mjs",
+        "bytes": 2993,
+        "sha256": "f9df91cd2e7d1d63e20b2a4b8f6b5e1334131034876d0ab80c634419bff3e2ed"
+      },
+      {
+        "path": "scripts/setup/host.mjs",
+        "bytes": 2006,
+        "sha256": "69b0e06315fbeb5128cc76f9753ad5c168d58242991ffc6150c70f7a0aa7e7fd"
+      },
+      {
+        "path": "scripts/setup/lifecycle.mjs",
+        "bytes": 9941,
+        "sha256": "14ce30b747094c40a866d0db069ce769c2a0bb1b90b6a382b64c18d7ed17142b"
+      },
+      {
+        "path": "scripts/setup/manifest.mjs",
+        "bytes": 4348,
+        "sha256": "f7e3c60ff2294cfebb40248c4299820c10ceec1d14af2dc8218c61d57bd6068f"
+      },
+      {
+        "path": "scripts/setup/packages.mjs",
+        "bytes": 7425,
+        "sha256": "ad29c7ca1043b7774d2d32a7c1f1a3d37af43aa9a0efe18260711c239533d93e"
+      },
+      {
+        "path": "scripts/setup/permissions.mjs",
+        "bytes": 7044,
+        "sha256": "02ed609f7073546e0c7b4fd53dc179da9b88b380b444efb5bf59b4dfd55cb67b"
+      },
+      {
+        "path": "scripts/setup/plan.mjs",
+        "bytes": 3661,
+        "sha256": "cc37014f755d6ef991deb6fe51e001d6d5727a2040e4764c4e69c0ef2e99424b"
+      },
+      {
+        "path": "scripts/setup/pnpm.mjs",
+        "bytes": 3665,
+        "sha256": "f42620423d142a95714239a6b298a9359a1a3ceee5629fbb6e6f6bb05edf0713"
+      },
+      {
+        "path": "scripts/setup/policy.mjs",
+        "bytes": 2963,
+        "sha256": "377c4220d4fa86d260b50345dc129d691c11d55d6c36f14d58ac8262e4c721db"
+      },
+      {
+        "path": "scripts/setup/process.mjs",
+        "bytes": 7260,
+        "sha256": "afeea25e1b1ec246be7557ad76d14a18e7350eafaf1afdc160f743fe0d00db5f"
+      },
+      {
+        "path": "scripts/setup/skill-discovery.mjs",
+        "bytes": 4312,
+        "sha256": "37491381a68db3d1cc24acb8604e60c675dd56da83f3586a29e6aa3e56bd81c4"
+      },
+      {
+        "path": "scripts/setup/skill-owner.mjs",
+        "bytes": 7173,
+        "sha256": "0ad05abb12746a74a09d2d262dd64e66bc87126cd87fa37b3cdaeceaa7930829"
+      },
+      {
+        "path": "scripts/setup/skills.mjs",
+        "bytes": 6282,
+        "sha256": "475f26489911b699b35ec6174ec6245f9160697e150e2285e67dcdfbe2914902"
+      },
+      {
+        "path": "scripts/setup/update.mjs",
+        "bytes": 2331,
+        "sha256": "a2681ccaaf6eb68324b35933d9f93665232e348138070a50fd70fcb5ca3204a2"
+      },
+      {
+        "path": "skills/memocap/SKILL.md",
+        "bytes": 5091,
+        "sha256": "484b5f457754b097b0b34b9cceaaffa8e26627b58d5657d6eea42a549078c4bd"
+      },
+      {
+        "path": "skills/memocap/references/memory-organization.md",
+        "bytes": 11726,
+        "sha256": "debc17925ab24b0101f7fe2798b15f4fba9a21016bee568d491d99b77f8675a8"
+      },
+      {
+        "path": "skills/memocap/references/memory-policy.md",
+        "bytes": 8123,
+        "sha256": "fe7ab7f98b8a6b292369b7d1661391c0d4dff8be56b998d45a571224d5338d07"
+      }
+    ]
+  },
+  "source": {
+    "package_json_sha256": "f5896bd1dae24494d47aa0263216d0856427123cc6cfc690b92c62203e62cdef",
+    "cargo_toml_sha256": "b0798973836c73ee6869619e0f01fd7c9eb74f0ed130e2f423890ff4a3601674",
+    "commit": null,
+    "freeze": "candidate_not_confirmed"
+  },
+  "registry_requests": [
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fplugin"
+    },
+    {
+      "method": "GET",
+      "url": "/jsonc-parser"
+    },
+    {
+      "method": "GET",
+      "url": "/zod"
+    },
+    {
+      "method": "GET",
+      "url": "/effect"
+    },
+    {
+      "method": "GET",
+      "url": "/@ai-sdk%2fprovider"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fsdk"
+    },
+    {
+      "method": "GET",
+      "url": "/json-schema"
+    },
+    {
+      "method": "GET",
+      "url": "/cross-spawn"
+    },
+    {
+      "method": "GET",
+      "url": "/ini"
+    },
+    {
+      "method": "GET",
+      "url": "/toml"
+    },
+    {
+      "method": "GET",
+      "url": "/uuid"
+    },
+    {
+      "method": "GET",
+      "url": "/yaml"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr"
+    },
+    {
+      "method": "GET",
+      "url": "/fast-check"
+    },
+    {
+      "method": "GET",
+      "url": "/multipasta"
+    },
+    {
+      "method": "GET",
+      "url": "/find-my-way-ts"
+    },
+    {
+      "method": "GET",
+      "url": "/kubernetes-types"
+    },
+    {
+      "method": "GET",
+      "url": "/@standard-schema%2fspec"
+    },
+    {
+      "method": "GET",
+      "url": "/which"
+    },
+    {
+      "method": "GET",
+      "url": "/path-key"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-command"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-regex"
+    },
+    {
+      "method": "GET",
+      "url": "/isexe"
+    },
+    {
+      "method": "GET",
+      "url": "/pure-rand"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr-extract"
+    },
+    {
+      "method": "GET",
+      "url": "/node-gyp-build-optional-packages"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-win32-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/detect-libc"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-regex/-/shebang-regex-3.0.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/detect-libc/-/detect-libc-2.1.2.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/isexe/-/isexe-2.0.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr-extract/-/msgpackr-extract-3.0.7.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract/msgpackr-extract-darwin-arm64/-/msgpackr-extract-darwin-arm64-3.0.7.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/pure-rand/-/pure-rand-8.4.2.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/yaml/-/yaml-2.9.1.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/multipasta/-/multipasta-0.2.9.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/toml/-/toml-4.3.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/uuid/-/uuid-14.0.3.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr/-/msgpackr-2.1.4.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/kubernetes-types/-/kubernetes-types-1.30.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/which/-/which-2.0.2.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/path-key/-/path-key-3.1.1.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/fast-check/-/fast-check-4.10.2.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/json-schema/-/json-schema-0.4.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/find-my-way-ts/-/find-my-way-ts-0.1.6.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/cross-spawn/-/cross-spawn-7.0.6.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai/sdk/-/sdk-1.19.3.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/zod/-/zod-4.1.8.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/jsonc-parser/-/jsonc-parser-3.3.1.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/effect/-/effect-4.0.0-beta.83.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/ini/-/ini-7.0.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@standard-schema/spec/-/spec-1.1.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/node-gyp-build-optional-packages/-/node-gyp-build-optional-packages-5.2.2.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-command/-/shebang-command-2.0.0.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@ai-sdk/provider/-/provider-3.0.8.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai/plugin/-/plugin-1.19.3.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fplugin"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2fcore"
+    },
+    {
+      "method": "GET",
+      "url": "/web-tree-sitter"
+    },
+    {
+      "method": "GET",
+      "url": "/@types%2femscripten"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2fkeymap"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2freact"
+    },
+    {
+      "method": "GET",
+      "url": "/react"
+    },
+    {
+      "method": "GET",
+      "url": "/react-devtools-core"
+    },
+    {
+      "method": "GET",
+      "url": "/ws"
+    },
+    {
+      "method": "GET",
+      "url": "/bufferutil"
+    },
+    {
+      "method": "GET",
+      "url": "/utf-8-validate"
+    },
+    {
+      "method": "GET",
+      "url": "/@opentui%2fsolid"
+    },
+    {
+      "method": "GET",
+      "url": "/solid-js"
+    },
+    {
+      "method": "GET",
+      "url": "/zod"
+    },
+    {
+      "method": "GET",
+      "url": "/effect"
+    },
+    {
+      "method": "GET",
+      "url": "/@ai-sdk%2fprovider"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai%2fsdk"
+    },
+    {
+      "method": "GET",
+      "url": "/json-schema"
+    },
+    {
+      "method": "GET",
+      "url": "/cross-spawn"
+    },
+    {
+      "method": "GET",
+      "url": "/ini"
+    },
+    {
+      "method": "GET",
+      "url": "/toml"
+    },
+    {
+      "method": "GET",
+      "url": "/uuid"
+    },
+    {
+      "method": "GET",
+      "url": "/yaml"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr"
+    },
+    {
+      "method": "GET",
+      "url": "/fast-check"
+    },
+    {
+      "method": "GET",
+      "url": "/multipasta"
+    },
+    {
+      "method": "GET",
+      "url": "/find-my-way-ts"
+    },
+    {
+      "method": "GET",
+      "url": "/kubernetes-types"
+    },
+    {
+      "method": "GET",
+      "url": "/@standard-schema%2fspec"
+    },
+    {
+      "method": "GET",
+      "url": "/which"
+    },
+    {
+      "method": "GET",
+      "url": "/path-key"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-command"
+    },
+    {
+      "method": "GET",
+      "url": "/shebang-regex"
+    },
+    {
+      "method": "GET",
+      "url": "/isexe"
+    },
+    {
+      "method": "GET",
+      "url": "/pure-rand"
+    },
+    {
+      "method": "GET",
+      "url": "/msgpackr-extract"
+    },
+    {
+      "method": "GET",
+      "url": "/node-gyp-build-optional-packages"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-win32-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-x64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-linux-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/@msgpackr-extract%2fmsgpackr-extract-darwin-arm64"
+    },
+    {
+      "method": "GET",
+      "url": "/detect-libc"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai/sdk/-/sdk-1.19.5.tgz"
+    },
+    {
+      "method": "GET",
+      "url": "/@opencode-ai/plugin/-/plugin-1.19.5.tgz"
+    }
+  ],
+  "host": {
+    "version": "1.19.3",
+    "sha256": "6d3e6458fce4b649edf974c19959d5dbfe1e7f255a503dcfc01215b24ad3ea5b",
+    "origin": "official_opencode_ai_npm_platform_dependency",
+    "pid": 16675,
+    "url": "http://127.0.0.1:59659",
+    "exit": {
+      "code": null,
+      "signal": "SIGTERM"
+    },
+    "log_tail": "cap packaged acceptance 64fOco/project with spaces\" path=\"private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\" workspaceID=undefined parentID=undefined title=\"Automatic capture E2E\" agent=undefined model=undefined metadata=undefined permission=\"[{\\\"permission\\\":\\\"memocap_remember\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"allow\\\"}]\" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1794396982784 time.updated=1794396982784\ntimestamp=2026-11-11T11:36:22.789Z level=INFO run=96ded7d5 message=loop session.id=ses_e359af1ffffeJjz7QiKmF0ybAO step=0\ntimestamp=2026-11-11T11:36:22.790Z level=ERROR run=96ded7d5 message=failed ref=err_ad10d0ac error=\"ProviderModelNotFoundError: Model not found: wire/missing-model. Did you mean: wire-model?\" cause=\"ProviderModelNotFoundError: Model not found: wire/missing-model. Did you mean: wire-model?\\n    at <anonymous> (/$bunfs/root/chunk-tqdk3s07.js:2:64699)\\n    at SessionPrompt.getModel (/$bunfs/root/chunk-psmj79bv.js:50:11031)\\n    at SessionPrompt.getModel (definition) (/$bunfs/root/chunk-psmj79bv.js:50:831)\\n    at SessionPrompt.run (/$bunfs/root/chunk-psmj79bv.js:50:14576)\\n    at SessionPrompt.run (definition) (/$bunfs/root/chunk-psmj79bv.js:50:10099)\\n    at SessionRunState.ensureRunning (/$bunfs/root/chunk-psmj79bv.js:50:14545)\\n    at SessionRunState.ensureRunning (definition) (/$bunfs/root/chunk-psmj79bv.js:2:6839)\\n    at SessionPrompt.loop (/$bunfs/root/chunk-psmj79bv.js:50:9849)\\n    at SessionPrompt.loop (definition) (/$bunfs/root/chunk-psmj79bv.js:50:14481)\\n    at SessionPrompt.prompt (/$bunfs/root/chunk-pg12d1fp.js:6:11717)\\n    at SessionPrompt.prompt (definition) (/$bunfs/root/chunk-psmj79bv.js:50:9462)\"\ntimestamp=2026-11-11T11:36:22.795Z level=INFO run=96ded7d5 message=\"disposing instance\" directory=\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\"\n",
+    "stdout_tail": "Warning: OPENCODE_SERVER_PASSWORD is not set; server is unsecured.\nopencode server listening on http://127.0.0.1:59659\n",
+    "stderr_tail": "af6e5ffeO3FhWC3kLdSCaX\ntimestamp=2026-11-11T11:36:21.864Z level=INFO run=96ded7d5 message=created id=ses_e359af597ffezh0dThQ0P7ZHVu slug=quick-orchid version=1.19.5 projectID=global directory=\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\" path=\"private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\" workspaceID=undefined parentID=ses_e359afbc6ffet4Wn5h9ieqwqGH title=\"memocap capture commit\" agent=undefined model=undefined metadata=undefined permission=\"[{\\\"permission\\\":\\\"memocap_remember\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"allow\\\"},{\\\"permission\\\":\\\"invalid\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"question\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"bash\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"read\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"glob\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"grep\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"edit\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"write\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"task\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"webfetch\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"todowrite\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"websearch\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"skill\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"apply_patch\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"memocap_organize\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"memocap_scope\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"memocap_recall\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"},{\\\"permission\\\":\\\"memocap_read\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"deny\\\"}]\" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1794396981864 time.updated=1794396981864\ntimestamp=2026-11-11T11:36:21.869Z level=INFO run=96ded7d5 message=loop session.id=ses_e359af597ffezh0dThQ0P7ZHVu step=0\ntimestamp=2026-11-11T11:36:21.872Z level=INFO run=96ded7d5 message=process session.id=ses_e359af597ffezh0dThQ0P7ZHVu messageID=msg_1ca650a6d001ozuwqoKkppDhV4\ntimestamp=2026-11-11T11:36:21.872Z level=INFO run=96ded7d5 message=stream providerID=wire modelID=wire-model session.id=ses_e359af597ffezh0dThQ0P7ZHVu small=false agent=build mode=primary\ntimestamp=2026-11-11T11:36:21.873Z level=INFO run=96ded7d5 message=\"llm runtime selected\" llm.runtime=ai-sdk llm.provider=wire llm.model=wire-model\ntimestamp=2026-11-11T11:36:21.879Z level=INFO run=96ded7d5 message=evaluated permission=memocap_remember pattern=repository:57fb61c8cc495b512e4486b80da4652b73092e3d2f3790f073b589349ad1e4b5 action.permission=memocap_remember action.pattern=* action.action=allow\ntimestamp=2026-11-11T11:36:22.232Z level=INFO run=96ded7d5 message=loop session.id=ses_e359af597ffezh0dThQ0P7ZHVu step=1\ntimestamp=2026-11-11T11:36:22.236Z level=INFO run=96ded7d5 message=process session.id=ses_e359af597ffezh0dThQ0P7ZHVu messageID=msg_1ca650bd80017fXO830EcfJw6N\ntimestamp=2026-11-11T11:36:22.236Z level=INFO run=96ded7d5 message=stream providerID=wire modelID=wire-model session.id=ses_e359af597ffezh0dThQ0P7ZHVu small=false agent=build mode=primary\ntimestamp=2026-11-11T11:36:22.238Z level=INFO run=96ded7d5 message=\"llm runtime selected\" llm.runtime=ai-sdk llm.provider=wire llm.model=wire-model\ntimestamp=2026-11-11T11:36:22.241Z level=INFO run=96ded7d5 message=loop session.id=ses_e359af597ffezh0dThQ0P7ZHVu step=2\ntimestamp=2026-11-11T11:36:22.241Z level=INFO run=96ded7d5 message=\"exiting loop\" session.id=ses_e359af597ffezh0dThQ0P7ZHVu\ntimestamp=2026-11-11T11:36:22.784Z level=INFO run=96ded7d5 message=created id=ses_e359af1ffffeJjz7QiKmF0ybAO slug=sunny-rocket version=1.19.5 projectID=global directory=\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\" path=\"private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\" workspaceID=undefined parentID=undefined title=\"Automatic capture E2E\" agent=undefined model=undefined metadata=undefined permission=\"[{\\\"permission\\\":\\\"memocap_remember\\\",\\\"pattern\\\":\\\"*\\\",\\\"action\\\":\\\"allow\\\"}]\" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1794396982784 time.updated=1794396982784\ntimestamp=2026-11-11T11:36:22.789Z level=INFO run=96ded7d5 message=loop session.id=ses_e359af1ffffeJjz7QiKmF0ybAO step=0\ntimestamp=2026-11-11T11:36:22.790Z level=ERROR run=96ded7d5 message=failed ref=err_ad10d0ac error=\"ProviderModelNotFoundError: Model not found: wire/missing-model. Did you mean: wire-model?\" cause=\"ProviderModelNotFoundError: Model not found: wire/missing-model. Did you mean: wire-model?\\n    at <anonymous> (/$bunfs/root/chunk-tqdk3s07.js:2:64699)\\n    at SessionPrompt.getModel (/$bunfs/root/chunk-psmj79bv.js:50:11031)\\n    at SessionPrompt.getModel (definition) (/$bunfs/root/chunk-psmj79bv.js:50:831)\\n    at SessionPrompt.run (/$bunfs/root/chunk-psmj79bv.js:50:14576)\\n    at SessionPrompt.run (definition) (/$bunfs/root/chunk-psmj79bv.js:50:10099)\\n    at SessionRunState.ensureRunning (/$bunfs/root/chunk-psmj79bv.js:50:14545)\\n    at SessionRunState.ensureRunning (definition) (/$bunfs/root/chunk-psmj79bv.js:2:6839)\\n    at SessionPrompt.loop (/$bunfs/root/chunk-psmj79bv.js:50:9849)\\n    at SessionPrompt.loop (definition) (/$bunfs/root/chunk-psmj79bv.js:50:14481)\\n    at SessionPrompt.prompt (/$bunfs/root/chunk-pg12d1fp.js:6:11717)\\n    at SessionPrompt.prompt (definition) (/$bunfs/root/chunk-psmj79bv.js:50:9462)\"\ntimestamp=2026-11-11T11:36:22.795Z level=INFO run=96ded7d5 message=\"disposing instance\" directory=\"/private/var/folders/x_/n5qr2_211jg2j9_7q_gdxw940000gn/T/memocap packaged acceptance 64fOco/project with spaces\"\n"
+  },
+  "actual_version": "1.19.5",
+  "phases": {
+    "listener_ready": {
+      "started_at": "2026-11-11T11:35:27.758Z",
+      "started_monotonic_ms": 12729.064875,
+      "finished_at": "2026-11-11T11:35:28.202Z",
+      "finished_monotonic_ms": 13172.135209,
+      "elapsed_ms": 443.070334,
+      "status": "completed"
+    },
+    "host_cleanup": {
+      "started_at": "2026-11-11T11:36:22.793Z",
+      "started_monotonic_ms": 67763.341542,
+      "finished_at": "2026-11-11T11:36:22.825Z",
+      "finished_monotonic_ms": 67794.479542,
+      "elapsed_ms": 31.138000000006286,
+      "status": "completed"
+    }
+  },
+  "api_requests": [
+    {
+      "route": "/session/ses_e359bb87cffeMxNW85J8m7RYdU/command",
+      "method": "POST",
+      "budget_ms": 180000,
+      "started_at": "2026-11-11T11:35:35.690Z",
+      "started_monotonic_ms": 20659.982959,
+      "stage": "response",
+      "http_status": 200,
+      "finished_at": "2026-11-11T11:35:36.676Z",
+      "finished_monotonic_ms": 21645.781625,
+      "elapsed_ms": 985.7986659999988,
+      "status": "completed"
+    },
+    {
+      "route": "/session/ses_e359bb87cffeMxNW85J8m7RYdU/command",
+      "method": "POST",
+      "budget_ms": 180000,
+      "started_at": "2026-11-11T11:35:36.676Z",
+      "started_monotonic_ms": 21645.932875,
+      "stage": "response",
+      "http_status": 200,
+      "finished_at": "2026-11-11T11:35:37.725Z",
+      "finished_monotonic_ms": 22695.490334,
+      "elapsed_ms": 1049.5574589999997,
+      "status": "completed"
+    },
+    {
+      "route": "/instance/dispose",
+      "method": "POST",
+      "budget_ms": 25000,
+      "started_at": "2026-11-11T11:36:22.793Z",
+      "started_monotonic_ms": 67763.394875,
+      "stage": "response",
+      "http_status": 200,
+      "finished_at": "2026-11-11T11:36:22.795Z",
+      "finished_monotonic_ms": 67764.48875,
+      "elapsed_ms": 1.0938750000059372,
+      "status": "completed"
+    }
+  ],
+  "status": "passed",
+  "model_requests": 70
+}
