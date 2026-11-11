@@ -77,7 +77,7 @@ fn position(text: &str, needle: &str) -> usize {
 }
 
 #[test]
-fn default_recall_list_and_status_explain_the_visible_stack() {
+fn library_recall_preserves_origins_while_list_and_status_explain_the_visible_stack() {
     // Given
     let fixture = Fixture::new();
     for domain in ["engineering/rust", "engineering/sqlite"] {
@@ -138,8 +138,7 @@ fn default_recall_list_and_status_explain_the_visible_stack() {
 
     // When
     let recall = output_text(fixture.run(&["recall", "alpha", "--limit", "20"]));
-    let limited =
-        output_text(fixture.run(&["recall", "alpha", "--limit", "1", "--max-chars", "0"]));
+    let limited = output_text(fixture.run(&["recall", "alpha", "--limit", "1"]));
     let list = output_text(fixture.run(&["list", "--limit", "20"]));
     let status = output_text(fixture.run(&["status"]));
 
@@ -148,31 +147,36 @@ fn default_recall_list_and_status_explain_the_visible_stack() {
     assert!(recall.contains("alpha first-domain collision result"));
     assert!(recall.contains("alpha second-domain collision result"));
     assert!(recall.contains("alpha alpha alpha universal strong unkeyed result"));
-    assert!(!recall.contains("alpha first-domain hidden result"));
-    assert!(!recall.contains("alpha universal hidden repository result"));
-    assert!(!recall.contains("alpha universal hidden domain result"));
+    assert!(recall.contains("alpha first-domain hidden result"));
+    assert!(recall.contains("alpha universal hidden repository result"));
+    assert!(recall.contains("alpha universal hidden domain result"));
     assert!(
-        position(&recall, "alpha repository weak result")
-            < position(&recall, "alpha first-domain collision result")
-    );
-    assert!(
-        position(&recall, "alpha first-domain collision result")
-            < position(&recall, "alpha second-domain collision result")
+        position(&recall, "alpha alpha alpha universal strong unkeyed result")
+            < position(&recall, "alpha repository weak result")
     );
     assert!(
         position(&recall, "alpha second-domain collision result")
-            < position(&recall, "alpha alpha alpha universal strong unkeyed result")
+            < position(&recall, "alpha first-domain collision result")
+    );
+    assert!(
+        position(&recall, "alpha alpha alpha universal strong unkeyed result")
+            < position(&recall, "alpha second-domain collision result")
     );
     assert!(recall.contains("source_order: 0"));
     assert!(recall.contains("visibility: visible"));
-    assert!(limited.contains("alpha repository weak result"));
+    assert!(limited.contains("alpha alpha alpha universal strong unkeyed result"));
+    assert!(!limited.contains("alpha repository weak result"));
     assert!(!limited.contains("alpha first-domain collision result"));
+    assert!(!limited.contains("alpha second-domain collision result"));
+    assert!(!limited.contains("alpha first-domain hidden result"));
+    assert!(!limited.contains("alpha universal hidden repository result"));
+    assert!(!limited.contains("alpha universal hidden domain result"));
     assert!(list.contains("alpha first-domain hidden result"));
     assert!(list.contains("alpha universal hidden repository result"));
     assert!(list.contains("visibility: shadowed"));
     assert!(list.contains("shadowed_by: source 0"));
     assert!(list.contains("shadowed_by: source 1"));
-    assert!(status.contains("schema_version: 2.2"));
+    assert!(status.contains("schema_version: 2.3"));
     assert!(status.contains("addressable_total: 7"));
     assert!(status.contains("effective_total: 4"));
     assert_eq!(
@@ -186,7 +190,7 @@ fn default_recall_list_and_status_explain_the_visible_stack() {
 }
 
 #[test]
-fn deleting_a_more_specific_topic_restores_the_next_visible_source() {
+fn deleting_a_topic_origin_removes_only_that_candidate_from_library_recall() {
     // Given
     let fixture = Fixture::new();
     success(&fixture.run(&["scope", "domain", "create", "engineering/rust"]));
@@ -224,9 +228,12 @@ fn deleting_a_more_specific_topic_restores_the_next_visible_source() {
 
     // Then
     assert!(before.contains("release repository result"));
-    assert!(!before.contains("release domain result"));
-    assert!(!before.contains("release universal result"));
+    assert!(before.contains("release domain result"));
+    assert!(before.contains("release universal result"));
+    assert!(!after_repository_delete.contains("release repository result"));
     assert!(after_repository_delete.contains("release domain result"));
-    assert!(!after_repository_delete.contains("release universal result"));
+    assert!(after_repository_delete.contains("release universal result"));
+    assert!(!after_domain_delete.contains("release domain result"));
+    assert!(!after_domain_delete.contains("release repository result"));
     assert!(after_domain_delete.contains("release universal result"));
 }

@@ -75,26 +75,51 @@ impl RepositoryContext<'_> {
 
 pub struct TargetedRecall<'a> {
     pub repositories: &'a [RepositoryId],
-    pub selector: Option<&'a PlacementSelector>,
+    pub discovery: &'a crate::discovery::Discovery,
     pub options: store::RecallOptions<'a>,
+}
+
+pub fn recall_placed(
+    database: &Path,
+    discovery: &crate::discovery::Discovery,
+    query: super::ScopedRecall<'_>,
+) -> Result<Vec<store::InventoryMemory>> {
+    let connection = store::open(database)?;
+    let options = store::RecallOptions {
+        query: query.query,
+        limit: query.limit,
+        kind: query.kind,
+        max_chars: query.max_chars,
+        match_mode: store::MatchMode::All,
+    };
+    let mut memories = store::recall_discovery(&connection, discovery, options)?;
+    store::budget_targeted_memories(&mut memories, options.limit, options.max_chars)?;
+    Ok(memories
+        .into_iter()
+        .map(|entry| store::InventoryMemory {
+            memory: entry.memory,
+            source_order: 0,
+            visibility: store::Visibility::Visible,
+        })
+        .collect())
 }
 
 pub fn recall_targeted(
     database: &Path,
     request: TargetedRecall<'_>,
 ) -> Result<Vec<store::TargetedMemory>> {
+    anyhow::ensure!(
+        !request.repositories.is_empty() && request.repositories.len() <= 8,
+        "one to eight targets are required"
+    );
     let connection = store::open(database)?;
-    let targets = request
-        .repositories
-        .iter()
-        .map(|repository| {
-            Ok(store::RecallTarget {
-                repository: repository.clone(),
-                sources: read_sources(&connection, request.selector, Some(repository))?,
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    store::recall_targets(&connection, &targets, request.options)
+    let mut memories = store::recall_discovery(&connection, request.discovery, request.options)?;
+    store::budget_targeted_memories(
+        &mut memories,
+        request.options.limit,
+        request.options.max_chars,
+    )?;
+    Ok(memories)
 }
 
 #[must_use]

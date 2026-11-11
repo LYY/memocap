@@ -59,6 +59,7 @@ fn execute_inner(database: &Path, request: &Request, receipt: &mut Receipt) -> R
         "multiple targets are supported only by recall and activity metadata"
     );
     match &request.command {
+        Command::Read { id, .. } => ensure!(*id > 0, "memory ID must be positive"),
         Command::ScopeResolve => return Ok(()),
         Command::Status { read_only: true } => {
             receipt.inspection = Some(crate::inspection::inspect(database, repository(request)?)?);
@@ -79,6 +80,7 @@ fn execute_inner(database: &Path, request: &Request, receipt: &mut Receipt) -> R
             writes::execute(&mut connection, request, receipt)?
         }
         Command::Recall { .. }
+        | Command::Read { .. }
         | Command::List { .. }
         | Command::ScopeShow
         | Command::Inventory

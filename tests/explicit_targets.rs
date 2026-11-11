@@ -88,7 +88,7 @@ fn explicit_writes_and_reads_use_the_target_instead_of_the_process_directory() {
 }
 
 #[test]
-fn multi_recall_preserves_per_repository_shadowing_and_deduplicates_shared_records() {
+fn multi_recall_preserves_same_topic_origins_without_source_priority() {
     let fixture = Fixture::new();
     fixture.at(
         &fixture.a,
@@ -129,7 +129,7 @@ fn multi_recall_preserves_per_repository_shadowing_and_deduplicates_shared_recor
     ] {
         assert_eq!(merged.matches(content).count(), 1, "{merged}");
     }
-    assert!(merged.find("release override").unwrap() < merged.find("release beta").unwrap());
+    assert!(merged.find("release beta").unwrap() < merged.find("release override").unwrap());
     fixture.at(&fixture.a, &["remember", "aftermulti single", "--force"]);
     assert!(!fixture
         .at(&fixture.b, &["list"])
@@ -200,7 +200,7 @@ fn invalid_targets_are_rejected_before_opening_or_mutating_the_database() {
 }
 
 #[test]
-fn explicit_domain_selection_requires_attachment_to_the_target() {
+fn explicit_domain_recall_selects_exact_origin_without_attachment_to_context() {
     let fixture = Fixture::new();
     fixture.at(
         &fixture.a,
@@ -215,7 +215,7 @@ fn explicit_domain_selection_requires_attachment_to_the_target() {
         &["remember", "domainrecord", "--domain", "engineering/rust"],
     );
 
-    let rejected = fixture.run(&[
+    let selected = fixture.run(&[
         "recall",
         "domainrecord",
         "--repo",
@@ -224,7 +224,7 @@ fn explicit_domain_selection_requires_attachment_to_the_target() {
         "engineering/rust",
     ]);
 
-    assert!(!rejected.status.success());
+    assert!(text(selected).contains("domainrecord"));
     assert!(fixture
         .at(&fixture.a, &["recall", "domainrecord"])
         .contains("domainrecord"));

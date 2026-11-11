@@ -6,29 +6,25 @@ use super::{
 use anyhow::{ensure, Context, Result};
 use rusqlite::Connection;
 
-fn expected(identity: bool) -> Result<Connection> {
+fn expected(events: &str) -> Result<Connection> {
     let connection = Connection::open_in_memory()?;
     connection.execute_batch(baseline::CORE)?;
+    connection.execute_batch(events)?;
     connection.execute_batch(baseline::ACTIVITY)?;
-    if identity {
-        connection.execute_batch(super::identity::SQL)?;
-    }
+    connection.execute_batch(super::identity::SQL)?;
     Ok(connection)
 }
 
-pub(super) fn current(connection: &Connection, identity: bool) -> Result<()> {
-    let expected = expected(identity)?;
-    if !identity {
-        ensure!(
-            !structure::objects(connection)?
-                .iter()
-                .any(|object| matches!(
-                    object.name.as_str(),
-                    "repository_identities" | "repository_locations"
-                )),
-            "schema 2.1 already has repository identity structures"
-        );
-    }
+pub(super) fn current(connection: &Connection) -> Result<()> {
+    against(connection, baseline::EVENTS)
+}
+
+pub(super) fn prior(connection: &Connection) -> Result<()> {
+    against(connection, super::prior::EVENTS)
+}
+
+fn against(connection: &Connection, events: &str) -> Result<()> {
+    let expected = expected(events)?;
     let actual = structure::objects(connection)?;
     for object in structure::objects(&expected)? {
         let existing = actual

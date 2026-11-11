@@ -157,7 +157,7 @@ fn remote_server(
 }
 
 #[test]
-fn default_memory_commands_isolate_repositories_and_reject_cross_scope_forget() {
+fn exact_origin_recall_isolates_repositories_and_default_forget_stays_scoped() {
     let fixture = CliFixture::new();
 
     let a = fixture.run(&fixture.repo_a, &["remember", "alpha isolation"]);
@@ -166,7 +166,16 @@ fn default_memory_commands_isolate_repositories_and_reject_cross_scope_forget() 
     let b = fixture.run(&fixture.repo_b, &["remember", "bravo isolation"]);
     assert_success(&b);
 
-    let a_recall = fixture.run(&fixture.repo_a, &["recall", "isolation"]);
+    let repository = memocap::scope::resolve_readonly(&fixture.repo_a).unwrap();
+    let a_recall = fixture.run(
+        &fixture.repo_a,
+        &[
+            "recall",
+            "isolation",
+            "--placement",
+            repository.repository().as_str(),
+        ],
+    );
     assert_success(&a_recall);
     let a_recall = String::from_utf8_lossy(&a_recall.stdout);
     assert!(a_recall.contains("alpha isolation"));

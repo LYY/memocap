@@ -4,7 +4,7 @@ CREATE TABLE schema_metadata (
     major INTEGER NOT NULL CHECK (major >= 1),
     minor INTEGER NOT NULL CHECK (minor >= 0)
 );
-INSERT INTO schema_metadata (singleton, major, minor) VALUES (1, 2, 2);
+INSERT INTO schema_metadata (singleton, major, minor) VALUES (1, 2, 3);
 CREATE TABLE domains (
     domain_id TEXT PRIMARY KEY,
     created_at TEXT NOT NULL
@@ -76,17 +76,19 @@ CREATE TRIGGER memories_au AFTER UPDATE ON memories BEGIN
 END;
 ";
 
-pub(super) const ACTIVITY: &str = "
+pub(super) const EVENTS: &str = "
 CREATE TABLE activity_events (
     sequence INTEGER PRIMARY KEY,
     operation_id TEXT NOT NULL,
-    phase TEXT NOT NULL CHECK(phase IN ('write','recall','injection_prepared','injection_observed')),
+    phase TEXT NOT NULL CHECK(phase IN ('write','recall','injection_prepared','injection_observed','capture_review')),
     category TEXT NOT NULL CHECK(category IN ('write','read')),
     started_at_ms INTEGER NOT NULL,
     recorded_at TEXT NOT NULL,
     event_json TEXT NOT NULL,
     UNIQUE(operation_id,phase)
-);
+);";
+
+pub(super) const ACTIVITY: &str = "
 CREATE INDEX activity_retention ON activity_events(category,started_at_ms DESC,sequence DESC);
 CREATE TABLE repository_metadata (
     repository_id TEXT PRIMARY KEY NOT NULL,

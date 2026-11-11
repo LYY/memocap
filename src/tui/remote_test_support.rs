@@ -100,7 +100,7 @@ pub(super) fn partial_remote_server() -> (String, Receiver<RemoteRequest>, JoinH
                 0 => serde_json::json!({
                     "domains": [],
                     "status": {
-                        "schema_version": "2.0",
+                        "schema_version": "2.3",
                         "placements": [],
                         "addressable_total": 1,
                         "effective_total": 1

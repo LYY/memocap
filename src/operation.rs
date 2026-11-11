@@ -11,6 +11,7 @@ pub use execution::execute;
 mod caller;
 mod history;
 mod reads;
+mod recall;
 mod recovery;
 mod writes;
 pub use caller::Caller;
@@ -40,13 +41,17 @@ pub enum Command {
         placement: Option<PlacementId>,
     },
     Recall {
+        discovery: crate::discovery::Discovery,
         query: String,
         match_mode: store::MatchMode,
         limit: usize,
         kind: Option<String>,
         max_chars: Option<usize>,
-        #[serde(with = "crate::receipt::ids::optional")]
-        placement: Option<PlacementId>,
+    },
+    Read {
+        id: i64,
+        #[serde(with = "crate::receipt::ids")]
+        placement: PlacementId,
     },
     List {
         limit: usize,
@@ -123,6 +128,7 @@ impl Command {
         match self {
             Self::Remember { .. } => "remember",
             Self::Recall { .. } => "recall",
+            Self::Read { .. } => "read",
             Self::List { .. } => "list",
             Self::Forget { .. } => "forget",
             Self::ScopeShow => "scope_show",

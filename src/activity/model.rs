@@ -75,6 +75,7 @@ pub enum ActivityDetail {
     Recall(RecallActivity),
     InjectionPrepared(InjectionActivity),
     InjectionObserved(InjectionActivity),
+    CaptureReview(super::CaptureReviewActivity),
 }
 
 impl ActivityDetail {
@@ -84,13 +85,17 @@ impl ActivityDetail {
             Self::Recall(_) => "recall",
             Self::InjectionPrepared(_) => "injection_prepared",
             Self::InjectionObserved(_) => "injection_observed",
+            Self::CaptureReview(_) => "capture_review",
         }
     }
 
     pub(crate) fn category(&self) -> &'static str {
         match self {
             Self::Write(_) => "write",
-            Self::Recall(_) | Self::InjectionPrepared(_) | Self::InjectionObserved(_) => "read",
+            Self::Recall(_)
+            | Self::InjectionPrepared(_)
+            | Self::InjectionObserved(_)
+            | Self::CaptureReview(_) => "read",
         }
     }
 }
@@ -151,6 +156,12 @@ pub struct InjectionActivity {
     pub status: InjectionStatus,
     pub injected_ids: Vec<i64>,
     pub cache_hit: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub references: Vec<super::InjectionReference>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub discovery: Option<crate::discovery::Discovery>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub truncated: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

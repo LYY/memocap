@@ -35,7 +35,8 @@ pub struct Remember {
 
 pub struct Recall {
     pub repository: RepositoryId,
-    pub placement: Option<PlacementId>,
+    pub discovery: crate::discovery::Discovery,
+    pub match_mode: crate::store::MatchMode,
     pub query: String,
     pub limit: usize,
     pub kind: Option<String>,
@@ -78,7 +79,8 @@ struct RememberIn {
 #[serde(deny_unknown_fields)]
 struct RecallIn {
     repository: String,
-    placement: Option<String>,
+    discovery: crate::discovery::Discovery,
+    match_mode: crate::store::MatchMode,
     query: String,
     limit: usize,
     #[serde(rename = "type")]
@@ -163,7 +165,8 @@ fn recall(body: &str) -> Result<Recall, ParseError> {
     let input = serde_json::from_str::<RecallIn>(body).map_err(|_| ParseError::Invalid)?;
     let repository = repository(&input.repository)?;
     Ok(Recall {
-        placement: placement(input.placement.as_deref(), &repository)?,
+        discovery: input.discovery,
+        match_mode: input.match_mode,
         repository,
         query: input.query,
         limit: input.limit,

@@ -101,7 +101,7 @@ fn extra_unique_indexes_and_constraints_refuse_without_mutation() {
 }
 
 #[test]
-fn organized_column_requires_exact_nullable_text_null_default_on_schema_2_1() {
+fn historical_schema_2_1_is_refused_even_with_organized_column_variants() {
     for definition in [
         None,
         Some("organized_at BLOB DEFAULT NULL"),
@@ -129,4 +129,42 @@ fn organized_column_requires_exact_nullable_text_null_default_on_schema_2_1() {
 
         assert_eq!(std::fs::read(&path).unwrap(), before);
     }
+}
+
+#[test]
+fn malformed_prior_schema_is_refused_without_repair() {
+    for mutation in [
+        "DROP TABLE repository_identities",
+        "DROP TABLE repository_locations",
+        "DROP INDEX activity_retention",
+        "DELETE FROM schema_metadata",
+        "ALTER TABLE activity_events RENAME COLUMN event_json TO opaque_json",
+    ] {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("prior.db");
+        let connection = super::current_fixture(&path);
+        connection.execute_batch(mutation).unwrap();
+        drop(connection);
+        let before = std::fs::read(&path).unwrap();
+
+        assert!(store::open(&path).is_err(), "{mutation}");
+
+        assert_eq!(std::fs::read(&path).unwrap(), before, "{mutation}");
+    }
+}
+
+#[test]
+fn schema_metadata_alone_cannot_claim_prior_ddl() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("false-prior.db");
+    let connection = store::open(&path).unwrap();
+    connection
+        .execute("UPDATE schema_metadata SET minor=2", [])
+        .unwrap();
+    drop(connection);
+    let before = std::fs::read(&path).unwrap();
+
+    assert!(store::open(&path).is_err());
+
+    assert_eq!(std::fs::read(&path).unwrap(), before);
 }

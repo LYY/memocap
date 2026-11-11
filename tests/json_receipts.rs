@@ -77,7 +77,7 @@ fn read_only_status_does_not_initialize_or_change_existing_databases() {
 }
 
 #[test]
-fn multi_target_receipt_preserves_applicability_and_global_budget() {
+fn multi_target_receipt_preserves_origins_with_unknown_applicability_and_global_budget() {
     let f = Fixture::new();
     f.json(
         &[
@@ -112,11 +112,12 @@ fn multi_target_receipt_preserves_applicability_and_global_budget() {
             .as_array()
             .unwrap()
             .len(),
-        1
+        0
     );
+    assert_eq!(receipt["results"][0]["applicability"], "unknown");
     assert_ne!(
-        receipt["results"][0]["applicable_repositories"],
-        receipt["results"][1]["applicable_repositories"]
+        receipt["results"][0]["memory"]["placement"],
+        receipt["results"][1]["memory"]["placement"]
     );
     let limited = f.json(&["recall", "release", "--limit", "1", "--json"], true);
     assert_eq!(limited["returned_ids"].as_array().unwrap().len(), 1);
@@ -134,7 +135,9 @@ fn recall_receipt_preserves_complete_matches_and_applicability_across_budgets() 
     for (limit, max_chars, count) in [
         ("20", "14", 2),
         ("20", "13", 1),
-        ("20", "0", 1),
+        ("20", "7", 1),
+        ("20", "6", 0),
+        ("20", "0", 0),
         ("1", "14", 1),
         ("0", "14", 0),
     ] {
@@ -162,19 +165,20 @@ fn recall_receipt_preserves_complete_matches_and_applicability_across_budgets() 
         );
         assert_eq!(receipt["truncated"], count < 2);
         assert_eq!(receipt["status"], if count == 0 { "empty" } else { "ok" });
+        for (result, content) in receipt["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(["fruit 文", "fruit 中"])
+        {
+            assert_eq!(result["memory"]["content"], content);
+        }
         if count == 2 {
-            let repositories = receipt["targets"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|target| target["repository_id"].clone())
-                .collect::<Vec<_>>();
             assert_eq!(
-                receipt["results"][1]["applicable_repositories"]
-                    .as_array()
-                    .unwrap(),
-                &repositories
+                receipt["results"][1]["applicable_repositories"],
+                serde_json::json!([])
             );
+            assert_eq!(receipt["results"][1]["applicability"], "unknown");
         }
     }
 }

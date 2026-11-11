@@ -43,7 +43,12 @@ impl std::error::Error for ActivityError {
             Self::Io(error) => Some(error),
             Self::Sqlite(error) => Some(error),
             Self::Serialization(error) => Some(error),
-            _ => None,
+            Self::Busy
+            | Self::Corrupt(_)
+            | Self::UnknownSchema
+            | Self::UnsupportedVersion { .. }
+            | Self::InvalidInput(_)
+            | Self::Conflict => None,
         }
     }
 }

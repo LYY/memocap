@@ -22,10 +22,11 @@ pub use transfers::{
 };
 pub(crate) use visible::budget_targeted_memories;
 pub use visible::{
-    list_inventory, merge_recalled, recall_targets, recall_visible, recall_visible_with_options,
-    single_visible_source, visible_inventory, visible_sources, visible_status, InventoryMemory,
-    MatchMode, PlacementCount, RecallApplicability, RecallOptions, RecallTarget, ShadowCause,
-    TargetRecall, TargetedMemory, Visibility, VisibleSource, VisibleStackStatus,
+    list_inventory, merge_recalled, recall_discovery, recall_targets, recall_visible,
+    recall_visible_with_options, single_visible_source, visible_inventory, visible_sources,
+    visible_status, InventoryMemory, MatchMode, PlacementCount, RecallApplicability, RecallOptions,
+    RecallTarget, ShadowCause, TargetRecall, TargetedMemory, Visibility, VisibleSource,
+    VisibleStackStatus,
 };
 
 pub const DEFAULT_RECALL_LIMIT: usize = 3;

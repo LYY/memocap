@@ -120,27 +120,7 @@ fn run_scoped(command: Command, targets: &[cli::RepositoryTarget]) -> Result<()>
             };
             println!("saved #{id}");
         }
-        Command::Recall {
-            query,
-            r#match,
-            limit,
-            r#type,
-            max_chars,
-            domain,
-            universal,
-        } => {
-            recall::run(
-                targets,
-                cli::placement_selector(domain, universal)?,
-                store::RecallOptions {
-                    query: &query,
-                    kind: r#type.as_deref(),
-                    match_mode: r#match,
-                    limit,
-                    max_chars,
-                },
-            )?;
-        }
+        Command::Recall { .. } => bail!("recall requires the observable operation API"),
         Command::List {
             limit,
             domain,
@@ -185,6 +165,7 @@ fn run_scoped(command: Command, targets: &[cli::RepositoryTarget]) -> Result<()>
         Command::Activity { .. } => bail!("activity requires the observable operation API"),
         Command::Serve { .. }
         | Command::Ui
+        | Command::Read { .. }
         | Command::Operation { .. }
         | Command::Organize { .. } => {
             bail!("command does not use a repository target");

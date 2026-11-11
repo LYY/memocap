@@ -55,7 +55,8 @@ fn v1_memory_domains_visible_stack_and_status_match_local_placement_rules() {
         "/v1/memories/recall",
         serde_json::json!({
             "repository": REPOSITORY,
-            "placement": null,
+            "discovery": {"kind":"library"},
+            "match_mode": "all",
             "query": "memory",
             "limit": 20,
             "type": null,
@@ -103,7 +104,7 @@ fn v1_memory_domains_visible_stack_and_status_match_local_placement_rules() {
             .iter()
             .filter_map(|entry| entry["memory"]["id"].as_i64())
             .collect::<Vec<_>>(),
-        vec![repository_id, domain_id, universal_id]
+        vec![universal_id, domain_id, repository_id]
     );
     assert_eq!(listed["memories"].as_array().unwrap().len(), 3);
     assert_eq!(status["domains"], serde_json::json!([domain]));

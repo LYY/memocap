@@ -43,7 +43,15 @@ pub struct MemoryResult {
     pub source_order: usize,
     pub visibility: String,
     pub applicable_repositories: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub applicability: Option<Applicability>,
     pub shadowed_by: Option<store::ShadowCause>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Applicability {
+    Unknown,
 }
 
 impl MemoryResult {
@@ -57,6 +65,7 @@ impl MemoryResult {
             source_order: entry.source_order,
             visibility: visibility.into(),
             applicable_repositories: repositories,
+            applicability: None,
             shadowed_by,
         }
     }
@@ -105,6 +114,8 @@ pub struct Receipt {
     pub targets: Vec<Target>,
     pub repository_context: crate::repository::Contexts,
     pub searched_placements: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub discovery: Option<crate::discovery::Discovery>,
     pub query_terms: Vec<String>,
     pub matched_ids: Vec<i64>,
     pub returned_ids: Vec<i64>,
@@ -175,6 +186,7 @@ impl Receipt {
             targets: vec![],
             repository_context: crate::repository::Contexts::new(),
             searched_placements: vec![],
+            discovery: None,
             query_terms: vec![],
             matched_ids: vec![],
             returned_ids: vec![],
