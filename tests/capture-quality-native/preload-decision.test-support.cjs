@@ -1,6 +1,17 @@
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
+const { mock } = require('node:test');
 const { hash, implementationFingerprint } = require('./approval.cjs');
+
+function withAuditedAccount(check) {
+  const userInfo = mock.method(os, 'userInfo', () => ({ username: 'liuyuyu' }));
+  try {
+    return check();
+  } finally {
+    userInfo.mock.restore();
+  }
+}
 
 function fakePreparation(privateRoot, paths) {
   return { directories: [path.join(paths.config, 'opencode'), paths.config], restore() {},
@@ -25,8 +36,8 @@ function fakePreload(options, mutate = () => {}) {
   } };
   const dependencies = { io, artifactHash: () => auditedHost };
   mutate(settings, dependencies);
-  const proof = establishPreload(settings, dependencies);
+  const proof = withAuditedAccount(() => establishPreload(settings, dependencies));
   return { proof, reads };
 }
 
-module.exports = { fakePreparation, fakePreload };
+module.exports = { fakePreparation, fakePreload, withAuditedAccount };

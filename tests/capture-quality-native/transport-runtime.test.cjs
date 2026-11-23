@@ -6,7 +6,7 @@ const { environment, startHost, fixtureURL } = require('./host.cjs');
 const { memoryIO, processFake } = require('./fakes.cjs');
 const { root } = require('./approval.cjs');
 const { invokeNative } = require('./native-proxy.cjs');
-const { fakePreload } = require('./preload-decision.test-support.cjs');
+const { fakePreload, withAuditedAccount } = require('./preload-decision.test-support.cjs');
 
 function budget() {
   return SharedBudget.consume('/attempt', { batch: 'offline-test' }, { io: memoryIO() });
@@ -104,9 +104,10 @@ test('cleanup signals only the explicitly owned native process group after dispo
 test('missing origins without independent preload evidence block even pure startup before generation', async () => {
   const shared = budget(); const log = [];
   assert.deepEqual(JSON.parse(environment({ profileRef: '/profile' }, approval, paths, true).OPENCODE_CONFIG_CONTENT).plugin, []);
-  await assert.rejects(() => startHost({ input: { profileRef: '/profile' }, approval, paths, pure: true, budget: shared },
+  // startHost checks preload synchronously, before its first await.
+  await assert.rejects(() => withAuditedAccount(() => startHost({ input: { profileRef: '/profile' }, approval, paths, pure: true, budget: shared },
     { spawn: processFake(log), clientFactory: () => ({ _client: { get: async () => ({ data: { version: '1.19.5' } }) },
-      config: { get: async () => ({ data: { mcp: {} } }) }, mcp: { status: async () => ({ data: {} }) } }) }),
+      config: { get: async () => ({ data: { mcp: {} } }) }, mcp: { status: async () => ({ data: {} }) } }) })),
   { code: 'preload_preparation_required' });
   assert.equal(log.length, 0);
   assert.equal(shared.snapshot().dispatches, 0);
