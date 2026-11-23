@@ -1,6 +1,6 @@
 # Install and Update
 
-This guide targets package `0.6.0` and Git tag `v0.6.0`. Keep the native CLI,
+This guide targets package `0.7.0` and Git tag `v0.7.0`. Keep the native CLI,
 OpenCode plugin, and managed skill on the same release. These instructions define
 the target contract; they do not claim publication, a local update, or runtime
 verification. Use the versioned guide shipped with the exact target package.
@@ -8,35 +8,33 @@ verification. Use the versioned guide shipped with the exact target package.
 ## Requirements
 
 - Node.js 22.20 or later, with npm and npx.
-- OpenCode 1.19.3 or 1.19.5, the exact tested host versions. Other versions are
-  refused. Setup does not install or upgrade the host.
+- OpenCode v1. Setup does not install or upgrade the host.
 
 The complete managed skill comes from the exact npm package; Git is not
 required. npm downloads can use the network. A provider is unnecessary for
 installation; without a live session, runtime verification remains `not_run`.
-If you separately choose to install a supported host, use an exact tested
-version, for example:
+If you separately choose to install a supported host, for example:
 
 ```sh
-npm install --global opencode-ai@1.19.3
+npm install --global opencode-ai@1
 opencode --version
 ```
 
-See the official OpenCode releases for [1.19.3](https://github.com/anomalyco/opencode/releases/tag/v1.19.3)
-and [1.19.5](https://github.com/anomalyco/opencode/releases/tag/v1.19.5).
+The v1 policy does not mean every minor or patch release has been tested.
+The plugin's pinned SDK dependency is not a host version requirement.
 
 ## Global and project installation
 
 For a user-level integration:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.6.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.7.0 memocap-setup install --global --yes --json
 ```
 
 For one project, pass its absolute path and quote spaces:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.6.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
+npx --yes --package @lyy-gh/memocap@0.7.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
 ```
 
 Global and project select integration ownership, not memory placement. Memories
@@ -69,14 +67,14 @@ layer; it does not move the skill directory. Setup preserves JSONC comments,
 unrelated entries, tuple options, and skill paths using a compare-and-swap edit.
 Concurrent edits are retained and reported as conflicts.
 
-Current setup ownership uses manifest format `2`. An installed v0.5.0 format-2
+Current setup ownership uses manifest format `2`. An installed v0.6.0 format-2
 record remains upgradable when it contains inert historical `migration`,
 `adoption`, or `steps.legacy_cleanup` fields. These fields do not authorize
 legacy takeover or cleanup. Unsupported manifest formats are refused. Unknown,
 changed, duplicate, shared, or ambiguous skill sources, remote `skills.urls`, and
 inactive config targets stop preflight. `--yes` never bypasses those protections.
 
-## Check and update from v0.5.0
+## Check and update from v0.6.0
 
 First inspect the selected integration:
 
@@ -85,17 +83,17 @@ memocap-setup check --global --json
 ```
 
 Read its `resolved_version` once, review the exact-target plan, and execute that
-same version after authorization. These examples target v0.6.0:
+same version after authorization. These examples target v0.7.0:
 
 ```sh
-memocap-setup update --to 0.6.0 --global --dry-run --json
-memocap-setup update --to 0.6.0 --global --yes --json
+memocap-setup update --to 0.7.0 --global --dry-run --json
+memocap-setup update --to 0.7.0 --global --yes --json
 ```
 
 To bootstrap the target worker explicitly:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.6.0 memocap-setup update --to 0.6.0 --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.7.0 memocap-setup update --to 0.7.0 --global --yes --json
 ```
 
 Use `--project "/absolute/path/to/repo"` for project scope. A different-version
@@ -112,25 +110,25 @@ npx bootstrap may download its pinned runner and write its npm cache first.
 Check without `--to` can query the stable registry version. Do not resolve
 `latest` again between planning and execution.
 
-The supported upgrade is current managed v0.5.0 format `2`, schema `2.2`, to
-v0.6.0 format `2`, schema `2.3`. Older legacy installers, ownership formats, and
+The supported upgrade is current managed v0.6.0 format `2`, schema `2.3`, to
+v0.7.0 format `2`, schema `2.3`. Older legacy installers, ownership formats, and
 schema-major transitions have no automatic recovery path in this release.
 
 ## Data and compatibility
 
-Package `0.6.0`, database schema `2.3`, setup manifest format `2`, and receipt
-format `1` are separate identities. The narrow `2.2` to `2.3` upgrade adds
-`capture_review` to the activity phase CHECK constraint and keeps
+Package `0.7.0`, database schema `2.3`, setup manifest format `2`, and receipt
+format `1` are separate identities. Updating ready v0.6.0 to v0.7.0 requires no
+schema preparation or activity pruning. It keeps
 existing memories, IDs, placements, domains and attachments, provenance, operation
 ledger, activity, repository hints, FTS, organization state, and existing identity
 and location metadata. Existing repository IDs remain authoritative.
 
-The new 0.6.0 CLI reports `upgrade_needed` for `2.2` without changing it.
-Before package upgrade, the actual 0.5.0 CLI reports `ready` for `2.2`; setup
-accepts that only during local preflight with requested target `0.6.0`. It reports
-`upgrade_needed` readiness, never target readiness. Installation requires the
-0.6.0 CLI and an independent `ready`/`2.3` readback with activity ready after
-authorized preparation. A 0.6.0 CLI reporting `ready`/`2.2` is refused.
+Both the installed 0.6.0 CLI and target 0.7.0 CLI report `ready`/`2.3` with
+activity ready. Installation requires the exact 0.7.0 CLI and an independent
+readback of that state. A CLI reporting `ready`/`2.2` is refused; the superseded
+0.5.0 preflight exception is removed. Exact schema `2.2` still reports
+`upgrade_needed` without changing it and retains its narrow authorized `2.3`
+preparation path. Existing retention rules still apply to later activity writes.
 Missing databases are created at `2.3`. Pre-versioned, malformed, unknown,
 schemas `2.1`, `2.0` and `1.0`, and future schemas are refused without reset. See
 [SCHEMA-VERSIONING.md](SCHEMA-VERSIONING.md) for the exact compatibility contract.
@@ -224,7 +222,7 @@ explicit `--project` path for project removal.
 ## Optional standalone skill for another agent
 
 ```sh
-npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.6.0 --skill memocap --agent '<other-agent-id>' --global --yes
+npx --yes skills@1.7.4 add https://github.com/LYY/memocap/tree/v0.7.0 --skill memocap --agent '<other-agent-id>' --global --yes
 ```
 
 This separate path uses the versioned GitHub tree and installs neither the CLI
@@ -236,9 +234,9 @@ and exit status to the same setup core.
 ## Windows PowerShell
 
 ```powershell
-npx --yes --package '@lyy-gh/memocap@0.6.0' memocap-setup install --global --yes --json
-npx --yes --package '@lyy-gh/memocap@0.6.0' memocap-setup install --project 'C:\work\my repo' --yes --json
+npx --yes --package '@lyy-gh/memocap@0.7.0' memocap-setup install --global --yes --json
+npx --yes --package '@lyy-gh/memocap@0.7.0' memocap-setup install --project 'C:\work\my repo' --yes --json
 memocap-setup check --global --json
-memocap-setup update --to 0.6.0 --global --dry-run --json
-memocap-setup update --to 0.6.0 --global --yes --json
+memocap-setup update --to 0.7.0 --global --dry-run --json
+memocap-setup update --to 0.7.0 --global --yes --json
 ```
