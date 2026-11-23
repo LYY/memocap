@@ -3,21 +3,25 @@ const test = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { DatabaseSync } = require('node:sqlite');
 const { isolatedEnvironment, digest } = require('./packaged-runtime.cjs');
 const { fixture } = require('./capture-pipeline-fixture.cjs');
 const proof = require('./capture-final-safety/observations.cjs');
 
+const native = path.join(proof.repo, 'target/debug', process.platform === 'win32' ? 'memocap.exe' : 'memocap');
+const nativeIdentity = () => ({ sha256: digest(fs.readFileSync(native)) });
+
 test('actual safety producer binds canonical source and runtime identities to acceptance records', () => {
   const canonical = require('./capture-quality-population-native/authorization.cjs').sources();
   const evidence = { source: proof.source(), lane: 'deterministic_challenges', safety_observations: [],
-    selector_file: 'tests/capture-final-safety.test.cjs' };
+    selector_file: 'tests/capture-final-safety.test.cjs', native: nativeIdentity() };
   proof.record(evidence, 'recursion', { case_id: 'worker inputs and idle replays cannot recursively claim capture', denominator: 8, violations: 0 });
   const row = evidence.safety_observations[0];
   assert.equal(row.source_sha256, canonical.digest);
   assert.deepEqual(evidence.source.manifest, Object.fromEntries(canonical.entries));
   assert.equal(row.host_version, process.versions.node);
   assert.equal(row.host_sha256, digest(fs.readFileSync(process.execPath)));
-  assert.equal(row.native_sha256, digest(fs.readFileSync(path.join(proof.repo, 'target/debug/memocap'))));
+  assert.equal(row.native_sha256, digest(fs.readFileSync(native)));
   assert.equal(row.selector_sha256, digest(fs.readFileSync(__filename)));
   assert.equal(row.result, 'satisfied');
   proof.record(evidence, 'recursion', { case_id: 'worker inputs and idle replays cannot recursively claim capture', denominator: 8, violations: 1 });
@@ -26,7 +30,7 @@ test('actual safety producer binds canonical source and runtime identities to ac
 
 test('worker inputs and idle replays cannot recursively claim capture', async () => {
   const evidence = { source: proof.source(), lane: 'deterministic_challenges', safety_observations: [],
-    selector_file: 'tests/capture-final-safety.test.cjs', cases: [] };
+    selector_file: 'tests/capture-final-safety.test.cjs', native: nativeIdentity(), cases: [] };
   const { createLifecycle } = await import('../plugin/capture/lifecycle.js');
   const life = createLifecycle(() => assert.fail('finished workers must not be aborted'));
   const observe = (id, serial) => life.observe({ sessionID: id, agent: 'build' },
@@ -57,7 +61,6 @@ test('all persisted capture activity excludes observed raw and marked secret sou
   const sandbox = fs.mkdtempSync(path.join(directory, 'isolated-'));
   const env = isolatedEnvironment(sandbox);
   context.after(() => fs.rmSync(sandbox, { recursive: true, force: true }));
-  const native = path.join(proof.repo, 'target/debug/memocap');
   const invoke = (args) => {
     const result = spawnSync(native, ['--json', ...args], { env, encoding: 'utf8', timeout: 10000 });
     assert.equal(result.status, 0, result.stderr);
@@ -65,7 +68,7 @@ test('all persisted capture activity excludes observed raw and marked secret sou
   };
   invoke(['activity', 'prepare']);
   const evidence = { source: proof.source(), lane: 'deterministic_challenges', safety_observations: [],
-    selector_file: 'tests/capture-final-safety.test.cjs', native: { sha256: digest(fs.readFileSync(native)) } };
+    selector_file: 'tests/capture-final-safety.test.cjs', native: nativeIdentity() };
   const boundary = [];
   const failures = [];
   let installed = false;
@@ -86,7 +89,13 @@ test('all persisted capture activity excludes observed raw and marked secret sou
   const before = current.calls.filter((call) => call.type === 'generation').length;
   await current.turn('secret', `Inspect marked synthetic secret password=${proof.secret}`, [{ kind: 'read', text: `password=${proof.secret}` }]);
   assert.equal(current.calls.filter((call) => call.type === 'generation').length, before);
-  const persisted = proof.rows(env.MEMOCAP_DB);
+  const database = new DatabaseSync(env.MEMOCAP_DB, { readOnly: true });
+  let persisted;
+  try {
+    persisted = database.prepare('SELECT * FROM activity_events ORDER BY sequence;').all().map(row => ({ ...row }));
+  } finally {
+    database.close();
+  }
   assert.equal(persisted.length, 2);
   assert.equal(current.reviews.at(-1).detail.metadata.reason, 'secret');
   const checked = proof.absence(persisted);
