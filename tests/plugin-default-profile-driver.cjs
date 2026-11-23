@@ -5,7 +5,7 @@ const { productionProbe } = require('./capture-quality-population-native/product
 
 async function driver(context, options = {}) {
   context.mock.timers.enable({ apis: ['setTimeout'] });
-  const probe = await productionProbe();
+  const probe = await productionProbe({ systemRoot: process.platform === 'win32' ? process.env.SystemRoot : undefined });
   const entry = await probe.load('../../plugin/index.js');
   const host = fixture();
   const bridge = await probe.load('../../plugin/bridge.js');

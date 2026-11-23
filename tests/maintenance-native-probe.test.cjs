@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { fork } = require('node:child_process');
+const { execFileSync, fork } = require('node:child_process');
 const { once } = require('node:events');
 const fs = require('node:fs');
 const http = require('node:http');
@@ -8,8 +8,8 @@ const path = require('node:path');
 const test = require('node:test');
 const { text } = require('node:stream/consumers');
 
-for (const { name, args, stdout, version } of [
-  { name: 'forwards and records the exact version', args: ['--version'], stdout: `${process.version}\n`, version: true },
+for (const { name, args, stdout = execFileSync(process.execPath, args, { encoding: 'utf8' }), version } of [
+  { name: 'forwards and records the exact version', args: ['--version'], version: true },
   { name: 'forwards ordinary stdout without recording it', args: ['-p', '"fixture output"'], stdout: 'fixture output\n', version: false },
 ]) {
   test(`native probe ${name} when the child closes before spawn acknowledgment`, { timeout: 5000 }, async (context) => {

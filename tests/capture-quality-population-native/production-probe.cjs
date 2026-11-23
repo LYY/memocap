@@ -6,7 +6,8 @@ const { pathToFileURL, fileURLToPath } = require('node:url');
 async function productionProbe(overrides = {}) {
   const defaults = [];
   const context = vm.createContext({ console, Buffer, URL, TextDecoder, TextEncoder, AbortSignal, AbortController, structuredClone,
-    setTimeout, clearTimeout, process: { env: { HOME: '/synthetic/home', MEMOCAP_DB: '/synthetic/memory.db' },
+    setTimeout, clearTimeout, process: { env: { HOME: '/synthetic/home', MEMOCAP_DB: '/synthetic/memory.db',
+      ...(overrides.systemRoot === undefined ? {} : { SystemRoot: overrides.systemRoot }) },
       platform: process.platform, cwd: () => '/synthetic/project' } });
   const modules = new Map();
   async function moduleFor(specifier, parent = pathToFileURL(__filename).href) {
