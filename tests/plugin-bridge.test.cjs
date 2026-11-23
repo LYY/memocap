@@ -2,25 +2,14 @@
 
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { setTimeout: delay } = require("node:timers/promises");
 const test = require("node:test");
 const { spawnSync } = require("node:child_process");
 const version = require("../package.json").version;
 const bridgeModule = import("../plugin/bridge.js");
 
-async function fixture(context, body, handshake = `console.log("memocap ${version}")`) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "memocap bridge "));
-  context.after(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const launcher = path.join(directory, "fake launcher.cjs");
-  fs.writeFileSync(launcher, `if (process.argv[2] === "--version") { ${handshake}; } else { ${body}\n }`);
-  const { createBridge } = await bridgeModule;
-  return { directory, launcher, run: createBridge({ launcher }).run };
-}
-
-const success = `console.log(JSON.stringify({format_version:1,status:"empty",targets:[],results:[]}));`;
+const { fixture, success, waitForFile } = require("./plugin-bridge-fixtures.cjs");
 
 test("literal argv, explicit cwd and receipt warnings survive the process boundary", async (context) => {
   const { directory, run } = await fixture(context, `
@@ -194,121 +183,6 @@ test("nonzero CLI with plain diagnostics stays a CLI failure", async (context) =
   const { directory, run } = await fixture(context, `console.error("missing dependency"); process.exitCode = 1;`);
   await assert.rejects(run(["recall", "query"], { cwd: directory }),
     (error) => error.code === "cli_failed" && error.stderr.includes("missing dependency"));
-});
-
-test("stdout and stderr overflow terminate the child with bounded captured output", async (context) => {
-  for (const stream of ["stdout", "stderr"]) {
-    const { directory, run } = await fixture(context, `
-      require("node:fs").writeFileSync("pid", String(process.pid));
-      setInterval(() => process.${stream}.write("x".repeat(65536)), 1);
-    `);
-    await assert.rejects(run(["recall", "query"], { cwd: directory }), (error) => {
-      assert.equal(error.code, "output_limit");
-      assert.ok(Buffer.byteLength(error[stream]) <= 1024 * 1024);
-      return true;
-    });
-    await assertGone(Number(fs.readFileSync(path.join(directory, "pid"), "utf8")));
-  }
-});
-
-test("an output limit cutting a multibyte character still bounds decoded bytes", async (context) => {
-  const { directory, run } = await fixture(context, `
-    process.stdout.write(Buffer.concat([Buffer.alloc(1024 * 1024 - 1, 97), Buffer.from("€".repeat(100))]));
-    setInterval(() => {}, 1000);
-  `);
-  await assert.rejects(run(["recall", "query"], { cwd: directory }), (error) => {
-    assert.equal(error.code, "output_limit");
-    assert.ok(Buffer.byteLength(error.stdout) <= 1024 * 1024);
-    return true;
-  });
-});
-
-async function waitForFile(file) {
-  for (let attempt = 0; attempt < 200; attempt += 1) {
-    if (fs.existsSync(file)) return fs.readFileSync(file, "utf8");
-    await delay(10);
-  }
-  assert.fail(`child did not become ready: ${file}`);
-}
-
-async function assertGone(pid) {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    try { process.kill(pid, 0); } catch (error) {
-      if (error.code === "ESRCH") return;
-      throw error;
-    }
-    await delay(10);
-  }
-  assert.fail(`child still running: ${pid}`);
-}
-
-test("cancel kills a launcher and its actual nested sidecar without replaying remember", async (context) => {
-  const { directory, run } = await fixture(context, `
-    const fs = require("node:fs");
-    fs.appendFileSync("attempts", "write\\n");
-    fs.writeFileSync("launcher-pid", String(process.pid));
-    require("node:child_process").spawnSync(process.execPath, ["-e",
-      'require("node:fs").writeFileSync("nested-pid", String(process.pid)); setInterval(() => {}, 1000);'], {stdio:"inherit"});
-  `);
-  const controller = new AbortController();
-  const pending = run(["remember", "content"], { cwd: directory, signal: controller.signal });
-  const rejected = assert.rejects(pending, (error) => error.code === "cancelled" && error.outcome === "outcome_unknown");
-  const nestedPid = Number(await waitForFile(path.join(directory, "nested-pid")));
-  controller.abort();
-  await rejected;
-  await assertGone(nestedPid);
-  await assertGone(Number(fs.readFileSync(path.join(directory, "launcher-pid"), "utf8")));
-  assert.equal(fs.readFileSync(path.join(directory, "attempts"), "utf8"), "write\n");
-});
-
-test("deadline covers both handshake and command and kills an uncooperative process", async (context) => {
-  const { directory, run } = await fixture(context, `
-    require("node:fs").writeFileSync("pid", String(process.pid));
-    process.on("SIGTERM", () => {}); setInterval(() => {}, 1000);
-  `);
-  const started = Date.now();
-  await assert.rejects(run(["remember", "content"], { cwd: directory, deadlineMs: 500 }),
-    (error) => error.code === "timeout" && error.outcome === "outcome_unknown");
-  assert.ok(Date.now() - started < 2500);
-  await assertGone(Number(fs.readFileSync(path.join(directory, "pid"), "utf8")));
-  const slowHandshake = await fixture(context, success, `setInterval(() => {}, 1000)`);
-  await assert.rejects(slowHandshake.run(["remember", "content"], { cwd: directory, deadlineMs: 150 }),
-    (error) => error.code === "timeout" && error.phase === "handshake" && error.outcome === "not_started");
-});
-
-test("default deadline is three seconds and pre-abort never starts a child", async (context) => {
-  const { directory, run } = await fixture(context, `setInterval(() => {}, 1000);`);
-  const started = Date.now();
-  await assert.rejects(run(["recall", "query"], { cwd: directory }), { code: "timeout" });
-  assert.ok(Date.now() - started >= 2800);
-  assert.ok(Date.now() - started < 5000);
-  const controller = new AbortController();
-  controller.abort();
-  await assert.rejects(run(["remember", "content"], { cwd: directory, signal: controller.signal }),
-    (error) => error.code === "cancelled" && error.outcome === "not_started");
-});
-
-test("handshake time is deducted from the command deadline", async (context) => {
-  const { directory, run } = await fixture(context, `
-    require("node:fs").writeFileSync("command-started", "yes");
-    ${success}
-  `, `
-    require("node:fs").writeFileSync("handshake-completed", String(process.pid));
-    console.log("memocap ${version}");
-  `);
-  const handshakeCompleted = path.join(directory, "handshake-completed");
-  context.mock.timers.enable({ apis: ["setTimeout"] });
-  const clock = context.mock.method(Date, "now", () => fs.existsSync(handshakeCompleted) ? 600 : 0);
-  try {
-    await assert.rejects(run(["recall", "query"], { cwd: directory, deadlineMs: 600 }),
-      { code: "timeout", phase: "command", outcome: "not_started" });
-    assert.equal(fs.existsSync(handshakeCompleted), true);
-    assert.equal(fs.existsSync(path.join(directory, "command-started")), false);
-  } finally {
-    clock.mock.restore();
-    context.mock.timers.reset();
-  }
-  await assertGone(Number(fs.readFileSync(handshakeCompleted, "utf8")));
 });
 
 test("invalid argv, cwd and deadline reject before launching", async (context) => {
