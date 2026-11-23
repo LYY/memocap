@@ -82,17 +82,31 @@ test('terminal observer rejection preserves the independently read-back capture 
   assert.deepEqual(current.calls.filter(({ type }) => ['write', 'readback'].includes(type)).map(({ type }) => type), ['write', 'readback']);
 });
 
-test('public capture synthesizes, independently supports, commits once and blocks actual fourth admission', async (t) => {
-  const current = await fixture(t);
-  const review = await current.turn('u', 'Use concise Chinese when responding in future.');
-  assert.equal(review.detail.metadata.status, 'saved');
-  assert.equal(review.detail.metadata.model_calls, 3);
-  assert.equal(current.calls.filter((call) => call.type === 'generation').length, 3);
-  assert.equal(current.calls.filter((call) => call.type === 'child').length, 2);
-  assert.deepEqual(current.calls.filter((call) => call.type === 'blocked').map((call) => call.code), ['model_budget']);
-  assert.deepEqual(current.calls.filter((call) => ['write', 'readback'].includes(call.type)).map((call) => call.type), ['write', 'readback']);
-  assert.equal(current.calls.some((call) => call.type === 'history' && call.id === 'parent'), false);
-});
+for (const [label, omitSessionPermission] of [['present', false], ['omitted', true]]) {
+  test(`public capture synthesizes, independently supports, commits once and blocks actual fourth admission (session permission ${label})`, async (t) => {
+    const current = await fixture(t, { omitSessionPermission });
+    const review = await current.turn('u', 'Use concise Chinese when responding in future.');
+    assert.equal(review.detail.metadata.status, 'saved', review.detail.metadata.reason);
+    assert.equal(review.detail.metadata.model_calls, 3);
+    assert.equal(current.calls.filter((call) => call.type === 'generation').length, 3);
+    assert.deepEqual(current.calls.filter((call) => call.type === 'child').map((call) => call.stage), ['extract', 'commit']);
+    assert.deepEqual(current.calls.filter((call) => call.type === 'blocked').map((call) => call.code), ['model_budget']);
+    assert.deepEqual(current.calls.filter((call) => ['ask', 'write', 'readback'].includes(call.type)).map((call) => call.type), ['ask', 'write', 'readback']);
+    assert.equal(current.calls.some((call) => call.type === 'history' && call.id === 'parent'), false);
+  });
+}
+
+for (const [label, sessionData] of [['empty', {}], ['mismatched', { id: 'other' }]]) {
+  test(`public capture does not write when the post-ask parent session is ${label}`, async (t) => {
+    const current = await fixture(t);
+    current.options.beforeAsk = () => { current.options.sessionData = sessionData; };
+    const review = await current.turn('u', 'Use concise Chinese when responding in future.');
+    assert.equal(review.detail.metadata.write_attempts, 0);
+    assert.equal(review.detail.metadata.status, 'denied');
+    assert.equal(review.detail.metadata.reason, 'permission_unavailable');
+    assert.deepEqual(current.calls.filter(({ type }) => ['ask', 'write', 'readback'].includes(type)).map(({ type }) => type), ['ask']);
+  });
+}
 
 for (const status of ['unknown', 'unsupported']) {
   test(`public capture rejects ${status} support without commit child or repair`, async (t) => {

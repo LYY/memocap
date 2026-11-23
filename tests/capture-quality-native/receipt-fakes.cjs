@@ -1,8 +1,9 @@
+const { version } = require('../../package.json');
 const placement = `repository:${'a'.repeat(64)}`;
 const operation = '11111111-1111-4111-8111-111111111111';
 
 function memoryReceipt(command = 'remember') {
-  return { format_version: 1, package_version: '0.7.0', operation: command,
+  return { format_version: 1, package_version: version, operation: command,
     operation_id: command === 'read' ? '22222222-2222-4222-8222-222222222222' : operation,
     status: command === 'read' ? 'ok' : 'inserted', backend: 'local', origin: 'cli',
     caller: { actor: 'plugin', session_id: 'session-1-commit', message_id: 'commit-user' },

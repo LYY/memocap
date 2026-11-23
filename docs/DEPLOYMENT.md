@@ -1,6 +1,6 @@
 # Deployment and Operations
 
-This guide describes the target operator contract for package 0.7.0; it
+This guide describes the target operator contract for package 0.7.1; it
 does not claim publication, a local update, or runtime verification. Follow the
 versioned guide shipped with the exact target package. The server owns one main
 SQLite database for core memories, activity, and repository metadata. It is not
@@ -175,7 +175,7 @@ The server exposes these authenticated `POST` routes under `/v1`:
 
 | Route | Purpose |
 | --- | --- |
-| `/v1/capabilities` | Check the current server version before receipt operations; CLI and server must match 0.7.0. |
+| `/v1/capabilities` | Check the current server version before receipt operations; CLI and server must match 0.7.1. |
 | `/v1/receipt` | Execute typed operations and return one format-1 receipt, including core outcome and independent activity outcome. |
 | `/v1/memories/remember` | Store one memory at an exact placement. |
 | `/v1/memories/recall` | Recall effective memories from the visible stack or one selected placement. |
@@ -195,7 +195,7 @@ Legacy unversioned routes such as `/remember`, `/recall`, `/list`, `/forget`,
 and `/status` are removed, not deprecated. There is no route fallback and no
 remote-to-local fallback.
 
-CLI, plugin, skill, and server use the target 0.7.0 contract. The existing
+CLI, plugin, skill, and server use the target 0.7.1 contract. The existing
 `/v1/capabilities` endpoint provides the server version check before mutation;
 versions must match. There is no old-request fallback or new capability
 negotiation. Binary support fields do not prove database readiness; inspect
@@ -293,10 +293,10 @@ FTS, provenance, operation ledger, and activity. Schemas `2.1`, `2.0`, `1.0`,
 pre-versioned, malformed, unknown, and future versions
 are refused without reset; there is no migration chain or older-consumer promise.
 
-The current managed update is from installed package `0.6.0`, manifest format
-`2`, and schema `2.3` to target package `0.7.0`, manifest format `2`, and schema
-`2.3`. Setup preflight reads `ready`/`2.3` from the installed `0.6.0` CLI; after
-the update, the selected exact `0.7.0` CLI must independently read back
+The current managed update is from installed package `0.6.0` or `0.7.0`, manifest format
+`2`, and schema `2.3` to target package `0.7.1`, manifest format `2`, and schema
+`2.3`. Setup preflight reads `ready`/`2.3` from the installed CLI; after
+the update, the selected exact `0.7.1` CLI must independently read back
 `ready`/`2.3` with activity ready. A valid ready `2.3` database needs no schema
 preparation for this package update. It preserves database data, unrelated
 configuration, and existing permissions. Check, doctor, and setup dry-run do not

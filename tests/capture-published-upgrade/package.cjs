@@ -7,11 +7,13 @@ const { isolatedEnvironment, digest, snapshot } = require('../packaged-runtime.c
 const { lifecycleFixture } = require('../setup-package-lifecycle-fixture.cjs');
 const { databaseSnapshot, managedSnapshot, assertRetained } = require('../setup-v050-upgrade/snapshots.cjs');
 const registry = 'https://registry.npmjs.org';
+const targetVersion = '0.7.1';
+const publicVersions = ['0.6.0', '0.7.0', targetVersion];
 function verifyPackage(value, version) {
-  assert.ok(['0.6.0', '0.7.0'].includes(version));
+  assert.ok(publicVersions.includes(version));
   assert.equal(value.packed.name, '@lyy-gh/memocap');
   assert.equal(value.packed.version, version);
-  assert.equal(new URL(value.dist.tarball).origin, registry);
+  assert.equal(value.dist.tarball, `${registry}/@lyy-gh/memocap/-/memocap-${version}.tgz`);
   const actual = `sha512-${crypto.createHash('sha512').update(value.bytes).digest('base64')}`;
   assert.equal(value.dist.integrity, actual);
   assert.equal(value.packed.integrity, actual);
@@ -62,10 +64,23 @@ function fixture(workspace, evidence) {
     },
     managed: () => managedSnapshot(packaged, config) });
 }
-async function publicPackage(fixture, version) {
-  assert.ok(['0.6.0', '0.7.0'].includes(version));
+async function publicPackage(fixture, version, receipt) {
+  assert.ok(publicVersions.includes(version));
   const spec = `@lyy-gh/memocap@${version}`;
+  if (version === targetVersion) {
+    assert.equal(receipt?.status, 'passed', 'a passing release receipt is required');
+    assert.equal(receipt.tag, `v${version}`);
+    assert.match(receipt.sha, /^[a-f0-9]{40}$/);
+    assert.match(receipt.registry_job, /^https:\/\/github\.com\/LYY\/memocap\/actions\/runs\/\d+\/job\/\d+$/);
+    assert.equal(receipt.registry?.conclusion, 'success');
+    assert.equal(receipt.registry.verify_metadata_integrity_provenance, 'success');
+    assert.equal(receipt.registry.package, spec);
+    assert.match(receipt.registry.integrity, /^sha512-[A-Za-z0-9+/]{86}==$/);
+    assert.equal(receipt.registry.provenance, 'https://slsa.dev/provenance/v1');
+    assert.ok(Number.isSafeInteger(receipt.registry.transparency_log_index) && receipt.registry.transparency_log_index >= 0);
+  }
   const dist = await fixture.json('npm', ['view', spec, 'dist', '--json', '--registry', registry]);
+  if (version === targetVersion) assert.equal(dist.integrity, receipt.registry.integrity, 'registry integrity differs from release receipt');
   const directory = path.join(fixture.root, `public-${version}`);
   fs.mkdirSync(directory);
   const packed = (await fixture.json('npm', ['pack', spec, '--json', '--ignore-scripts', '--registry', registry,
@@ -88,6 +103,7 @@ async function installedProof(fixture, artifact) {
   const published = files(artifact.payload), installed = files(fixture.installedRoot);
   for (const [file, hash] of Object.entries(published)) assert.equal(installed[file], hash, file);
   const launcherPath = path.join(fixture.installedRoot, 'bin/cli.cjs');
+  delete require.cache[require.resolve(path.join(fixture.installedRoot, 'package.json'))];
   delete require.cache[require.resolve(launcherPath)];
   const launcher = require(launcherPath);
   const asset = launcher.resolveReleaseAsset(process.platform, process.arch);
@@ -141,7 +157,7 @@ async function seed(fixture) {
 async function provisionHost(fixture, phase = 'target') {
   // The published v0.6.0 runner has a minor-version allowlist; the target does not.
   const baseline = phase === 'baseline';
-  const requested = baseline ? '1.19.3' : '1';
+  const requested = baseline ? '1.19.3' : '1.19.6';
   await fixture.command('npm', ['install', '--global', '--prefix', path.join(fixture.root, 'tools'),
     `opencode-ai@${requested}`, '--registry', registry], { env: { MEMOCAP_LINK_PHASE: 'official-host-bootstrap' } });
   const modules = path.join(fixture.root, 'tools', process.platform === 'win32' ? 'node_modules' : 'lib/node_modules');
@@ -151,8 +167,8 @@ async function provisionHost(fixture, phase = 'target') {
   const installed = path.join(modules, 'opencode-ai');
   const { version } = JSON.parse(fs.readFileSync(path.join(installed, 'package.json'), 'utf8'));
   const { isSupportedHost } = await import('../../lib/opencode-host.js');
-  if (baseline) assert.equal(version, requested);
-  else assert.ok(isSupportedHost(version), 'installed OpenCode package must be v1');
+  assert.ok(isSupportedHost(version), 'installed OpenCode package must be v1');
+  assert.equal(version, requested);
   const name = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
   const choices = [path.join(installed, 'node_modules', platform, 'bin', name), path.join(modules, platform, 'bin', name)];
   const host = choices.find(filename => fs.existsSync(filename));
@@ -161,4 +177,4 @@ async function provisionHost(fixture, phase = 'target') {
   fixture.evidence[baseline ? 'baseline_host' : 'host'] = { version, sha256: digest(fs.readFileSync(host)), origin: 'official_public_package' };
   return host;
 }
-module.exports = { registry, verifyPackage, retained, complete, fixture, publicPackage, installedProof, seed, provisionHost, nativeProof, setupProof };
+module.exports = { registry, targetVersion, verifyPackage, retained, complete, fixture, publicPackage, installedProof, seed, provisionHost, nativeProof, setupProof };

@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { fixture } = require("./setup-fixtures.cjs");
+const { version: currentVersion } = require("../package.json");
 
 function databaseCLI(setup, version) {
   setup.installCLI(version);
@@ -45,11 +46,11 @@ async function currentFixture(context) {
   fs.writeFileSync(installed.manifest_path, JSON.stringify(manifest));
   const targetRoot = path.join(setup.root, "target-worker");
   fs.cpSync(setup.packageRoot, targetRoot, { recursive: true });
-  fs.writeFileSync(path.join(targetRoot, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version: "0.7.0" }));
+  fs.writeFileSync(path.join(targetRoot, "package.json"), JSON.stringify({ name: "@lyy-gh/memocap", version: currentVersion }));
   fs.appendFileSync(path.join(targetRoot, "skills/memocap/SKILL.md"), "\ntarget fixture payload\n");
   const run = setup.runtime.run;
   setup.runtime.run = async (command, args, options) => {
-    if(command === "npx" && args.includes("@lyy-gh/memocap@0.7.0")) {
+    if(command === "npx" && args.includes(`@lyy-gh/memocap@${currentVersion}`)) {
       setup.calls.push({ command, args: [...args] });
       const { runSetup } = await import("../scripts/setup/core.mjs");
       const report = await runSetup(args.slice(args.indexOf("memocap-setup") + 1), { ...setup.runtime, packageRoot: targetRoot });
@@ -57,7 +58,7 @@ async function currentFixture(context) {
     }
     const execution = await run(command, args, options);
     if(command === "npm" && args[0] === "install") {
-      databaseCLI(setup, "0.7.0");
+      databaseCLI(setup, currentVersion);
       fs.cpSync(path.join(targetRoot, "skills"), path.join(setup.installed, "skills"), { recursive: true });
     }
     return execution;

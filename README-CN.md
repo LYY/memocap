@@ -12,10 +12,10 @@ OpenCode 是唯一官方支持的集成。插件通过包内绝对路径的 CLI 
 
 ## 安装
 
-为当前用户安装 v0.7.0 CLI、OpenCode 插件和运行时 skill：
+为当前用户安装 v0.7.1 CLI、OpenCode 插件和运行时 skill：
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.7.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.7.1 memocap-setup install --global --yes --json
 ```
 
 需要 Node.js 22.20 或更高版本、npm/npx，以及 OpenCode v1。
@@ -33,7 +33,7 @@ Agent 进行已获授权的非交互安装或更新时，按[Agent 指南](docs/
 全局 `--repo <PATH>` 显式选择真实仓库路径；recall 和 `scope resolve` 可重复指定，最多八个目标。
 也可使用与 `--repo` 互斥的 `--repository-id <ID>` 直接选择明确的 repository ID。
 写操作始终只有一个目标。全局 `--json` 返回 format-1 receipt，供自动化使用；
-`serve` 和 `ui` 不支持它。package `0.7.0`、core schema `2.3`、receipt format
+`serve` 和 `ui` 不支持它。package `0.7.1`、core schema `2.3`、receipt format
 `1` 是彼此独立的标识。
 
 ```text
@@ -275,7 +275,7 @@ Bearer 鉴权不提供传输保密性或完整性。默认 Compose 部署只在�
 接口发布原始 HTTP 端口。
 
 当前 JSON 操作通过 `/v1/capabilities` 检查 server 版本，再调用 `/v1/receipt`；
-CLI 与 server 必须匹配 0.7.0，版本不符在 mutation 前拒绝，无旧请求 fallback 或新增能力协商。route、trust boundary、
+CLI 与 server 必须匹配 0.7.1，版本不符在 mutation 前拒绝，无旧请求 fallback 或新增能力协商。route、trust boundary、
 Compose 和 recovery 流程见[DEPLOYMENT.md](docs/DEPLOYMENT.md)。服务器严格校验
 remote repository ID。
 
@@ -305,7 +305,7 @@ registry、当前 repository attachment、精确 placement 和 operation fingerp
 schema `2.3`；只有精确且受支持的 schema `2.2` 可以升级到 `2.3`，仅重建 activity 表及其
 必需索引，不改变 memory ID 或 placement。schema `2.1`、`2.0`、`1.0`、预版本、未知、未来版本和畸形数据库会被拒绝，
 不会 reset。升级 `2.2` 前，使用 SQLite backup API 或其他 WAL-aware 方法备份。切换
-package 版本不会更改或恢复数据库数据。不要用旧备份覆盖更新的数据。package `0.7.0`、
+package 版本不会更改或恢复数据库数据。不要用旧备份覆盖更新的数据。package `0.7.1`、
 schema `2.3` 和 receipt format `1` 是彼此独立的标识。
 
 ## 对照
