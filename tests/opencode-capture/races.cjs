@@ -6,12 +6,12 @@ async function duplicate(current, evidence) {
   const parent = await current.parent();
   const text = 'Report finished.\n\nI prefer Chinese for the exact canonical duplicate fixture.\nSource: user-authored reference';
   const before = writes(control);
-  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.commit(), { text: 'Saved.' });
+  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.support(), current.commit());
   await current.prompt(parent, text);
   const first = await current.review(parent);
   assert.equal(meta(first).status, 'saved');
   const observed = control.events.length;
-  provider.responses.push({ text: 'Confirmed again.' }, current.extract());
+  provider.responses.push({ text: 'Confirmed again.' }, current.extract(), current.support());
   await current.prompt(parent, text);
   const result = await current.review(parent, observed);
   assert.equal(meta(result).reason, 'duplicate_body');
@@ -30,7 +30,7 @@ async function newInput(current, evidence) {
   const parent = await current.parent();
   const before = writes(control);
   const gateStart = control.events.length;
-  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.commit());
+  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.support(), current.commit());
   const original = await current.prompt(parent, 'For future responses, always use the superseded input fixture.');
   await control.wait((event) => control.events.indexOf(event) >= gateStart && event.phase === 'gate.waiting' && event.sessionID === 'handshake');
   const observed = control.events.length;
@@ -56,7 +56,7 @@ async function nativeDenial(current, evidence) {
   const { control, provider, client, unwrap } = current;
   const parent = await current.parent('ask');
   const before = writes(control);
-  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.commit(), { text: 'Denied.' });
+  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.support(), current.commit());
   await current.prompt(parent, 'For future responses, always use the actual native ask rejection fixture.');
   const asked = await control.wait((event) => event.phase === 'host.event' &&
     ['permission.asked', 'permission.updated'].includes(event.event.type) && event.event.properties.permission === 'memocap_remember');
@@ -74,7 +74,7 @@ async function unknownReceipt(current, evidence) {
   control.settings.unknownWrite = true;
   const parent = await current.parent();
   const before = writes(control);
-  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.commit(), { text: 'Unknown result. Do not retry.' });
+  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.support(), current.commit());
   await current.prompt(parent, 'For future responses, always use the unknown receipt fixture.');
   const result = await current.review(parent);
   assert.equal(meta(result).status, 'unknown');

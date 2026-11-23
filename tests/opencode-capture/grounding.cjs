@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { meta, writes } = require('./cases.cjs');
 const { crossProject } = require('./cross-project.cjs');
+const { proposal } = require('./harness.cjs');
 
 async function documentRoute(current, evidence) {
   const docs = path.join(current.fixture.project, 'docs');
@@ -14,11 +15,11 @@ async function documentRoute(current, evidence) {
   const before = writes(current.control);
   current.provider.responses.push({ tool: 'read', args: { filePath } }, { text: 'Read confirmed.' },
     current.extract((parsed) => {
-      const selected = parsed.evidence.find((unit) => unit.text.includes('docs/alpha.md'));
-      assert.ok(selected, JSON.stringify(parsed.evidence));
+      const selected = parsed.sources.find((unit) => unit.text.includes('docs/alpha.md'));
+      assert.ok(selected, JSON.stringify(parsed.sources));
       assert.match(selected.text, /Never use this entry for beta/);
-      return { candidates: [{ evidence: [{ sourceId: selected.sourceId, quote: selected.text }] }] };
-    }), current.commit(), { text: 'Saved.' });
+      return proposal(parsed, selected, 'Alpha environment: start at docs/alpha.md. Approval required. Never use this entry for beta.');
+    }), current.support(), current.commit());
   await current.prompt(parent, 'Read docs/entry.md to locate the alpha entry.');
   const result = await current.review(parent);
   assert.equal(meta(result).status, 'saved', JSON.stringify(result));
@@ -36,13 +37,13 @@ async function documentRoute(current, evidence) {
 async function readFailures(current, evidence) {
   const parent = await current.parent();
   const text = 'I prefer concise responses for the read failure fixture.';
-  current.provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.commit(), { text: 'Saved.' });
+  current.provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.support(), current.commit());
   await current.prompt(parent, text);
   assert.equal(meta(await current.review(parent)).status, 'saved');
   const before = writes(current.control);
   const observed = current.control.events.length;
   current.control.settings.failRead = true;
-  current.provider.responses.push({ text: 'Confirmed again.' }, current.extract());
+  current.provider.responses.push({ text: 'Confirmed again.' }, current.extract(), current.support());
   await current.prompt(parent, text);
   const failed = await current.review(parent, observed);
   current.control.settings.failRead = false;
@@ -54,7 +55,7 @@ async function readFailures(current, evidence) {
 
   const mismatch = await current.parent();
   current.control.settings.mismatchReadTags = true;
-  current.provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.commit(), { text: 'Unknown.' });
+  current.provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.support(), current.commit());
   await current.prompt(mismatch, 'I prefer explicit units for the tag readback fixture.');
   const changed = await current.review(mismatch);
   current.control.settings.mismatchReadTags = false;

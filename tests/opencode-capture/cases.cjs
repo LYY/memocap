@@ -10,7 +10,7 @@ async function handshakeAbort(current, evidence) {
   control.settings.handshakeGate = true;
   const parent = await current.parent();
   const before = writes(control);
-  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.commit(), { text: 'Stopped.' });
+  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.support(), current.commit());
   await current.prompt(parent, 'For future work, always use the handshake cancellation fixture.');
   await control.wait((event) => event.phase === 'gate.waiting' && event.sessionID === 'handshake');
   const observed = control.events.length;
@@ -55,7 +55,7 @@ async function rejected(current, evidence) {
     ['no_durable_model_policy', 'This task exited with zero status.', () => ({ candidates: [] }), 'no_candidate'],
     ['quoted_assistant_model_policy', 'The assistant wrote: always use this provider.', () => ({ candidates: [] }), 'no_candidate'],
     ['secret', 'For future work, always use api_key: synthetic-secret-value.', undefined, 'secret'],
-    ['unsupported_source', 'For future work, always use Chinese for this unsupported source test.', () => ({ candidates: [{ evidence: [{ sourceId: 'assistant-only', quote: 'Business succeeded.' }] }] }), 'missing_evidence'],
+    ['unsupported_source', 'For future work, always use Chinese for this unsupported source test.', (packet) => ({ candidates: [{ statements: [{ text: 'Business succeeded.', citations: [{ source_id: 'assistant-only', content_hash: packet.sources[0].content_hash, span: { start: 0, end: 19 }, quote: 'Business succeeded.' }] }] }] }), 'evidence_mismatch'],
     ['no_candidate', 'For future work, always use Chinese for this empty candidate test.', () => ({ candidates: [] }), 'no_candidate'],
   ]) {
     const parent = await current.parent();
@@ -74,7 +74,7 @@ async function rejected(current, evidence) {
 async function mismatchAndBudget(current, evidence) {
   const mismatch = await current.parent();
   const before = writes(current.control);
-  current.provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.commit((args) => ({ content: `${args.content} invented` })), { text: 'Stopped.' });
+  current.provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.support(), current.commit((args) => ({ content: `${args.content} invented` })));
   await current.prompt(mismatch, 'For future work, always use the candidate mismatch fixture.');
   const rejected = await current.review(mismatch);
   assert.equal(meta(rejected).reason, 'candidate_mismatch');
@@ -82,17 +82,61 @@ async function mismatchAndBudget(current, evidence) {
   evidence.cases.push({ name: 'mismatched_candidate', review: meta(rejected) });
 
   const budget = await current.parent();
-  current.provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.commit(),
-    { tool: 'memocap_remember', args: { content: 'second unbound write' } });
+  const start = current.control.events.length;
+  const requests = current.provider.requests.length;
+  const record = { name: 'second_tool_and_three_dispatch_budget', parentID: budget.id, status: 'started' };
+  evidence.cases.push(record);
+  current.provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.support(), {
+    get tools() { return [current.commit(), { tool: 'memocap_remember', args: { content: 'second unbound write' } }]; },
+  });
   await current.prompt(budget, 'For future work, always use the bounded generation fixture.');
   const result = await current.review(budget);
-  assert.equal(meta(result).status, 'saved');
-  assert.equal(meta(result).model_calls, 3);
-  assert.equal(meta(result).tool_calls, 2);
-  assert.equal(writes(current.control), before + 1);
   const child = (await current.client.session.children({ path: { id: budget.id } })).data.find((entry) => entry.title.endsWith('commit'));
   await current.control.wait((event) => event.phase === 'generation.blocked' && event.sessionID === child.id && event.code === 'model_budget');
-  evidence.cases.push({ name: 'second_tool_and_three_dispatch_budget', review: meta(result) });
+  await current.control.wait(() => current.control.events.filter((event) => event.phase === 'remember.result' && event.sessionID === child.id).length === 2);
+  const trace = current.toolOrder().filter((event) => event.sessionID === child.id).map((event) => ({ ...event,
+    parentID: budget.id, userID: result.payload.context.message_id }));
+  const events = current.captureEvents(start);
+  const activity = await current.cli(['activity', 'show', result.payload.operation_id]);
+  Object.assign(record, { status: 'observed', userID: result.payload.context.message_id, childID: child.id,
+    review: meta(result), trace, events, provider_requests: current.provider.requests.length - requests, activity });
+  const beforeCalls = trace.filter((event) => event.phase === 'before.return');
+  const invokes = trace.filter((event) => event.phase === 'execute.invoke');
+  const returns = trace.filter((event) => event.phase === 'execute.return');
+  assert.equal(beforeCalls.length, 2);
+  assert.equal(new Set(beforeCalls.map((event) => event.callID)).size, 2);
+  assert.equal(new Set(beforeCalls.map((event) => event.content_hash)).size, 2);
+  assert.equal(invokes.length, 2);
+  assert.equal(returns.length, 2);
+  assert.ok(trace.every((event) => event.generation === 1));
+  const first = returns.find((event) => event.content_hash === invokes[0].content_hash);
+  const second = returns.find((event) => event.content_hash === invokes[1].content_hash);
+  assert.equal(second.code, 'attempt_consumed');
+  const bothBefore = beforeCalls[1].sequence < invokes[0].sequence;
+  record.order = bothBefore ? 'both_before_first_execute' : 'first_execute_before_second_before';
+  const spawned = events.filter((event) => event.phase === 'native.write.spawn').length;
+  if (bothBefore) {
+    assert.equal(first.code, 'candidate_mismatch');
+    assert.equal(spawned, 0);
+    assert.equal(events.filter((event) => event.phase === 'native.write.committed').length, 0);
+    assert.ok(returns.every((event) => event.readback_status === undefined));
+    assert.deepEqual(meta(result), { status: 'skipped', reason: 'candidate_mismatch', memory_ids: [], model_calls: 3, tool_calls: 2, write_attempts: 0 });
+  } else {
+    assert.equal(invokes[0].content_hash, beforeCalls[0].content_hash);
+    assert.equal(first.status, 'inserted');
+    assert.equal(first.readback_status, 'ok');
+    const readback = events.find((event) => event.phase === 'remember.result' && event.receipt.readback?.status === 'ok').receipt.readback.results[0];
+    assert.equal(readback.content_hash, beforeCalls[0].content_hash);
+    assert.equal(readback.placement, current.target);
+    assert.match(readback.tags, /^memocap-capture-[a-f0-9]{64}$/);
+    assert.equal(spawned, 1);
+    assert.equal(events.filter((event) => event.phase === 'native.write.committed').length, 1);
+    assert.deepEqual(meta(result), { status: 'saved', reason: 'saved_verified', memory_ids: first.returned_ids, model_calls: 3, tool_calls: 2, write_attempts: 1 });
+  }
+  assert.equal(record.provider_requests, 4);
+  assert.equal(result.exit_code, 0);
+  assert.deepEqual(activity.events.find((event) => event.detail.phase === 'capture_review').detail.metadata, meta(result));
+  record.status = 'passed';
 }
 
 async function cancelAfterCommit(current, evidence, childAbort = false) {
@@ -100,7 +144,7 @@ async function cancelAfterCommit(current, evidence, childAbort = false) {
   const parent = await current.parent();
   const gateStart = control.events.length;
   control.settings.afterWriteGate = true;
-  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.commit(), { text: 'Saved.' });
+  provider.responses.push({ text: 'Confirmed.' }, current.extract(), current.support(), current.commit());
   await current.prompt(parent, `For future work, always use the ${childAbort ? 'child' : 'parent'} write then cancellation readback fixture.`);
   await control.wait((event) => control.events.indexOf(event) >= gateStart && event.phase === 'gate.waiting' && event.sessionID === 'after-write');
   const children = (await client.session.children({ path: { id: parent.id } })).data;
