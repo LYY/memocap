@@ -19,5 +19,5 @@ export function complete(messages, userID) {
   return latest?.info.id === userID && assistant?.role === "assistant" && assistant.parentID === userID &&
     Boolean(assistant.time.completed) && assistant.finish === "stop" && !assistant.error &&
     !messages.filter((message) => message.info.parentID === userID).some((message) => message.info.error ||
-      message.parts.some((part) => part.type === "tool" && ["pending", "running", "error"].includes(part.state.status)));
+      message.parts.some((part) => part.type === "tool" && ["pending", "running"].includes(part.state.status)));
 }

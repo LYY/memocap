@@ -1,14 +1,20 @@
 import { CaptureStop } from "./contract.js";
+import { performance } from 'node:perf_hooks';
 
 export function createLifecycle(abort) {
   const parents = new Map();
   const workers = new Map();
   let generation = 0;
   function invalidate(turn, reason) {
+    turn?.observation?.abort();
     if (!turn || turn.phase === "writing" || turn.phase === "finished" || turn.reason) return;
     turn.reason = reason;
     turn.controller.abort();
-    for (const childID of turn.children) abort(childID);
+    for (const childID of turn.children) {
+      const worker = workers.get(childID);
+      if (worker) { delete worker.messageInput; delete worker.systemInput; }
+      abort(childID);
+    }
   }
   function observe(input, output) {
     if (workers.has(input.sessionID) || output.message.role !== "user" ||
@@ -28,6 +34,7 @@ export function createLifecycle(abort) {
     }
   }
   function check(turn) {
+    if (turn.executionDeadline !== undefined && performance.now() >= turn.executionDeadline) invalidate(turn, 'capture_timeout');
     if (turn.reason || parents.get(turn.parentID) !== turn) throw new CaptureStop(turn.reason ?? "new_input");
   }
   function event(event) {
@@ -69,7 +76,7 @@ export function createLifecycle(abort) {
       turn.phase = "finished";
       for (const id of turn.children) {
         const worker = workers.get(id);
-        if (worker) worker.closed = true;
+        if (worker) { worker.closed = true; delete worker.messageInput; delete worker.systemInput; }
       }
     },
     writing(turn) { check(turn); turn.phase = "writing"; turn.write_attempts = 1; },

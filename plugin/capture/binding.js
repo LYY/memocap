@@ -1,14 +1,17 @@
 import { CaptureStop, data } from "./contract.js";
+import { createCaptureInputGuard } from "./input.js";
+import { observationHash } from "./observed/value.js";
 import { permissionSnapshot } from "./permission.js";
 
-export function createBinding({ client, runtime, operations, lifecycle }) {
+export function createBinding({ client, runtime, operations, lifecycle, observed }) {
   function params(input, output) {
     const worker = lifecycle.workers.get(input.sessionID);
     if (!worker) return;
     if (worker.closed) throw new CaptureStop("worker_closed");
     const turn = worker.turn;
     lifecycle.check(turn);
-    if (turn.model_calls >= 3) throw new CaptureStop("model_budget");
+    if (turn.model_calls >= 3 || (worker.admissions ?? 0) >= (worker.stage === 'extract' ? 2 : 1)) throw new CaptureStop("model_budget");
+    worker.admissions = (worker.admissions ?? 0) + 1;
     turn.model_calls++;
     output.maxOutputTokens = Math.min(output.maxOutputTokens ?? 1024, 1024);
   }
@@ -49,11 +52,16 @@ export function createBinding({ client, runtime, operations, lifecycle }) {
       }
       const childState = await runtime.context(context.sessionID);
       childState.targets = turn.targets;
+      const checkSource = () => {
+        const current = observed.snapshot(turn.parentID, turn.userID);
+        if (current.findLast((message) => message.info.role === "user")?.info.id !== turn.userID) throw new CaptureStop("new_input");
+        if (observationHash(current) !== turn.observationHash) throw new CaptureStop("source_changed");
+        if (turn.frameHash && observationHash(observed.frame(turn.parentID, turn.userID, turn.origin)) !== turn.frameHash) throw new CaptureStop('source_changed');
+      };
       const guard = async (phase) => {
         lifecycle.check(turn);
         await permissionSnapshot(client, turn);
-        const current = data(await client.session.messages({ path: { id: turn.parentID }, signal: turn.controller.signal }));
-        if (current.findLast((message) => message.info.role === "user")?.info.id !== turn.userID) throw new CaptureStop("new_input");
+        checkSource();
         lifecycle.check(turn);
         checkedPhase = phase;
       };
@@ -62,6 +70,7 @@ export function createBinding({ client, runtime, operations, lifecycle }) {
         beforeSpawn() {
           lifecycle.check(turn);
           if (turn.parentState.generation !== turn.runtimeGeneration) throw new CaptureStop("new_input");
+          checkSource();
           lifecycle.writing(turn);
         } });
       const native = await frozen.execute();
@@ -88,5 +97,5 @@ export function createBinding({ client, runtime, operations, lifecycle }) {
     if (worker && !worker.closed && !worker.turn.commitPending) worker.turn.commitPending = pending;
     return pending;
   }
-  return { params, before, execute, owns: (id) => lifecycle.workers.has(id) };
+  return { ...createCaptureInputGuard(lifecycle), params, before, execute, owns: (id) => lifecycle.workers.has(id) };
 }

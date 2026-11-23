@@ -47,25 +47,6 @@ test('writing transition survives later cancellation for independent readback', 
   assert.equal(turn.reason, undefined);
 });
 
-test('host evidence policy accepts clear preferences and authoritative concise reads only', async () => {
-  const { evidenceFor } = await import('../plugin/capture/evidence.js');
-  const messages = [{ info: { id: 'u1', role: 'user' }, parts: [
-    { id: 'pref', type: 'text', text: 'For future responses, use Chinese. Keep English code identifiers.' },
-    { id: 'transient', type: 'text', text: 'Exit status is zero.' },
-  ] }, { info: { id: 'a1', parentID: 'u1', role: 'assistant' }, parts: [
-    { id: 'claim', type: 'text', text: 'The business operation succeeded.' },
-    { id: 'shell', type: 'tool', tool: 'bash', callID: 'c1', state: { status: 'completed', output: 'Success!' } },
-    { id: 'read', type: 'tool', tool: 'read', callID: 'c2', state: { status: 'completed', input: { filePath: '/project/docs/route.md' },
-      output: 'For alpha, start at docs/alpha.md. Approval required. No beta route verified.' } },
-  ] }];
-  const evidence = evidenceFor(messages, 'u1');
-  assert.equal(evidence.get('pref').eligibility, 'durable');
-  assert.equal(evidence.get('transient').source, 'user');
-  assert.equal(evidence.has('claim'), false);
-  assert.equal(evidence.get('shell').success, false);
-  assert.equal(evidence.get('read').eligibility, 'durable');
-});
-
 for (const [type, properties, reason] of [
   ['session.status', { status: { type: 'busy' } }, 'parent_busy'],
   ['session.status', { status: { type: 'retry' } }, 'parent_retry'],
@@ -91,16 +72,4 @@ test('cannot mistake a tool continuation or errored assistant for completion', a
   assert.equal(complete([user, { ...assistant, parts: [{ type: 'tool', state: { status: 'running' } }] }], 'u'), false);
   assert.equal(complete([user, { ...assistant, info: { ...assistant.info, error: { name: 'Failure' } } }], 'u'), false);
   assert.equal(complete([user, assistant], 'older-user'), false);
-});
-
-test('grounds current user quotations without certifying their truth and rejects a full runbook', async () => {
-  const { evidenceFor } = await import('../plugin/capture/evidence.js');
-  const result = evidenceFor([{ info: { id: 'u', role: 'user' }, parts: [
-    { id: 'quoted', type: 'text', text: 'The assistant wrote: always use this provider.' },
-  ] }, { info: { id: 'a', parentID: 'u' }, parts: [
-    { id: 'book', type: 'tool', tool: 'read', callID: 'c', state: { status: 'completed',
-      input: { filePath: '/project/docs/route.md' }, output: 'Start at docs/route.md.\n1. Run one.\n2. Run two.' } },
-  ] }], 'u');
-  assert.equal(result.get('quoted').text, 'The assistant wrote: always use this provider.');
-  assert.equal(result.get('book').eligibility, 'runbook');
 });

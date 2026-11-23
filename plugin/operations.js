@@ -178,15 +178,17 @@ export function createOperations(runtime, rememberHooks = {}) {
       const receipts = [];
       for (const target of await runtime.selected(state)) receipts.push(await request(state, ["status", "--read-only", ...repoArgs([target])], context));
       return { status: "ok", plugin_version: packageVersion, targets: state.targets, receipts,
-        current: state.last ?? { status: "not_run" }, capture: runtime.captureStatus?.(state.sessionID), warnings: runtime.warnings };
+        current: state.last ?? { status: "not_run" }, capture: runtime.captureStatus?.(state.sessionID),
+        maintenance: runtime.maintenanceStatus?.(state.sessionID), warnings: runtime.warnings };
     }
     if (command === "scopes") return request(state, ["scope", "list", "--all"], context);
     if (command === "recent") return request(state, ["activity", "list", "--writes", "--limit", "20", "--session", state.sessionID], context);
     if (command === "why") {
       const operationID = state.last?.activity_operation_id ?? state.last?.operation_id;
       const capture = runtime.captureStatus?.(state.sessionID);
-      if (!operationID) return { status: "not_run", current: state.last ?? { status: "not_run" }, capture };
-      return { ...await request(state, ["activity", "show", operationID], context), current: state.last, capture };
+      const maintenance = runtime.maintenanceStatus?.(state.sessionID);
+      if (!operationID) return { status: "not_run", current: state.last ?? { status: "not_run" }, capture, maintenance };
+      return { ...await request(state, ["activity", "show", operationID], context), current: state.last, capture, maintenance };
     }
     if (command === "list") {
       const [placement, offset = "0"] = argument;
