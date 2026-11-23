@@ -91,6 +91,9 @@ pub(super) fn record(database: &std::path::Path, pending: Pending, outgoing: &Ou
         WriteAction::Remember => decoded["id"].as_i64(),
         WriteAction::Forget => pending.memory_id,
         WriteAction::Copy | WriteAction::Move => decoded["result"]["memory_id"].as_i64(),
+        WriteAction::MaintainUpdate | WriteAction::MaintainMerge | WriteAction::MaintainDelete => {
+            return;
+        }
     };
     let event = ActivityEvent {
         operation_id: pending.id,

@@ -15,14 +15,15 @@ remote operation are documented in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Install
 
-Install the v0.6.0 CLI, OpenCode plugin, and runtime skill for your user:
+Install the v0.7.0 CLI, OpenCode plugin, and runtime skill for your user:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.6.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.7.0 memocap-setup install --global --yes --json
 ```
 
-Requires Node.js 22.20 or later, npm/npx, and OpenCode 1.19.3 or 1.19.5. The
-plugin SDK is pinned to 1.19.3. The package contains the complete skill and its
+Requires Node.js 22.20 or later, npm/npx, and OpenCode v1. The
+plugin SDK is pinned to 1.19.3; this is not a host version requirement. The
+package contains the complete skill and its
 references. Setup copies it into the selected
 OpenCode config root, then points both the plugin and `skills.paths` at that same
 managed directory. The default path does not use Git or the `skills` CLI, though
@@ -43,7 +44,7 @@ Global `--repo <PATH>` selects a concrete repository instead of the working
 directory; repeat it for recall or `scope resolve`, up to eight targets. Alternatively use
 `--repository-id <ID>` for explicit ID-only selection, mutually exclusive with
 `--repo`. Writes have one target. Global `--json` returns a format-1 receipt for automation; it is not
-supported by `serve` or `ui`. Package `0.6.0`, core schema `2.3`, and receipt
+supported by `serve` or `ui`. Package `0.7.0`, core schema `2.3`, and receipt
 format `1` are independent identities.
 
 ```text
@@ -347,7 +348,7 @@ an equivalent trusted encrypted network boundary; set `MEMOCAP_ADDR` to its
 `https://` endpoint. Do not publish the raw HTTP port on all host interfaces.
 
 Current JSON operations check the server version through `/v1/capabilities`,
-then use `/v1/receipt`. CLI and server must match version 0.6.0 before mutation;
+then use `/v1/receipt`. CLI and server must match version 0.7.0 before mutation;
 there is no old-request fallback or new capability negotiation. See [DEPLOYMENT.md](docs/DEPLOYMENT.md)
 for the route list, trust boundary, Compose setup, and recovery procedure.
 Remote requests carry a valid remote scope ID, and the server strictly validates
@@ -387,7 +388,7 @@ its required index without changing memory IDs or placements. Schemas `2.1`, `2.
 and malformed databases are refused without reset. Back up with SQLite's backup
 API or another WAL-aware method before the `2.2` upgrade. Changing package
 versions does not change or restore database data. Never restore an older backup
-over newer data. Package `0.6.0`, schema `2.3`, and receipt format `1` are
+over newer data. Package `0.7.0`, schema `2.3`, and receipt format `1` are
 independent identities.
 
 ## Compare

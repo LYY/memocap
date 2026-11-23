@@ -26,6 +26,12 @@ automatically create, change, or remove npm trust relationships.
 
 ## Product Evolution
 
+Production gates OpenCode by major version only: v1. Fix actual behavioral
+issues as they arise. Before narrowing this requirement, document the reason,
+scope, and impact, and obtain user approval. Fixed versions used for
+reproducible tests, CI, and QA artifacts, and the SDK dependency lock, are not
+host runtime prerequisites.
+
 memocap currently serves one user on one machine, and that user installs the
 latest version after each update. Future proposals and implementation should
 optimize the current design. Avoid speculative compatibility for superseded

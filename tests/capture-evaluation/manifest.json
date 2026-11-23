@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "base_sha": "905a066aa4e67e9932e0f2af135aaa1cf170ad37",
+  "tag": "v0.6.0",
+  "hash_algorithm": "sha256",
+  "hash_input": "exact file bytes, UTF-8, no canonicalization",
+  "files": {
+    "tuning.json": "eed4003f644f239ee85ed6f2d85443be97925a4169e04eefd53d9b4eb3c39620",
+    "holdout.json": "39b136874542635cb1547c424c2e3e0b7bdb6dd55b91a651ede505904318ab1e"
+  },
+  "planned_denominators": {
+    "tuning": {"capture": 16, "capture_save": 8, "capture_skip": 8, "maintenance": 12, "authorized_maintenance": 2, "source_loss_unknown": 4},
+    "holdout": {"capture": 4, "capture_save": 2, "capture_skip": 2, "maintenance": 4, "authorized_maintenance": 1, "source_loss_unknown": 1}
+  },
+  "quality_status": "not_run",
+  "holdout_evaluation_status": "sealed",
+  "independent_gold_review": "pending",
+  "thresholds_and_new_budgets": "not_selected"
+}

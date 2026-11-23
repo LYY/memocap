@@ -1,15 +1,17 @@
 import { tool } from "@opencode-ai/plugin";
 import { failure } from "./protocol.js";
+import { maintenanceTool } from "./maintenance/tool.js";
 
 function toolOutput(payload) {
   const output = JSON.stringify(payload);
   return { title: `memocap: ${payload.status}`, output, metadata: { status: payload.status, memocap_complete_output: output } };
 }
 
-export function createTools(operations, capture) {
+export function createTools(operations, capture, maintenance) {
   function permitted(name, schema, description) {
     return tool({ description, args: schema,
       async execute(args, context) {
+        if (maintenance?.owns(context.sessionID)) return toolOutput({ status: "blocked", error: { code: "unbound_tool" } });
         if (capture?.owns(context.sessionID)) {
           if (name !== "remember") return toolOutput({ status: "blocked", error: { code: "unbound_tool" } });
           return toolOutput(await capture.execute(args, context));
@@ -18,6 +20,7 @@ export function createTools(operations, capture) {
         if (!parsed.success) return toolOutput({ status: "failed", error: { code: "invalid_request" } });
         if (parsed.data.tags) Object.freeze(parsed.data.tags);
         Object.freeze(parsed.data);
+        const observeRead = name === 'read' ? capture?.read?.(context) : undefined;
         if ((name === "scope" && ((parsed.data.paths === undefined) === (parsed.data.repository_ids === undefined)))) {
           return toolOutput({ status: "failed", error: { code: "invalid_request" } });
         }
@@ -33,7 +36,12 @@ export function createTools(operations, capture) {
           if (!["recall", "read"].includes(name)) await context.ask({ permission: `memocap_${name}`, patterns: ids, always: ids,
             metadata: { operation: name, targets, placement: args.universal ? "universal" : args.domain ? `domain:${args.domain}` : "repository" } });
         } catch { return toolOutput({ status: "denied", operation: name, targets }); }
-        try { return toolOutput(await operations[name](parsed.data, { ...context, approvedTargets: targets })); }
+        try {
+          const receipt = await operations[name](parsed.data, { ...context, approvedTargets: targets });
+          const registered = name === 'read' && maintenance ? await maintenance.registerRead(receipt, parsed.data, context) : receipt;
+          observeRead?.(registered, parsed.data);
+          return toolOutput(registered);
+        }
         catch (error) { return toolOutput(error?.status === "blocked" ? { status: "denied", error: { code: error.code } } : failure(error)); }
       },
     });
@@ -41,12 +49,14 @@ export function createTools(operations, capture) {
 
   const text = tool.schema.string().min(1);
   return {
+    ...(maintenance ? { memocap_maintain: maintenanceTool({ execute: (args, context) => capture?.owns(context.sessionID) && !maintenance.owns(context.sessionID) ?
+      { status: "blocked", error: { code: "unbound_tool" } } : maintenance.execute(args, context) }) } : {}),
     ...(operations.organization ? { memocap_organize: tool({
       description: "Page/read complete local organization snapshots, or apply one concretely user-confirmed group. Read instruction_pointer first; use preview database identity on later calls. Apply requires confirmed=true plus host permission; unknown outcomes must never be replayed.",
       args: { operation: tool.schema.enum(["page", "read", "apply"]), request: text,
         database: text.optional(), confirmed: tool.schema.boolean().optional() },
       async execute(args, context) {
-        if (capture?.owns(context.sessionID)) return toolOutput({ status: "blocked", error: { code: "unbound_tool" } });
+        if (capture?.owns(context.sessionID) || maintenance?.owns(context.sessionID)) return toolOutput({ status: "blocked", error: { code: "unbound_tool" } });
         return toolOutput(await operations.organization.permitted(args, context));
       },
     }) } : {}),

@@ -225,7 +225,10 @@ export function createBridge({ launcher = bundledLauncher, executable } = {}) {
         throw new BridgeError("cli_failed", "CLI version handshake failed", handshake);
       }
       checkVersion(/^memocap\s+(\S+)\s*$/.exec(handshake.stdout)?.[1], "handshake", handshake);
-      const commandArgv = argv.includes("--json") ? [...argv] : [...argv, "--json"];
+      const separator = argv.indexOf("--");
+      const optionEnd = separator === -1 ? argv.length : separator;
+      const commandArgv = [...argv];
+      if (!argv.slice(0, optionEnd).includes("--json")) commandArgv.splice(optionEnd, 0, "--json");
       const output = await runProcess({ ...request, argv: commandArgv, stdin, beforeSpawn, phase: "command" });
       return { receipt: commandReceipt(output), stderr: output.stderr, exitCode: output.exitCode };
     },

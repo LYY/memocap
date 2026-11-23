@@ -1,7 +1,7 @@
 # Schema Versioning Contract
 
-Updated 2026-11-11. This document defines the SQLite lifecycle contract for
-package `0.6.0`. Package `0.6.0`, database schema `2.3`, setup manifest format `2`, and receipt
+Updated 2026-11-16. This document defines the SQLite lifecycle contract for
+package `0.7.0`. Package `0.7.0`, database schema `2.3`, setup manifest format `2`, and receipt
 `format_version: 1` are independent identities. This contract does not claim
 that the package has been published.
 
@@ -50,8 +50,9 @@ main database. There is no blanket cleanup action.
 ## Opening and Inspection
 
 Read-write preparation creates a missing database directly at schema `2.3`.
-It upgrades only the exact supported schema `2.2` used by the currently installed
-package `0.5.0`, as specified below.
+It upgrades only the exact supported schema `2.2` to `2.3`, as specified below.
+Schema `2.2` is the historical schema used by package `0.5.0`; the currently
+installed package `0.6.0` uses schema `2.3`.
 
 `memocap status --read-only --json` inspects without running lifecycle
 transitions. Its successful format-1 receipt reports:
@@ -85,8 +86,8 @@ server's configured main database.
 
 ## The 2.2 to 2.3 Upgrade
 
-The only supported migration is exact schema `2.2` to `2.3`. The installed
-`0.5.0` schema has a closed `activity_events.phase` CHECK allowing only `write`,
+The only supported migration is exact schema `2.2` to `2.3`. The historical
+package `0.5.0` schema has a closed `activity_events.phase` CHECK allowing only `write`,
 `recall`, `injection_prepared`, and `injection_observed`. Schema `2.3` adds
 `capture_review` to that closed set. The prior DDL is retained explicitly for
 validation and the real `2.2` fixture; inspection never silently substitutes a
@@ -124,13 +125,16 @@ pre-versioned, malformed, unknown, future, different-major, or otherwise
 unsupported schema is refused without changing its rows or schema. There is no
 automatic reset, core-table rebuild, export/import, or fallback migration.
 
-The actual immediate-prior `0.5.0` CLI can report `ready`/`2.2` during installation
-preflight. Target readiness requires the selected `0.6.0` CLI and an independent
-`ready`/`2.3` readback with activity ready after authorized preparation. The new
-schema implementation reports `upgrade_needed`/`2.2` until preparation completes.
-This is an immediate-prior installation path, not an old-binary interoperability
-promise or a chain of migrations. Package-version changes are a separate release
-preparation step; this schema work alone does not claim a `0.6.0` release.
+For the current managed update, the installed package `0.6.0` CLI must report
+`ready`/`2.3` during setup preflight. Target readiness requires the selected exact
+`0.7.0` CLI and an independent `ready`/`2.3` readback with activity ready. A valid
+ready `2.3` database needs no schema preparation for this package update; its
+database data remains unchanged, and unrelated configuration and existing
+permissions are retained. Check, doctor, and setup dry-run do not initialize,
+migrate, prune, or record activity. Exact schema `2.2` still reports
+`upgrade_needed` until separately authorized preparation. This immediate-prior
+installer path does not promise old-binary interoperability or recovery from
+older managed installers.
 
 ## Organization Lifecycle
 

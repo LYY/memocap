@@ -279,14 +279,16 @@ fn scope_with_injected_legacy_cleanup_failure(cwd: &Path) -> anyhow::Result<scop
         .ok_or_else(|| anyhow::anyhow!("git executable is unavailable"))?;
     let shim_directory = test_directory();
     let shim = shim_directory.path().join("git");
-    symlink(real_git, shim_directory.path().join("real-git"))?;
+    let pass_through = shim_directory.path().join("pass-through");
+    fs::create_dir(&pass_through)?;
+    symlink(real_git, pass_through.join("git"))?;
     fs::write(
         &shim,
         "#!/bin/sh\n\
          if [ \"$1\" = \"config\" ] && [ \"$2\" = \"--local\" ] && [ \"$3\" = \"--unset-all\" ] && [ \"$4\" = \"memocap.scope-id\" ]; then\n\
              exit 1\n\
          fi\n\
-         exec \"$(dirname \"$0\")/real-git\" \"$@\"\n",
+         exec \"$(dirname \"$0\")/pass-through/git\" \"$@\"\n",
     )?;
     let mut permissions = fs::metadata(&shim)?.permissions();
     permissions.set_mode(0o755);

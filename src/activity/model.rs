@@ -117,6 +117,9 @@ pub enum WriteAction {
     Forget,
     Copy,
     Move,
+    MaintainUpdate,
+    MaintainMerge,
+    MaintainDelete,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

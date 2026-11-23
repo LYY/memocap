@@ -2,6 +2,7 @@ mod apply;
 mod database;
 mod error;
 mod ids;
+mod maintenance;
 mod model;
 mod reads;
 mod request;
@@ -9,6 +10,7 @@ mod request;
 pub use apply::apply;
 pub use error::{Error, Result};
 pub use ids::{MemoryId, UpperId};
+pub use maintenance::maintain;
 pub use model::{
     Action, Applied, Key, Output, Page, Provenance, Read, ReadRecord, Snapshot, SourceKind,
 };

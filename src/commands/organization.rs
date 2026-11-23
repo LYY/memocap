@@ -20,6 +20,8 @@ pub(crate) enum Command {
     Read,
     /// Apply one confirmed atomic group. JSON stdin: mode, group, dependencies.
     Apply,
+    /// Execute one already-authorized local maintenance group. Strict ApplyRequest JSON stdin.
+    Maintain,
 }
 
 impl Command {
@@ -28,6 +30,7 @@ impl Command {
             Self::Page => "organize_page",
             Self::Read => "organize_read",
             Self::Apply => "organize_apply",
+            Self::Maintain => "organize_maintain",
         }
     }
 }
@@ -36,7 +39,7 @@ pub(crate) fn run(command: Command, options: &crate::Cli) -> Result<()> {
     let start = Instant::now();
     let mut receipt = Receipt::new(command.name());
     receipt.caller = options.caller_json.clone().unwrap_or_default();
-    let result = execute(command, options);
+    let result = execute(command, options, &mut receipt);
     match result {
         Ok(output) => {
             receipt.returned_ids = match &output {
@@ -101,7 +104,11 @@ pub(crate) fn run(command: Command, options: &crate::Cli) -> Result<()> {
     Ok(())
 }
 
-fn execute(command: Command, options: &crate::Cli) -> organization::Result<Output> {
+fn execute(
+    command: Command,
+    options: &crate::Cli,
+    receipt: &mut Receipt,
+) -> organization::Result<Output> {
     if !options.repo.is_empty()
         || !options.repository_id.is_empty()
         || options.targets_json.is_some()
@@ -120,13 +127,24 @@ fn execute(command: Command, options: &crate::Cli) -> organization::Result<Outpu
     if !options.json {
         return Err(Error::before(
             "invalid_arguments",
-            "use memocap organize page|read|apply --json with a JSON object on stdin",
+            "use memocap organize page|read|apply|maintain --json with a JSON object on stdin",
         ));
     }
     let mut input = String::new();
+    let limit = match command {
+        Command::Maintain => 65_537,
+        Command::Page | Command::Read | Command::Apply => u64::MAX,
+    };
     io::stdin()
+        .take(limit)
         .read_to_string(&mut input)
         .map_err(|error| Error::before("invalid_request", error))?;
+    if matches!(command, Command::Maintain) && input.len() > 65_536 {
+        return Err(Error::before(
+            "invalid_request",
+            "maintenance request exceeds 65536 bytes",
+        ));
+    }
     let database = Paths::discover()
         .map_err(|error| Error::before("not_initialized", error))?
         .database;
@@ -134,6 +152,9 @@ fn execute(command: Command, options: &crate::Cli) -> organization::Result<Outpu
         Command::Page => organization::page(&database, &parse(&input)?).map(Output::Page),
         Command::Read => organization::read(&database, &parse(&input)?).map(Output::Read),
         Command::Apply => organization::apply(&database, &parse(&input)?).map(Output::Apply),
+        Command::Maintain => {
+            organization::maintain(&database, &parse(&input)?, receipt).map(Output::Apply)
+        }
     }
 }
 

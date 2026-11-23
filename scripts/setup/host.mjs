@@ -1,16 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
+import { isSupportedHost } from "../../lib/opencode-host.js";
 import { SetupError } from "./arguments.mjs";
 import { readJSON } from "./files.mjs";
 import { checked, executable, launcherScript } from "./process.mjs";
 
-export function isSupportedHost(version) {
-  return version === "1.19.3" || version === "1.19.5";
-}
+export { isSupportedHost };
 
 export function inspectHost(runtime) {
   const filename = executable("opencode", runtime.env);
-  if (!filename) throw new SetupError("missing_host", "OpenCode 1.19.3 or 1.19.5 must already be installed and available on PATH");
+  if (!filename) throw new SetupError("missing_host", "OpenCode v1 must already be installed and available on PATH");
   const real = fs.realpathSync(filename);
   const target = /\.(cmd|bat)$/i.test(real) ? launcherScript(real) : real;
   let directory = target && path.dirname(target);
@@ -26,7 +25,7 @@ export function inspectHost(runtime) {
 }
 
 export async function verifyHost(runtime, host) {
-  const version = host.version || await checked(runtime, host.executable_path, ["--version"]);
-  if (!isSupportedHost(version)) throw new SetupError("unsupported_host", `Verified OpenCode versions are 1.19.3 and 1.19.5; found ${version}`);
+  const version = host.version ?? await checked(runtime, host.executable_path, ["--version"]);
+  if (!isSupportedHost(version)) throw new SetupError("unsupported_host", `Expected a valid OpenCode v1 version; found ${JSON.stringify(version)}`);
   return version;
 }

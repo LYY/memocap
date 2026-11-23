@@ -50,7 +50,7 @@ function lifecycleFixture(workspace, evidence) {
     return result;
   }
 
-  async function prepare() {
+  async function prepare({ installPackagedHost = true } = {}) {
     const native = path.resolve(process.env.MEMOCAP_TEST_NATIVE || path.join(workspace, "target/debug", process.platform === "win32" ? "memocap.exe" : "memocap"));
     const nativeVersion = (await run(native, ["--version"])).stdout.trim();
     assert.equal(nativeVersion, `memocap ${version}`, "build the current native version before packaging");
@@ -95,15 +95,17 @@ function lifecycleFixture(workspace, evidence) {
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     env.npm_config_registry = `http://127.0.0.1:${server.address().port}`;
     evidence.registry_requests = requests;
-    await command("npm", ["install", "--global", "--prefix", tools, "opencode-ai@1.19.3", "--registry", "https://registry.npmjs.org"],
-      { env: { MEMOCAP_LINK_PHASE: "official-host-bootstrap" } });
-    const hostRoot = path.join(tools, process.platform === "win32" ? "node_modules" : "lib/node_modules");
-    const hostPlatform = { "darwin-arm64": "opencode-darwin-arm64", "linux-x64": "opencode-linux-x64", "win32-x64": "opencode-windows-x64" }[`${process.platform}-${process.arch}`];
-    host = path.join(hostRoot, "opencode-ai/node_modules", hostPlatform, "bin", process.platform === "win32" ? "opencode.exe" : "opencode");
-    if (!fs.existsSync(host)) host = path.join(hostRoot, hostPlatform, "bin", process.platform === "win32" ? "opencode.exe" : "opencode");
-    assert.ok(fs.existsSync(host), `official native host missing: ${host}`);
-    assert.equal((await run(host, ["--version"])).stdout.trim(), "1.19.3");
-    evidence.host = { version: "1.19.3", sha256: digest(fs.readFileSync(host)), origin: "official_opencode_ai_npm_platform_dependency" };
+    if (installPackagedHost) {
+      await command("npm", ["install", "--global", "--prefix", tools, "opencode-ai@1.19.3", "--registry", "https://registry.npmjs.org"],
+        { env: { MEMOCAP_LINK_PHASE: "official-host-bootstrap" } });
+      const hostRoot = path.join(tools, process.platform === "win32" ? "node_modules" : "lib/node_modules");
+      const hostPlatform = { "darwin-arm64": "opencode-darwin-arm64", "linux-x64": "opencode-linux-x64", "win32-x64": "opencode-windows-x64" }[`${process.platform}-${process.arch}`];
+      host = path.join(hostRoot, "opencode-ai/node_modules", hostPlatform, "bin", process.platform === "win32" ? "opencode.exe" : "opencode");
+      if (!fs.existsSync(host)) host = path.join(hostRoot, hostPlatform, "bin", process.platform === "win32" ? "opencode.exe" : "opencode");
+      assert.ok(fs.existsSync(host), `official native host missing: ${host}`);
+      assert.equal((await run(host, ["--version"])).stdout.trim(), "1.19.3");
+      evidence.host = { version: "1.19.3", sha256: digest(fs.readFileSync(host)), origin: "official_opencode_ai_npm_platform_dependency" };
+    }
     const asset = { "darwin-arm64": "memocap-aarch64-apple-darwin", "linux-x64": "memocap-x86_64-unknown-linux-gnu", "win32-x64": "memocap-x86_64-pc-windows-msvc.exe" }[`${process.platform}-${process.arch}`];
     const cacheBase = process.platform === "darwin" ? path.join(home, "Library/Caches") : process.platform === "win32" ? env.LOCALAPPDATA : env.XDG_CACHE_HOME;
     const cached = path.join(cacheBase, "memocap", version, asset);
@@ -118,7 +120,7 @@ function lifecycleFixture(workspace, evidence) {
       if (process.platform !== "win32") fs.chmodSync(path.join(guards, name), 0o755);
     }
     const runnerPrefix = path.join(root, "runner");
-    await command("npm", ["install", "--prefix", runnerPrefix, "--ignore-scripts", tarball]);
+    await command("npm", ["install", "--prefix", runnerPrefix, "--ignore-scripts", tarball, "--registry", "https://registry.npmjs.org"]);
     return { payload, tarball, runnerRoot: path.join(runnerPrefix, "node_modules/@lyy-gh/memocap"), host };
   }
 
