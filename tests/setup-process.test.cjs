@@ -56,7 +56,9 @@ test("Windows resolves npm Node shims before extensionless shell launchers and p
 });
 
 test("core installs a local packed fixture through a real isolated npm prefix and reads the executable", async (context) => {
+  const tmpdir = process.platform === "win32" ? null : context.mock.method(require("node:os"), "tmpdir", () => "/tmp");
   const f = fixture(context, { metadata: "native" });
+  tmpdir?.mock.restore();
   assert.equal(Object.hasOwn(f.runtime, "policyMetadata"), false);
   const { runProcess, executable } = await import("../scripts/setup/process.mjs");
   fs.mkdirSync(path.join(f.packageRoot, "bin"));

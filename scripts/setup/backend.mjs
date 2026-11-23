@@ -27,14 +27,14 @@ function receiptJSON(execution) {
   }
 }
 
-function validateInspection(receipt, status, priorProducer) {
+function validateInspection(receipt, status) {
   const inspection = receipt?.inspection;
   if (receipt?.format_version !== 1 || receipt.status !== "ok" || receipt.backend !== status.backend || !inspection ||
       receipt.origin !== (status.backend === "local" ? "cli" : "server") ||
       (inspection.activity_error !== null && typeof inspection.activity_error !== "string") ||
       (inspection.activity_status === "degraded" ? !inspection.activity_error : inspection.activity_error !== null) ||
       !Array.isArray(inspection.capabilities) || inspection.capabilities.some((name) => typeof name !== "string") ||
-      !validSchemaState(inspection, priorProducer) || !capabilities.every((name) => inspection.capabilities.includes(name))) {
+      !validSchemaState(inspection) || !capabilities.every((name) => inspection.capabilities.includes(name))) {
     throw new SetupError("backend_incompatible", "Backend inspection does not satisfy the single-database contract");
   }
   return inspection;
@@ -47,14 +47,14 @@ function validVisible(inspection) {
     Number.isSafeInteger(visible.effective_total) && visible.effective_total >= 0 && visible.effective_total <= visible.addressable_total;
 }
 
-function validSchemaState(inspection, priorProducer) {
+function validSchemaState(inspection) {
   switch (inspection.core_status) {
     case "not_initialized":
       return inspection.schema_version === null && inspection.visible === null && inspection.activity_status === "not_initialized";
     case "upgrade_needed":
       return inspection.schema_version === "2.2" && inspection.visible === null && inspection.activity_status === "upgrade_needed";
     case "ready": {
-      return (inspection.schema_version === "2.3" || (priorProducer && inspection.schema_version === "2.2")) &&
+      return inspection.schema_version === "2.3" &&
         validVisible(inspection) &&
         ["ready", "degraded"].includes(inspection.activity_status);
     }
@@ -94,8 +94,7 @@ async function inspectBackend(context, status) {
   const execution = await runtime.run(status.executable_path, ["status", "--read-only", "--json"], { env: runtime.env, cwd: runtime.cwd });
   const receipt = receiptJSON(execution);
   if (execution.code !== 0) throw new SetupError("backend_inspection_failed", "Backend read-only inspection failed", { backend_code: receipt?.error?.code || null });
-  const priorProducer = status.backend === "local" && context.report.shared_cli.version === "0.5.0" && context.target === "0.6.0";
-  const inspection = validateInspection(receipt, status, priorProducer);
+  const inspection = validateInspection(receipt, status);
   const token = runtime.env.MEMOCAP_TOKEN;
   if (token && inspection.activity_error) inspection.activity_error = inspection.activity_error.replaceAll(token, "[redacted]");
   const readySchemaStatus = inspection.schema_version === "2.3" ? "compatible" : "upgrade_needed";

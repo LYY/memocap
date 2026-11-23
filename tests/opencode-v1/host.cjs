@@ -80,16 +80,17 @@ async function wireProvider(options = {}) {
       const step = options.emptyCaptureExtraction && captureExtraction(body)
         ? { text: JSON.stringify({ candidates: [] }) }
         : responses.shift() || { text: 'Local wire fixture completed.' };
-      const delta = step.tool ? { role: 'assistant', tool_calls: [{ index: 0,
-        id: `call_${requests.length}`, type: 'function', function: {
-          name: step.tool, arguments: JSON.stringify(step.args),
-        } }] } : { role: 'assistant', content: step.text };
+       const calls = step.tools ?? (step.tool ? [step] : []);
+       const delta = calls.length ? { role: 'assistant', tool_calls: calls.map((call, index) => ({ index,
+         id: `call_${requests.length}${index ? `_${index}` : ''}`, type: 'function', function: {
+           name: call.tool, arguments: JSON.stringify(call.args),
+         } })) } : { role: 'assistant', content: step.text };
       response.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
       const event = (value) => response.write(`data: ${JSON.stringify(value)}\n\n`);
       const common = { id: `chatcmpl_${requests.length}`, object: 'chat.completion.chunk',
         created: 1700000000, model: 'wire-model' };
       event({ ...common, choices: [{ index: 0, delta, finish_reason: null }] });
-      event({ ...common, choices: [{ index: 0, delta: {}, finish_reason: step.tool ? 'tool_calls' : 'stop' }],
+       event({ ...common, choices: [{ index: 0, delta: {}, finish_reason: calls.length ? 'tool_calls' : 'stop' }],
         usage: { prompt_tokens: 10, completion_tokens: 2, total_tokens: 12 } });
       response.end('data: [DONE]\n\n');
     } catch (error) {

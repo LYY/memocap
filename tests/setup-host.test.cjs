@@ -7,7 +7,7 @@ const test = require("node:test");
 const { fixture } = require("./setup-fixtures.cjs");
 const { snapshot } = require("./packaged-runtime.cjs");
 
-for (const version of ["1.19.3", "1.19.5"]) for (const origin of ["native", "homebrew"]) test(`readonly prerequisites accept tested ${origin} host ${version}`, async (context) => {
+for (const version of ["1.19.3", "1.19.5", "1.20.0"]) for (const origin of ["native", "homebrew"]) test(`readonly prerequisites accept ${origin} host ${version}`, async (context) => {
   const setup = fixture(context);
   const { prerequisites } = await import("../scripts/setup/packages.mjs");
   const directory = path.join(setup.root, "host");
@@ -26,7 +26,11 @@ for (const version of ["1.19.3", "1.19.5"]) for (const origin of ["native", "hom
   assert.deepEqual(snapshot([setup.root]), before);
 });
 
-for (const version of ["1.19.3", "1.19.5", "1.19.4", "1.19.6", "1.20.0"]) for (const metadata of [true, false]) test(`authorized verification ${metadata ? "metadata" : "execution"} handles exact host ${version}`, async () => {
+for (const [version, supported] of [
+  ["1.19.3", true], ["1.19.5", true], ["1.19.4", true], ["1.19.6", true], ["1.20.0", true],
+  ["1.0.0-rc.1+build.007", true], ["0.20.0", false], ["2.0.0-rc.1", false],
+  ["1.20", false], ["1.020.0", false], ["1.20.0-01", false], ["1.20.0+", false], ["", false],
+]) for (const metadata of [true, false]) test(`authorized verification ${metadata ? "metadata" : "execution"} handles host ${JSON.stringify(version)}`, async () => {
   const { verifyHost } = await import("../scripts/setup/host.mjs");
   const calls = [];
   const runtime = { run: async (command, args) => { calls.push({ command, args }); return { code: 0, stdout: `${version}\n`, stderr: "" }; } };
@@ -34,7 +38,7 @@ for (const version of ["1.19.3", "1.19.5", "1.19.4", "1.19.6", "1.20.0"]) for (c
 
   const verification = verifyHost(runtime, host);
 
-  if (["1.19.3", "1.19.5"].includes(version)) assert.equal(await verification, version);
+  if (supported) assert.equal(await verification, version);
   else await assert.rejects(verification, { code: "unsupported_host" });
   assert.deepEqual(calls, metadata ? [] : [{ command: host.executable_path, args: ["--version"] }]);
 });
@@ -131,14 +135,14 @@ for (const origin of ["native", "homebrew"]) test(`readonly ${origin} metadata d
   assert.deepEqual(snapshot([setup.root]), before);
 });
 
-test("readonly prerequisites reject an unsupported native package version without execution", async (context) => {
+for (const version of ["2.0.0", "1.20", ""]) test(`readonly prerequisites reject native package version ${JSON.stringify(version)} without execution`, async (context) => {
   const setup = fixture(context);
   const { prerequisites } = await import("../scripts/setup/packages.mjs");
   const directory = path.join(setup.root, "unsupported host");
   const modules = path.join(directory, "node_modules/opencode-ai");
   fs.mkdirSync(path.join(modules, "bin"), { recursive: true });
   fs.copyFileSync(process.execPath, path.join(modules, "bin/opencode.exe"));
-  fs.writeFileSync(path.join(modules, "package.json"), JSON.stringify({ name: "opencode-ai", version: "1.19.2" }));
+  fs.writeFileSync(path.join(modules, "package.json"), JSON.stringify({ name: "opencode-ai", version }));
   fs.writeFileSync(path.join(directory, "opencode.cmd"), "@echo off\r\n", { mode: 0o755 });
   const runtime = { ...setup.runtime, env: { ...setup.env, PATH: directory }, platform: "win32", arch: "x64",
     run: () => assert.fail("unsupported host inspection must not execute a child") };

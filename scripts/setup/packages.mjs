@@ -99,7 +99,7 @@ export async function prerequisites(runtime) {
   if (major < 22 || (major === 22 && minor < 20)) throw new SetupError("node_version", "Node >=22.20.0 is required");
   if (!["linux/x64", "darwin/arm64", "win32/x64"].includes(`${runtime.platform}/${runtime.arch}`)) throw new SetupError("unsupported_platform", `${runtime.platform}/${runtime.arch}`);
   const host = inspectHost(runtime);
-  if (host.version && !isSupportedHost(host.version)) throw new SetupError("unsupported_host", `Verified OpenCode versions are 1.19.3 and 1.19.5; found ${host.version}`);
+  if (host.source !== "not_run" && !isSupportedHost(host.version)) throw new SetupError("unsupported_host", `Expected a valid OpenCode v1 version; found ${JSON.stringify(host.version)}`);
   return { node: process.versions.node, platform: `${runtime.platform}/${runtime.arch}`, opencode: host.version, host };
 }
 
