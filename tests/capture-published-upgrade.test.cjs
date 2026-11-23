@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const crypto = require('node:crypto');
-const { verifyPackage, retained, complete, nativeProof, setupProof, provisionHost } = require('./capture-published-upgrade/package.cjs');
+const { targetVersion, verifyPackage, retained, complete, nativeProof, setupProof, provisionHost } = require('./capture-published-upgrade/package.cjs');
 const { verifyRead, verifyCapture, installedSDK } = require('./capture-published-upgrade/host.cjs');
 const bytes = Buffer.from('independent published fixture bytes');
 const dist = { tarball: 'https://registry.npmjs.org/@lyy-gh/memocap/-/memocap-0.7.0.tgz',
@@ -81,6 +81,51 @@ test('native bytes and checksum use the existing launcher verification seam', co
   fs.writeFileSync(files.binary, 'tampered');
   assert.throws(() => nativeProof(launcher, files));
 });
+test('installed proof fetches the new release checksum after same-path replacement', async context => {
+  const fs = require('node:fs'), path = require('node:path');
+  const { installedProof } = require('./capture-published-upgrade/package.cjs');
+  const root = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'published replacement '));
+  context.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const installedRoot = path.join(root, 'installed');
+  const env = { XDG_CACHE_HOME: path.join(root, 'cache'), LOCALAPPDATA: path.join(root, 'cache') };
+  const cache = process.platform === 'darwin' ? path.join(root, 'Library/Caches') : env.XDG_CACHE_HOME;
+  const { name } = require('../bin/cli.cjs').resolveReleaseAsset(process.platform, process.arch);
+  const releases = new Map();
+  for (const version of ['0.6.0', targetVersion]) {
+    const payload = path.join(root, version);
+    fs.mkdirSync(path.join(payload, 'bin'), { recursive: true });
+    for (const file of ['cli.cjs', 'cache-lock.cjs']) {
+      fs.copyFileSync(path.join(__dirname, '../bin', file), path.join(payload, 'bin', file));
+    }
+    fs.writeFileSync(path.join(payload, 'package.json'), JSON.stringify({ name: '@lyy-gh/memocap', version }));
+    const binary = path.join(cache, 'memocap', version, name);
+    const nativeBytes = Buffer.from(`synthetic native ${version}`);
+    const checksum = `${crypto.createHash('sha256').update(nativeBytes).digest('hex')}  ${name}\n`;
+    const url = `https://github.com/LYY/memocap/releases/download/v${version}/${name}.sha256`;
+    fs.mkdirSync(path.dirname(binary), { recursive: true });
+    fs.writeFileSync(binary, nativeBytes);
+    fs.writeFileSync(`${binary}.sha256`, checksum);
+    releases.set(url, checksum);
+    fs.cpSync(payload, installedRoot, { recursive: true });
+
+    const host = { version: '1.19.3' };
+    const readiness = { observed: '2.3', status: 'ready' };
+    const proof = await installedProof({ installedRoot, env, home: root, evidence: { baseline_host: host, host },
+      async command(executable, args) {
+        if (executable === 'memocap') return { stdout: `memocap ${version}\n` };
+        assert.equal(executable, process.execPath);
+        assert.equal(args[2], url);
+        return { stdout: releases.get(args[2]) };
+      },
+      managed: () => ({ manifest: { format_version: 2 }, config_text: '// synthetic unmanaged comment',
+        config: { permission: { custom_tool: { 'private/*': 'deny' } } } }),
+      json: () => ({ runner_version: version, prerequisites: { opencode: host.version }, readiness: 'static_ready',
+        shared_cli: { executable_version: version }, backend: { core_schema: readiness, activity: readiness } }),
+      cli: () => ({ inspection: { schema_version: '2.3', core_status: 'ready', activity_status: 'ready' } }),
+    }, { payload, version });
+    assert.equal(proof.native.checksumURL, url);
+  }
+});
 for (const opt of [undefined, '0']) test(`opt-out ${opt} skips before helper import or sandbox creation`, () => {
   const { spawnSync } = require('node:child_process');
   const entry = require.resolve('./capture-published-upgrade.integration.test.cjs');
@@ -93,7 +138,7 @@ for (const opt of [undefined, '0']) test(`opt-out ${opt} skips before helper imp
   if (opt !== undefined) env.MEMOCAP_CAPTURE_PUBLISHED_E2E = opt;
   const result = spawnSync(process.execPath, ['-e', script, entry], { env, encoding: 'utf8', timeout: 10000 });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /skipped 2/);
+  assert.match(result.stdout, /skipped 3/);
 });
 test('no-init fixture isolates credentials, overrides and caches without native initialization', async () => {
   const { fixture } = require('./capture-published-upgrade/package.cjs');
@@ -129,9 +174,11 @@ test('provisionHost verifies the installed OpenCode v1 and its executable', asyn
     { label: 'pins the published 0.6 baseline to its compatible host', phase: 'baseline', version: '1.19.3', reported: '1.19.3' },
     { label: 'rejects newer v1 in the legacy baseline phase', phase: 'baseline', version: '1.25.4', reported: '1.25.4',
       error: { code: 'ERR_ASSERTION', actual: '1.25.4', expected: '1.19.3' } },
-    { label: 'accepts a different v1 minor', version: '1.25.4', reported: '1.25.4' },
-    { label: 'rejects a mismatched executable', version: '1.25.4', reported: '1.19.3',
-      error: { code: 'ERR_ASSERTION', actual: '1.19.3', expected: '1.25.4' } },
+    { label: 'pins the target fixture to the observed host', version: '1.19.6', reported: '1.19.6' },
+    { label: 'rejects a different installed v1 host in the target fixture', version: '1.25.4', reported: '1.25.4',
+      error: { code: 'ERR_ASSERTION', actual: '1.25.4', expected: '1.19.6' } },
+    { label: 'rejects a mismatched executable', version: '1.19.6', reported: '1.19.3',
+      error: { code: 'ERR_ASSERTION', actual: '1.19.3', expected: '1.19.6' } },
     { label: 'rejects an installed v2 even if the executable matches', version: '2.0.0', reported: '2.0.0',
       error: /installed OpenCode package must be v1/ },
   ]) {
@@ -169,7 +216,7 @@ test('provisionHost verifies the installed OpenCode v1 and its executable', asyn
           origin: 'official_public_package' });
       }
       assert.deepEqual(installs, [['install', '--global', '--prefix', tools,
-        phase === 'baseline' ? 'opencode-ai@1.19.3' : 'opencode-ai@1', '--registry', 'https://registry.npmjs.org']]);
+        phase === 'baseline' ? 'opencode-ai@1.19.3' : 'opencode-ai@1.19.6', '--registry', 'https://registry.npmjs.org']]);
     });
   }
 });

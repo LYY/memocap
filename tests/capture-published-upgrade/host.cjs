@@ -145,7 +145,8 @@ async function runtime(fixture, staticProof) {
     observed.cross_project_read = JSON.parse(readTool.state.output);
     verifyRead(observed.cross_project_read, expected);
     assert.deepEqual((await fixture.cli(['list', '--repo', fixture.directories.B])).returned_ids, []);
-    const cache = path.join(fixture.env.XDG_CACHE_HOME, 'opencode/packages', '@lyy-gh/memocap@0.7.0/node_modules/@lyy-gh/memocap');
+    const version = staticProof.doctor.runner_version;
+    const cache = path.join(fixture.env.XDG_CACHE_HOME, 'opencode/packages', `@lyy-gh/memocap@${version}/node_modules/@lyy-gh/memocap`);
     observed.loaded = { path: cache, plugin: digest(fs.readFileSync(path.join(cache, 'plugin/index.js'))) };
     const loadedFiles = snapshot([cache]);
     for (const [filename, hash] of Object.entries(staticProof.files)) assert.equal(loadedFiles[path.join(cache, filename)], hash, filename);
@@ -160,7 +161,7 @@ async function runtime(fixture, staticProof) {
     } });
     unwrap(await projectB.session.command({ path: { id: statusSession.id }, body: { command: 'memory', arguments: 'status', model: 'wire/wire-model' } }));
     assert.equal(observed.policy.policy.mode, 'managed');
-    assert.equal(observed.policy.policy.version, '0.7.0');
+    assert.equal(observed.policy.policy.version, version);
     assert.equal(observed.policy.policy.digest, staticProof.managed.policy.digest);
     assert.equal(fs.realpathSync(observed.policy.policy.directory), fs.realpathSync(staticProof.managed.policy.directory));
     observed.expected = expected; observed.provider_requests = provider.requests;
