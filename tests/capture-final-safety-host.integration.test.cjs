@@ -26,7 +26,7 @@ test(selector,
     pipeline(current);
     evidence.source = binding;
     assert.equal(evidence.sdk.version, '1.19.3');
-    assert.equal(evidence.native.version, 'memocap 0.7.0');
+    assert.equal(evidence.native.version, 'memocap 0.7.1');
     current.support = () => ({ get text() { return JSON.stringify({ memory: { status: 'accept' },
       statements: packet(current).candidate.statements.map((_, index) => ({ index, status: 'supported' })),
       continuity: { status: 'current' } }); } });
@@ -100,7 +100,7 @@ test(selector,
       });
       maintenance = await maintenanceHost(evidence.host.version, maintenanceEvidence);
     }
-    assert.equal(maintenanceEvidence.native.version, '0.7.0');
+    assert.equal(maintenanceEvidence.native.version, '0.7.1');
     assert.equal(maintenanceEvidence.host.sha256, evidence.host.sha256);
     const parent = await maintenance.parent();
     const filePath = path.join(maintenance.root, 'project/final-source.txt');

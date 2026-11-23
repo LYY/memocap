@@ -5,18 +5,19 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const { currentFixture } = require("./setup-current-fixture.cjs");
+const { version: currentVersion } = require("../package.json");
 
-test("managed contract fixture upgrades 0.6 ownership via exact 0.7 worker without schema preparation", async (context) => {
+test(`managed contract fixture upgrades 0.6 ownership via exact ${currentVersion} worker without schema preparation`, async (context) => {
   const setup = await currentFixture(context);
   const before = JSON.parse(fs.readFileSync(setup.env.MEMOCAP_DB));
   const oldSkill = fs.readFileSync(path.join(setup.managedPath(), "SKILL.md"), "utf8");
-  const report = await setup.setup(["update", "--to", "0.7.0", "--yes"]);
+  const report = await setup.setup(["update", "--to", currentVersion, "--yes"]);
   assert.equal(report.exit_code, 0, JSON.stringify(report));
   assert.equal(report.delegated_worker, true);
   assert.equal(report.bootstrap_runner_version, "0.6.0");
-  assert.equal(report.runner_version, "0.7.0");
-  assert.equal(report.shared_cli.version, "0.7.0");
-  assert.equal(report.shared_cli.executable_version, "0.7.0");
+  assert.equal(report.runner_version, currentVersion);
+  assert.equal(report.shared_cli.version, currentVersion);
+  assert.equal(report.shared_cli.executable_version, currentVersion);
   assert.equal(report.backend.core_schema.observed, "2.3");
   assert.equal(report.backend.activity.status, "ready");
   assert.equal(report.runtime.status, "not_run");
@@ -24,7 +25,7 @@ test("managed contract fixture upgrades 0.6 ownership via exact 0.7 worker witho
   assert.deepEqual(JSON.parse(fs.readFileSync(setup.env.MEMOCAP_DB)), before);
   assert.equal(JSON.parse(fs.readFileSync(report.manifest_path)).format_version, 2);
   const config = JSON.parse(fs.readFileSync(setup.config));
-  assert.equal(config.plugin[0][0], "@lyy-gh/memocap@0.7.0");
+  assert.equal(config.plugin[0][0], `@lyy-gh/memocap@${currentVersion}`);
   assert.equal(config.model, "fixture/model");
   assert.deepEqual(config.custom, { retained: true });
   assert.deepEqual(config.permission, { custom_tool: { "private/*": "deny" }, memocap_recall: { library: "allow" }, memocap_read: { library: "allow" } });
@@ -42,7 +43,7 @@ for(const command of ["check", "doctor", "update"]) test(`${command} reads curre
   const setup = await currentFixture(context);
   const files = [setup.config, setup.installed.manifest_path, setup.env.MEMOCAP_DB, path.join(setup.managedPath(), "SKILL.md")];
   const before = files.map((filename) => fs.readFileSync(filename, "utf8"));
-  const report = await setup.setup([command, "--to", "0.7.0", ...(command === "update" ? ["--dry-run"] : [])]);
+  const report = await setup.setup([command, "--to", currentVersion, ...(command === "update" ? ["--dry-run"] : [])]);
   assert.equal(report.error, null, JSON.stringify(report));
   assert.equal(report.backend.core_schema.observed, "2.3");
   assert.equal(report.backend.core_schema.status, "compatible");
