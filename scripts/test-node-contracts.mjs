@@ -22,7 +22,7 @@ export function selectNodeTests(
 }
 
 if (import.meta.main) {
-  const execution = spawnSync(process.execPath, ["--test", ...selectNodeTests()], {
+  const execution = spawnSync(process.execPath, ["--experimental-vm-modules", "--test", ...selectNodeTests()], {
     stdio: "inherit",
   });
   if (execution.error) throw execution.error;

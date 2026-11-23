@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "origin": "Synthetic public tuning fixture; no runtime observation or authorization",
+  "adapter": { "input_sha256": "eed4003f644f239ee85ed6f2d85443be97925a4169e04eefd53d9b4eb3c39620" },
+  "bindings": {
+    "queued_s1": { "pointer": "/capture/2/turns/0/tools/0/output", "content_hash": "cdd5a776e157b5756f7e6a4cc99a7739803d529cbc86a993a50d368046c0f58f", "span": { "start": 0, "end": 43 }, "quote": "exit_code=0; request accepted; state=queued" },
+    "beta_prior": { "pointer": "/capture/8/turns/0/tools/0/output", "content_hash": "ce393b41aae8d8b327ab235b2a39d26aea519180fd8cbab34ec6b19bb3a0c378", "span": { "start": 0, "end": 54 }, "quote": "For alpha, start at docs/alpha.md. Never use for beta." },
+    "beta_current": { "pointer": "/capture/8/turns/1/user", "content_hash": "730c28f232da8be447a38d2936b95c3fe68e7f9a8b253a48d1d38226feb497a4", "span": { "start": 0, "end": 37 }, "quote": "Now investigate the beta environment." },
+    "unknown_prior": { "pointer": "/capture/9/turns/0/tools/0/output", "content_hash": "0f5c7804e6d3d80160526f25180bb47530259b9ff0627203d3c12f5e68b1a7d0", "span": { "start": 0, "end": 53 }, "quote": "For alpha, start at docs/alpha.md. Approval required." },
+    "unknown_current": { "pointer": "/capture/9/turns/1/user", "content_hash": "cb7f31eaf07cb993e2fb49b7d1681eb3d38fabdff2ae19bc06fad28eaf62a1e4", "span": { "start": 0, "end": 23 }, "quote": "Check that other thing." },
+    "identity_s1": { "pointer": "/capture/10/turns/0/tools/0/output", "content_hash": "8a2813c0b5fbf462f421a3508882955eae1df673863cb11491b64da86d145c48", "span": { "start": 0, "end": 109 }, "quote": "For alpha, start at docs/alpha.md after approval. For gamma, start at docs/gamma.md in observation mode only." },
+    "dropped_short": { "pointer": "/capture/11/turns/0/tools/0/output", "content_hash": "dc0def56493bf3d1eaa1418ef134aa69078c1bff93685fb21cc10223077e5efd", "span": { "start": 0, "end": 34 }, "quote": "For alpha, start at docs/alpha.md." },
+    "dropped_full": { "pointer": "/capture/11/turns/0/tools/0/output", "content_hash": "dc0def56493bf3d1eaa1418ef134aa69078c1bff93685fb21cc10223077e5efd", "span": { "start": 0, "end": 73 }, "quote": "For alpha, start at docs/alpha.md. Approval required. Never use for beta." }
+  },
+  "counterfactuals": [
+    { "name": "queued_false_completed", "original_case": "queued-exit-zero", "current_user_id": "u1", "candidate": { "kind": "context", "statements": [{ "text": "The alpha rehearsal completed successfully.", "citations": ["queued_s1"] }] } },
+    { "name": "beta_old_shape", "original_case": "switch-beta", "current_user_id": "u2", "candidate": { "kind": "context", "statements": [{ "text": "Beta uses the previous alpha route.", "citations": ["beta_prior"] }] } },
+    { "name": "beta_bound_support", "original_case": "switch-beta", "current_user_id": "u2", "candidate": { "kind": "context", "statements": [{ "text": "Beta uses the previous alpha route.", "citations": ["beta_prior", "beta_current"] }] } },
+    { "name": "unknown_old_shape", "original_case": "unknown-followup", "current_user_id": "u2", "candidate": { "kind": "context", "statements": [{ "text": "Continue the alpha route.", "citations": ["unknown_prior"] }] } },
+    { "name": "unknown_bound_support", "original_case": "unknown-followup", "current_user_id": "u2", "candidate": { "kind": "context", "statements": [{ "text": "Continue the alpha route.", "citations": ["unknown_prior", "unknown_current"] }] } },
+    { "name": "drop_conditions", "original_case": "dropped-condition", "current_user_id": "u1", "candidate": { "kind": "context", "statements": [{ "text": "Start at docs/alpha.md without conditions.", "citations": ["dropped_short"] }] } },
+    { "name": "identity_alpha", "original_case": "same-source-distinct-claims", "current_user_id": "u1", "candidate": { "kind": "context", "statements": [{ "text": "Alpha starts at docs/alpha.md after approval.", "citations": ["identity_s1"] }] } },
+    { "name": "identity_gamma", "original_case": "same-source-distinct-claims", "current_user_id": "u1", "candidate": { "kind": "context", "statements": [{ "text": "Gamma starts at docs/gamma.md in observation mode only.", "citations": ["identity_s1"] }] } }
+  ],
+  "preservation": {
+    "frozen9": {
+      "tests/capture-evaluation/manifest.json": "8ff49e70c80bcb5b7279b100f7459c434d656873114cee165857ce5b3adf30de",
+      "tests/capture-evaluation/tuning.json": "eed4003f644f239ee85ed6f2d85443be97925a4169e04eefd53d9b4eb3c39620",
+      "tests/capture-evaluation/holdout.json": "39b136874542635cb1547c424c2e3e0b7bdb6dd55b91a651ede505904318ab1e",
+      "tests/capture-evaluation/README.md": "f8e53ff851e8b54d27fc1785d8e62cb619edc46328fa454691e761b8b340d018",
+      "tests/capture-evaluation/baseline.cjs": "6b9c0d1298776e3e4e7bbc4701dc8bcdbb06a410f4341b9e37aae5f30f9577a8",
+      "package-lock.json": "77d236f59ad6c2c99f7c9ed44290348fa6f283d52d52d1731503787b1d40df05"
+    },
+    "reviewed_artifacts": {}
+  },
+  "frozen_counts": { "capture": 16, "capture_save": 8, "capture_skip": 8, "capture_opportunity_denominator": 8, "capture_atomic_claim_denominator": 9, "maintenance": 12, "maintenance_authorized_opportunity_denominator": 2, "source_loss_unknown": 4, "same_task_continuity": 1, "different_or_unknown_continuity": 2 }
+}
