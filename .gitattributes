@@ -1,0 +1,7 @@
+# The capture evaluation contract hashes these exact bytes, including line endings.
+/tests/capture-evaluation/README.md -text
+/tests/capture-evaluation/baseline.cjs -text
+/tests/capture-evaluation/holdout.json -text
+/tests/capture-evaluation/manifest.json -text
+/tests/capture-evaluation/tuning.json -text
+/package-lock.json -text
