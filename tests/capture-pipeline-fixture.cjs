@@ -24,7 +24,7 @@ async function fixture(t, options = {}) {
     tool: { ids: async () => ({ data: ['read', 'bash', 'memocap_remember'] }) },
     app: { agents: async () => ({ data: [{ name: 'build', permission }] }) },
     session: {
-      get: async ({ path }) => ({ data: options.omitSessionPermission ? { id: path.id } : { permission } }),
+      get: async ({ path }) => ({ data: options.sessionData ?? (options.omitSessionPermission ? { id: path.id } : { id: path.id, permission }) }),
       abort: async ({ path }) => { calls.push({ type: 'abort', id: path.id }); return { data: true }; },
       create: async ({ body }) => {
         const id = `child${++serial}`;

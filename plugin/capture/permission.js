@@ -6,6 +6,7 @@ export async function permissionSnapshot(client, turn) {
     client.session.get({ path: { id: turn.parentID }, signal: turn.controller.signal }), client.app.agents({ signal: turn.controller.signal }),
   ]);
   const session = data(parent);
+  if (session?.id !== turn.parentID) throw new CaptureStop("permission_unavailable", "denied");
   const { permission: sessionRules = [] } = session;
   const agent = data(agents).find((entry) => entry.name === turn.agent);
   if (!agent || !Array.isArray(agent.permission) || !Array.isArray(sessionRules)) {

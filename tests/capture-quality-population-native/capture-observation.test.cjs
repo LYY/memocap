@@ -46,7 +46,7 @@ async function run(options = {}) {
   const client = { _client: { get: async () => ({ data: { version: '1.19.3' } }) },
     tool: { ids: async () => ({ data: ['memocap_remember'] }) },
     app: { agents: async () => ({ data: [{ name: 'build', permission }] }) }, session: {
-      get: async () => ({ data: { permission } }), abort: async () => ({ data: true }),
+      get: async ({ path }) => ({ data: { id: path.id, permission } }), abort: async () => ({ data: true }),
       create: async () => ({ data: { id: `child${++serial}` } }),
       prompt: async ({ path, body }) => {
         capture.params({ sessionID: path.id }, {});
