@@ -1,7 +1,7 @@
 # Agent Install and Update Guide
 
 Use this guide for an authorized memocap install/update targeting package
-`0.7.0` and tag `v0.7.0`. Keep native CLI, plugin, and runtime skill on that
+`0.7.1` and tag `v0.7.1`. Keep native CLI, plugin, and runtime skill on that
 exact release. Follow the versioned guide bundled with the target package.
 This contract does not claim publication, a local update, or runtime verification.
 See [Install and Update](INSTALL.md) for the human guide.
@@ -32,13 +32,13 @@ bootstrap the pinned package instead of assuming those commands exist.
 ## Install
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.7.0 memocap-setup install --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.7.1 memocap-setup install --global --yes --json
 ```
 
 For project scope:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.7.0 memocap-setup install --project "/absolute/path/to/repo" --yes --json
+npx --yes --package @lyy-gh/memocap@0.7.1 memocap-setup install --project "/absolute/path/to/repo" --yes --json
 ```
 
 The worker copies its complete bundled skill and references into
@@ -66,24 +66,24 @@ existing database using SQLite's backup API or another WAL-aware method first.
 Preparation can prune retained activity. Remote preparation belongs to the
 server administrator and must run locally.
 
-## Current v0.6.0 to v0.7.0 update
+## Managed update from v0.6.0 or v0.7.0 to v0.7.1
 
 Use the exact target package to inspect, plan, and apply the update. The
-installed v0.6.0 setup runner can reject newer OpenCode v1 releases before it
-reports the installation state. The v0.7.0 runner supports OpenCode v1; no host
-downgrade is needed to update an existing installation.
+v0.7.1 runner supports OpenCode v1; no host downgrade is needed to update an
+existing installation. The older v0.6.0 runner can reject newer OpenCode v1
+releases before reporting the installation state.
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.7.0 memocap-setup check --to 0.7.0 --global --json
-npx --yes --package @lyy-gh/memocap@0.7.0 memocap-setup update --to 0.7.0 --global --dry-run --json
+npx --yes --package @lyy-gh/memocap@0.7.1 memocap-setup check --to 0.7.1 --global --json
+npx --yes --package @lyy-gh/memocap@0.7.1 memocap-setup update --to 0.7.1 --global --dry-run --json
 ```
 
-Review `runner_version` and `resolved_version` (both `0.7.0`), the reported
+Review `runner_version` and `resolved_version` (both `0.7.1`), the reported
 OpenCode and config, and `shared_cli.manager`, which identifies the existing npm
 or pnpm owner. After authorization, apply the same exact target:
 
 ```sh
-npx --yes --package @lyy-gh/memocap@0.7.0 memocap-setup update --to 0.7.0 --global --yes --json
+npx --yes --package @lyy-gh/memocap@0.7.1 memocap-setup update --to 0.7.1 --global --yes --json
 ```
 
 Repeat the originally installed scopes in all three commands: use `--global`
@@ -91,8 +91,8 @@ for a global install and the same concrete `--project PATH` for each project.
 Keep the same `--config FILE` if you used an explicit config override. The runner
 discovers the existing CLI owner even when launched with npx; do not select a
 different package manager. Do not substitute `latest` for either version pin.
-The supported path is managed format `2`, package `0.6.0`, schema `2.3`, to
-managed format `2`, package `0.7.0`, schema `2.3`. Legacy installer recovery and
+The direct path is managed format `2`, package `0.6.0` or `0.7.0`, schema `2.3`, to
+managed format `2`, package `0.7.1`, schema `2.3`. Legacy installer recovery and
 schema-major transitions are retired. Existing supported memories, placements,
 domains, provenance, FTS, operation ledger, activity, organization state, and
 repository identity/location metadata remain intact. This package update makes
@@ -102,8 +102,8 @@ It does not prune activity; existing retention rules still apply to later activi
 Check, doctor, and dry-run perform no logical database writes, initialization,
 schema changes, activity recording, or pruning. Dry-run also avoids worker
 fetches and config/skill/manifest writes; outer npx can still download its
-pinned runner first. Both the installed 0.6.0 CLI and the target 0.7.0 CLI report
-`ready`/`2.3` with activity ready. Completion requires the exact 0.7.0 CLI and
+pinned runner first. Both the installed CLI and the target 0.7.1 CLI report
+`ready`/`2.3` with activity ready. Completion requires the exact 0.7.1 CLI and
 an independent readback of that state after the package update. No schema
 preparation runs for this path. Refuse any CLI that reports `ready`/`2.2`;
 the superseded 0.5.0 preflight exception is removed. Exact schema `2.2` reported
@@ -150,7 +150,7 @@ An example agent completion report, distinct from literal setup JSON:
 {
   "result": "static_ready",
   "scope": "global",
-  "target_version": "0.7.0",
+  "target_version": "0.7.1",
   "cli": "unchanged",
   "plugin": "installed",
   "skill": "installed",
@@ -185,11 +185,11 @@ Neither flow authorizes personal memory changes or tool-denial bypasses.
 ## Windows PowerShell
 
 ```powershell
-npx --yes --package '@lyy-gh/memocap@0.7.0' memocap-setup install --global --yes --json
-npx --yes --package '@lyy-gh/memocap@0.7.0' memocap-setup install --project 'C:\work\my repo' --yes --json
-npx --yes --package '@lyy-gh/memocap@0.7.0' memocap-setup check --to 0.7.0 --global --json
-npx --yes --package '@lyy-gh/memocap@0.7.0' memocap-setup update --to 0.7.0 --global --dry-run --json
-npx --yes --package '@lyy-gh/memocap@0.7.0' memocap-setup update --to 0.7.0 --global --yes --json
+npx --yes --package '@lyy-gh/memocap@0.7.1' memocap-setup install --global --yes --json
+npx --yes --package '@lyy-gh/memocap@0.7.1' memocap-setup install --project 'C:\work\my repo' --yes --json
+npx --yes --package '@lyy-gh/memocap@0.7.1' memocap-setup check --to 0.7.1 --global --json
+npx --yes --package '@lyy-gh/memocap@0.7.1' memocap-setup update --to 0.7.1 --global --dry-run --json
+npx --yes --package '@lyy-gh/memocap@0.7.1' memocap-setup update --to 0.7.1 --global --yes --json
 ```
 
 Source wrappers `scripts/install.sh` and `scripts/install.ps1` forward arguments

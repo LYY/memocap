@@ -1,7 +1,7 @@
 # Schema Versioning Contract
 
 Updated 2026-11-16. This document defines the SQLite lifecycle contract for
-package `0.7.0`. Package `0.7.0`, database schema `2.3`, setup manifest format `2`, and receipt
+package `0.7.1`. Package `0.7.1`, database schema `2.3`, setup manifest format `2`, and receipt
 `format_version: 1` are independent identities. This contract does not claim
 that the package has been published.
 
@@ -51,8 +51,8 @@ main database. There is no blanket cleanup action.
 
 Read-write preparation creates a missing database directly at schema `2.3`.
 It upgrades only the exact supported schema `2.2` to `2.3`, as specified below.
-Schema `2.2` is the historical schema used by package `0.5.0`; the currently
-installed package `0.6.0` uses schema `2.3`.
+Schema `2.2` is the historical schema used by package `0.5.0`; packages `0.6.0`
+and `0.7.0` use schema `2.3`.
 
 `memocap status --read-only --json` inspects without running lifecycle
 transitions. Its successful format-1 receipt reports:
@@ -125,9 +125,9 @@ pre-versioned, malformed, unknown, future, different-major, or otherwise
 unsupported schema is refused without changing its rows or schema. There is no
 automatic reset, core-table rebuild, export/import, or fallback migration.
 
-For the current managed update, the installed package `0.6.0` CLI must report
+For the managed update from package `0.6.0` or `0.7.0`, the installed CLI must report
 `ready`/`2.3` during setup preflight. Target readiness requires the selected exact
-`0.7.0` CLI and an independent `ready`/`2.3` readback with activity ready. A valid
+`0.7.1` CLI and an independent `ready`/`2.3` readback with activity ready. A valid
 ready `2.3` database needs no schema preparation for this package update; its
 database data remains unchanged, and unrelated configuration and existing
 permissions are retained. Check, doctor, and setup dry-run do not initialize,

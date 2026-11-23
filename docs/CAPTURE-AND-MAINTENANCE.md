@@ -1,8 +1,8 @@
 # 自动捕获与使用后维护
 
-> 本指南描述 memocap v0.7.0 的自动捕获与使用后维护行为。实际运行行为以相互匹配的 v0.7.0 CLI、OpenCode 插件和配套 `policy` 为前提；本文不表示这些组件已经发布或安装，也不保证模型的自然语言判断普遍正确。
+> 本指南描述 memocap v0.7.1 的自动捕获与使用后维护行为。实际运行行为以相互匹配的 v0.7.1 CLI、OpenCode 插件和配套 `policy` 为前提；本文不表示这些组件已经发布或安装，也不保证模型的自然语言判断普遍正确。
 
-本指南补充 [README 的自动捕获说明](../README.md#L198)。现有 [OpenCode 捕获实现说明](./OPENCODE-CAPTURE-IMPLEMENTATION.md#L1)记录 v0.6.0 的历史行为；本指南描述 v0.7.0。
+本指南补充 [README 的自动捕获说明](../README.md#L198)。现有 [OpenCode 捕获实现说明](./OPENCODE-CAPTURE-IMPLEMENTATION.md#L1)记录 v0.6.0 的历史行为；本指南描述 v0.7.1。
 
 ## 自动捕获
 

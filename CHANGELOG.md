@@ -1,5 +1,14 @@
 # Changelog
 
+## @lyy-gh/memocap 0.7.1 (Unreleased)
+
+- Automatic capture now uses the agent's permission rules when OpenCode omits
+  session-specific rules. Malformed rules still block capture, and an explicit
+  matching session deny still takes precedence.
+- Managed updates from `v0.6.0` or `v0.7.0`
+  leave SQLite schema `2.3` and setup manifest format `2` unchanged. OpenCode
+  v1 remains supported, with the plugin SDK pinned to `1.19.3`.
+
 ## @lyy-gh/memocap 0.6.0 (Unreleased)
 
 Implemented outcomes for package target `0.6.0` and Git tag target `v0.6.0`.
